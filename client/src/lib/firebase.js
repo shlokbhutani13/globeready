@@ -11,7 +11,13 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
-export const firebaseConfigured = Boolean(firebaseConfig.apiKey && firebaseConfig.projectId);
+export const firebaseConfigured = Boolean(
+  firebaseConfig.apiKey
+  && firebaseConfig.authDomain
+  && firebaseConfig.projectId
+  && firebaseConfig.storageBucket
+  && firebaseConfig.appId,
+);
 const app = firebaseConfigured
   ? getApps()[0] || initializeApp(firebaseConfig)
   : null;

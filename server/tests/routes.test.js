@@ -2,6 +2,7 @@ import request from "supertest";
 import { beforeEach, describe, expect, test } from "vitest";
 
 import { createApp } from "../src/app.js";
+import { createUserRateLimiter } from "../src/rate-limit.js";
 import { createDemoStore } from "../src/store.js";
 
 describe("application routes", () => {
@@ -52,5 +53,28 @@ describe("application routes", () => {
     expect(response.body.data.mode).toBe("demo");
     expect(response.body.data.sources.length).toBeGreaterThan(0);
     expect(response.body.data.disclaimer).toMatch(/official/i);
+  });
+
+  test("limits repeated AI requests per user", async () => {
+    const limitedApp = createApp({
+      store: createDemoStore(),
+      auth: null,
+      assistant: null,
+      aiLimiter: createUserRateLimiter({ limit: 1, windowMs: 60_000 }),
+    });
+
+    await request(limitedApp)
+      .post("/api/assistant")
+      .set("x-demo-user", "student-a")
+      .send({ question: "How should I prepare for an SSN appointment?" })
+      .expect(200);
+
+    const response = await request(limitedApp)
+      .post("/api/assistant")
+      .set("x-demo-user", "student-a")
+      .send({ question: "What documents should I bring?" })
+      .expect(429);
+
+    expect(response.body.error.code).toBe("rate_limit_exceeded");
   });
 });

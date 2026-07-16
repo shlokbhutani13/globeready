@@ -6,6 +6,7 @@ import { createDemoStore } from "./store.js";
 import { assistantRouter } from "./routes/assistant.js";
 import { documentsRouter } from "./routes/documents.js";
 import { profileRouter } from "./routes/profile.js";
+import { createUserRateLimiter } from "./rate-limit.js";
 import { resourcesRouter } from "./routes/resources.js";
 import { tasksRouter } from "./routes/tasks.js";
 
@@ -13,6 +14,9 @@ export function createApp({
   auth = null,
   assistant = createAssistant(),
   store = createDemoStore(),
+  aiLimiter = createUserRateLimiter({
+    limit: Number(process.env.AI_REQUESTS_PER_MINUTE || 12),
+  }),
 } = {}) {
   const app = express();
   const allowedOrigin = process.env.CLIENT_URL || "http://localhost:5173";
@@ -23,17 +27,17 @@ export function createApp({
   app.get("/api/health", (_request, response) => {
     response.json({
       ok: true,
-      mode: auth && assistant ? "live" : "demo",
-      services: { auth: Boolean(auth), ai: Boolean(assistant) },
+      mode: auth ? "live" : "demo",
+      services: { auth: Boolean(auth), ai: assistant?.mode === "live" },
     });
   });
 
   const authenticate = createAuthMiddleware(auth);
   app.use("/api/profile", authenticate, profileRouter(store));
   app.use("/api/tasks", authenticate, tasksRouter(store));
-  app.use("/api/documents", authenticate, documentsRouter(store));
+  app.use("/api/documents", authenticate, documentsRouter(store, assistant || createAssistant(), aiLimiter));
   app.use("/api/resources", authenticate, resourcesRouter(store));
-  app.use("/api/assistant", authenticate, assistantRouter(store, assistant || createAssistant()));
+  app.use("/api/assistant", authenticate, assistantRouter(store, assistant || createAssistant(), aiLimiter));
 
   app.use((_request, response) => {
     response.status(404).json({ error: { code: "not_found", message: "Route not found." } });

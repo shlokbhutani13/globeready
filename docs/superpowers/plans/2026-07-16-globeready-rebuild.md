@@ -6,7 +6,7 @@
 
 **Architecture:** Keep the Vite/React client and Express service. Firebase Authentication supplies identity, Firestore and Storage persist user-scoped data, and Express verifies Firebase ID tokens before serving AI or document-analysis requests. Missing Firebase or Gemini credentials activate an explicit local demo mode rather than fake production behavior.
 
-**Tech Stack:** React 18, Vite 4, React Router, Firebase Web SDK, Express, Firebase Admin SDK, Gemini SDK, Vitest, Testing Library, Supertest, ESLint, GitHub Actions.
+**Tech Stack:** React 18, Vite 8, React Router, Firebase Web SDK, Express, Firebase Admin SDK, Gemini SDK, Vitest, Testing Library, Supertest, GitHub Actions.
 
 ## Global Constraints
 

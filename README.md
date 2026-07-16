@@ -4,19 +4,12 @@ GlobeReady is a responsive productivity workspace for international students. It
 
 ## Current release
 
-The repository contains a complete portfolio demo that works without credentials:
+The repository supports two modes:
 
-- Personalized dashboard
-- Document-vault metadata and file validation
-- Tasks and deadlines
-- Trusted visa, CPT/OPT, SSN, banking, healthcare, and tax guides
-- Profile-based recommendations
-- Sourced assistant demo with explicit limitations
-- Responsive desktop and mobile navigation
-- User-scoped Express APIs with authentication middleware
-- Firebase Firestore and Storage ownership rules
+- **Demo mode:** safe sample data with no account, uploads, or API keys.
+- **Connected mode:** Firebase email/password and Google login, user-scoped Firestore data, Firebase Storage uploads, saved guides, verified API tokens, and optional Gemini answers and document explanations.
 
-Live Firebase storage and Gemini calls require your own project credentials. The demo does not upload identity documents or send content to an AI provider.
+The product includes the personalized dashboard, document vault, tasks, trusted student guides, profile recommendations, responsive navigation, and sourced AI guidance. GlobeReady does not replace official government or university advice.
 
 ## Architecture
 
@@ -41,7 +34,8 @@ See [Architecture](docs/ARCHITECTURE.md), [Privacy](docs/PRIVACY.md), and [Migra
 Requirements: Node.js 22.
 
 ```bash
-cp .env.example .env.local
+cp server/.env.example server/.env
+cp client/.env.example client/.env.local
 cd server && npm install && npm run dev
 ```
 
@@ -51,7 +45,7 @@ In a second terminal:
 cd client && npm install && npm run dev
 ```
 
-Open `http://localhost:5173`, then choose **Continue in demo mode**.
+Open `http://localhost:5173`, then choose **Continue in demo mode**. For connected mode, follow [Deployment](DEPLOYMENT.md) and add the Firebase client values to `client/.env.local` and server values to `server/.env`.
 
 ## Verification
 
@@ -66,15 +60,19 @@ cd ../client && npm test && npm run build
 - Live mode verifies Firebase ID tokens.
 - Demo mode requires an explicit demo identity header.
 - Firestore and Storage rules require `request.auth.uid == uid`.
-- Document metadata accepts only PDF, PNG, and JPEG files up to 10 MB.
+- Storage accepts only PDF, PNG, and JPEG files up to 10 MB.
+- Document analysis loads only a file recorded in the authenticated user's collection.
+- AI routes apply a configurable per-user request limit.
 - Local environment files are ignored.
 
 Review Firebase Auth domains, API-key restrictions, Firestore rules, and Storage rules before a public deployment.
 
-## Limits
+## Release boundary
 
-- Demo uploads store safe metadata only.
-- Gemini integration is optional and the checked-in demo uses deterministic answers.
+- The code is prepared for deployment but this repository does not contain production credentials.
+- Live Firebase and Gemini behavior still requires validation against the Firebase project you choose.
+- Demo uploads store metadata in memory and never send file contents.
+- Gemini remains optional. Without it, the assistant uses deterministic sourced guidance and document analysis explains that content was not read.
 - The app provides general information, not legal, immigration, tax, health, or financial advice.
 - Email, SMS, calendar, and push reminders are not implemented.
 - University-specific guidance is limited to curated resources.

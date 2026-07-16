@@ -2,7 +2,7 @@ import { Router } from "express";
 import { allowedDocumentTypes, cleanText, validDate } from "../validation.js";
 import { config } from "../config.js";
 
-export function documentsRouter(store) {
+export function documentsRouter(store, assistant, aiLimiter = (_request, _response, next) => next()) {
   const router = Router();
   router.get("/", async (request, response) => {
     response.json({ data: await store.documents.list(request.user.uid) });
@@ -37,6 +37,31 @@ export function documentsRouter(store) {
   router.delete("/:id", async (request, response) => {
     const removed = await store.documents.remove(request.user.uid, request.params.id);
     return removed ? response.status(204).end() : response.status(404).json({ error: { code: "document_not_found" } });
+  });
+  router.post("/:id/analyze", aiLimiter, async (request, response) => {
+    const documents = await store.documents.list(request.user.uid);
+    const document = documents.find((item) => item.id === request.params.id);
+    if (!document) {
+      return response.status(404).json({ error: { code: "document_not_found" } });
+    }
+    const ownedStoragePrefix = `users/${request.user.uid}/documents/`;
+    if (
+      assistant?.mode === "live"
+      && (!document.storagePath || !document.storagePath.startsWith(ownedStoragePrefix))
+    ) {
+      return response.status(422).json({
+        error: {
+          code: "invalid_storage_path",
+          message: "This document is not stored in your private folder.",
+        },
+      });
+    }
+    const analysis = await assistant.analyzeDocument({ uid: request.user.uid, document });
+    await store.documents.update(request.user.uid, document.id, {
+      analysis,
+      analysisStatus: "complete",
+    });
+    response.json({ data: analysis });
   });
   return router;
 }

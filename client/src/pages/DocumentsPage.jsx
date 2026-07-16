@@ -9,14 +9,14 @@ export function validateDocument(file) {
   return "";
 }
 
-export default function DocumentsPage({ documents = [], onAdd = () => {}, onDelete = () => {} }) {
+export default function DocumentsPage({ documents = [], onAdd = () => {}, onDelete = () => {}, onAnalyze = () => {}, uploadProgress = 0 }) {
   const input = useRef(null);
   const [error, setError] = useState("");
   const choose = (file) => {
     if (!file) return;
     const nextError = validateDocument(file);
     setError(nextError);
-    if (!nextError) onAdd({ name: file.name, contentType: file.type, size: file.size, category: "Other" });
+    if (!nextError) onAdd(file);
   };
   return (
     <div className="page">
@@ -24,8 +24,9 @@ export default function DocumentsPage({ documents = [], onAdd = () => {}, onDele
       <input ref={input} hidden type="file" accept=".pdf,.png,.jpg,.jpeg" onChange={(event) => choose(event.target.files?.[0])} />
       <section className="upload-zone" onClick={() => input.current?.click()}><span><UploadCloud size={27} /></span><div><h2>Upload a document</h2><p>PDF, PNG, or JPEG up to 10 MB</p></div><LockKeyhole size={19} /></section>
       {error && <div className="inline-error">{error}</div>}
+      {uploadProgress > 0 && uploadProgress < 100 && <div className="upload-progress"><span style={{ width: `${uploadProgress}%` }} />Uploading {uploadProgress}%</div>}
       <section className="panel"><div className="panel-title"><div><span className="eyebrow">Vault</span><h2>{documents.length} documents</h2></div></div>
-        <div className="document-table">{documents.map((document) => <div className="document-row" key={document.id}><span className="file-icon"><FileText size={18} /></span><div><strong>{document.name}</strong><small>{document.category} · {document.storageMode || "demo storage"}</small></div><span className="status">Ready</span><button aria-label={`Delete ${document.name}`} onClick={() => onDelete(document.id)}><Trash2 size={16} /></button></div>)}</div>
+        <div className="document-table">{documents.map((document) => <div className="document-row" key={document.id}><span className="file-icon"><FileText size={18} /></span><div><strong>{document.name}</strong><small>{document.category} · {document.storageMode || "Firebase Storage"}</small>{document.analysis?.summary && <small>{document.analysis.summary}</small>}</div><button className="analyze-button" onClick={() => onAnalyze(document)}>Explain</button><button aria-label={`Delete ${document.name}`} onClick={() => onDelete(document)}><Trash2 size={16} /></button></div>)}</div>
       </section>
       <Disclaimer />
     </div>

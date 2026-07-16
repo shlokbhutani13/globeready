@@ -1,8 +1,8 @@
 {
   "type": "module",
-  "name": "server",
+  "name": "globeready-api",
   "version": "1.0.0",
-  "description": "",
+  "description": "Authenticated API for the GlobeReady international student workspace",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
@@ -12,17 +12,19 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "dependencies": {
+    "@google/genai": "^1.32.0",
     "cors": "^2.8.6",
     "dotenv": "^17.4.0",
     "express": "^5.2.1",
-    "firebase-admin": "^13.4.0",
-    "multer": "^2.0.2",
-    "uuid": "^13.0.0"
+    "firebase-admin": "^14.1.0"
   },
   "devDependencies": {
     "supertest": "^7.1.4",
     "vitest": "^3.2.4"
+  },
+  "overrides": {
+    "uuid": "^11.1.1"
   }
 }
