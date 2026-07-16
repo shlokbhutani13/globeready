@@ -1,7 +1,19 @@
 import cors from "cors";
 import express from "express";
+import { createAssistant } from "./assistant.js";
+import { createAuthMiddleware } from "./auth.js";
+import { createDemoStore } from "./store.js";
+import { assistantRouter } from "./routes/assistant.js";
+import { documentsRouter } from "./routes/documents.js";
+import { profileRouter } from "./routes/profile.js";
+import { resourcesRouter } from "./routes/resources.js";
+import { tasksRouter } from "./routes/tasks.js";
 
-export function createApp({ auth = null, assistant = null } = {}) {
+export function createApp({
+  auth = null,
+  assistant = createAssistant(),
+  store = createDemoStore(),
+} = {}) {
   const app = express();
   const allowedOrigin = process.env.CLIENT_URL || "http://localhost:5173";
 
@@ -15,6 +27,13 @@ export function createApp({ auth = null, assistant = null } = {}) {
       services: { auth: Boolean(auth), ai: Boolean(assistant) },
     });
   });
+
+  const authenticate = createAuthMiddleware(auth);
+  app.use("/api/profile", authenticate, profileRouter(store));
+  app.use("/api/tasks", authenticate, tasksRouter(store));
+  app.use("/api/documents", authenticate, documentsRouter(store));
+  app.use("/api/resources", authenticate, resourcesRouter(store));
+  app.use("/api/assistant", authenticate, assistantRouter(store, assistant || createAssistant()));
 
   app.use((_request, response) => {
     response.status(404).json({ error: { code: "not_found", message: "Route not found." } });
