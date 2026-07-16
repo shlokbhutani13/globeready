@@ -1,85 +1,143 @@
 # GlobeReady
 
-GlobeReady is a responsive productivity workspace for international students. It organizes documents, deadlines, trusted guides, profile-based recommendations, and sourced AI explanations without pretending to replace official university or government advice.
+[![CI](https://github.com/shlokbhutani13/globeready/actions/workflows/ci.yml/badge.svg)](https://github.com/shlokbhutani13/globeready/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-17191e.svg)](LICENSE)
+[![React 18](https://img.shields.io/badge/React-18-315fda.svg)](client/package.json)
+[![Firebase](https://img.shields.io/badge/Firebase-Auth%20%7C%20Firestore%20%7C%20Storage-f0a534.svg)](firebase.json)
 
-## Current release
+GlobeReady is a full-stack productivity workspace for international students. It brings documents, deadlines, official resources, profile-based guidance, and AI explanations into one focused application.
 
-The repository supports two modes:
+The repository demonstrates production-minded authentication, user-scoped data, secure file handling, AI integration, responsive product design, automated tests, and documented deployment.
 
-- **Demo mode:** safe sample data with no account, uploads, or API keys.
-- **Connected mode:** Firebase email/password and Google login, user-scoped Firestore data, Firebase Storage uploads, saved guides, verified API tokens, and optional Gemini answers and document explanations.
+> **Project status:** deployment-ready code with a credential-free demo mode. No public production deployment is attached to this repository.
 
-The product includes the personalized dashboard, document vault, tasks, trusted student guides, profile recommendations, responsive navigation, and sourced AI guidance. GlobeReady does not replace official government or university advice.
+![GlobeReady student dashboard](docs/assets/globeready-dashboard.jpg)
+
+## Product tour
+
+| Authentication | Document vault |
+| --- | --- |
+| ![GlobeReady login](docs/assets/globeready-login.jpg) | ![GlobeReady document vault](docs/assets/globeready-documents.jpg) |
+
+Users can:
+
+- Sign up with email and password or use Google through Firebase Authentication.
+- Store profile, task, document, and saved-resource data under their Firebase UID.
+- Upload PDF, PNG, and JPEG documents up to 10 MB.
+- Request plain-language Gemini explanations for an authorized document.
+- Track deadlines, complete tasks, and save official student resources.
+- Use the full responsive interface with safe sample data when credentials are unavailable.
+
+## Engineering highlights
+
+| Area | Implementation |
+| --- | --- |
+| Identity | Firebase Auth on the client; Firebase Admin ID-token verification on protected API routes |
+| Data isolation | Firestore records and Storage objects live below `users/{uid}` with matching security rules |
+| Document security | Type and size validation, sanitized filenames, user-folder checks before server-side analysis |
+| AI safety | Curated official sources, structured responses, disclaimers, prompt-injection guidance, per-user throttling |
+| Resilience | Deterministic assistant fallback when Gemini is unavailable; failed metadata writes clean up uploaded files |
+| Delivery | Vite 8 production build, Node.js 22 API, API Dockerfile, Vercel SPA routing, GitHub Actions |
+| Quality | 23 automated tests, clean production builds, zero npm audit findings |
 
 ## Architecture
 
-```text
-React + Vite
-    |
-    | Firebase ID token or explicit demo identity
-    v
-Express API
-    |
-    +-- user-scoped data store
-    +-- Firebase Admin verification
-    +-- optional Gemini assistant
-
-Firebase Auth + Firestore + Storage
+```mermaid
+flowchart LR
+    User["Student"] --> Client["React + Vite client"]
+    Client --> Auth["Firebase Authentication"]
+    Client --> Firestore["Firestore"]
+    Client --> Storage["Firebase Storage"]
+    Client --> API["Express API"]
+    API --> Admin["Firebase Admin token verification"]
+    API --> Firestore
+    API --> Storage
+    API --> Gemini["Gemini API"]
 ```
 
-See [Architecture](docs/ARCHITECTURE.md), [Privacy](docs/PRIVACY.md), and [Migration](docs/MIGRATION.md).
+The browser handles authenticated product data through Firebase. The Express service owns token verification, bounded AI requests, trusted-source selection, and document analysis. Demo mode keeps sample data in memory and never uploads identity documents.
 
-## Local setup
+## Technology
+
+- React 18, React Router, Vite 8
+- Firebase Authentication, Firestore, Storage, Admin SDK
+- Express 5 and Node.js 22
+- Google Gen AI SDK
+- Vitest, Testing Library, and Supertest
+- GitHub Actions and Docker
+
+## Run locally
 
 Requirements: Node.js 22.
 
 ```bash
+git clone https://github.com/shlokbhutani13/globeready.git
+cd globeready
 cp server/.env.example server/.env
 cp client/.env.example client/.env.local
-cd server && npm install && npm run dev
 ```
 
-In a second terminal:
+Start the API:
 
 ```bash
-cd client && npm install && npm run dev
+cd server
+npm install
+npm run dev
 ```
 
-Open `http://localhost:5173`, then choose **Continue in demo mode**. For connected mode, follow [Deployment](DEPLOYMENT.md) and add the Firebase client values to `client/.env.local` and server values to `server/.env`.
+Start the client in a second terminal:
+
+```bash
+cd client
+npm install
+npm run dev
+```
+
+Open `http://localhost:5173` and choose **Continue in demo mode**. Firebase and Gemini credentials are optional for the demo.
 
 ## Verification
 
 ```bash
-cd server && npm test && npm run lint
-cd ../client && npm test && npm run build
+cd server
+npm ci
+npm audit
+npm test
+npm run lint
+
+cd ../client
+npm ci
+npm audit
+npm test
+npm run build
 ```
 
-## Security model
+GitHub Actions runs the server and client checks on every push and pull request.
 
-- Protected API routes never trust a caller-provided user ID.
-- Live mode verifies Firebase ID tokens.
-- Demo mode requires an explicit demo identity header.
-- Firestore and Storage rules require `request.auth.uid == uid`.
-- Storage accepts only PDF, PNG, and JPEG files up to 10 MB.
-- Document analysis loads only a file recorded in the authenticated user's collection.
-- AI routes apply a configurable per-user request limit.
-- Local environment files are ignored.
+## Security and privacy
 
-Review Firebase Auth domains, API-key restrictions, Firestore rules, and Storage rules before a public deployment.
+- Protected API routes derive identity from verified Firebase tokens.
+- Firestore and Storage rules enforce `request.auth.uid == uid`.
+- The API rejects document paths outside the authenticated user's Storage folder.
+- AI endpoints apply a configurable per-user request limit.
+- Local environment files and production credentials stay outside Git.
+- GlobeReady provides general information, not legal, immigration, tax, health, or financial advice.
 
-## Release boundary
+Read [SECURITY.md](SECURITY.md) and [docs/PRIVACY.md](docs/PRIVACY.md) before configuring real identity documents.
 
-- The code is prepared for deployment but this repository does not contain production credentials.
-- Live Firebase and Gemini behavior still requires validation against the Firebase project you choose.
-- Demo uploads store metadata in memory and never send file contents.
-- Gemini remains optional. Without it, the assistant uses deterministic sourced guidance and document analysis explains that content was not read.
-- The app provides general information, not legal, immigration, tax, health, or financial advice.
-- Email, SMS, calendar, and push reminders are not implemented.
-- University-specific guidance is limited to curated resources.
+## Deployment
 
-## Project history
+The client and API deploy separately. [DEPLOYMENT.md](DEPLOYMENT.md) covers Firebase setup, environment variables, API packaging, Vercel routing, and the production release checklist.
 
-GlobeReady consolidates the useful product ideas and student-guide work from the former `int_students` prototype. The security model and interface were rebuilt rather than preserving its shared-user backend or tracked environment file.
+Live Firebase and Gemini flows require a credentialed end-to-end test against the chosen production project. Use synthetic documents during that validation.
+
+## Documentation
+
+- [Architecture](docs/ARCHITECTURE.md)
+- [Deployment guide](DEPLOYMENT.md)
+- [Privacy model](docs/PRIVACY.md)
+- [Roadmap](docs/ROADMAP.md)
+- [Migration from `int_students`](docs/MIGRATION.md)
+- [Contributing](CONTRIBUTING.md)
 
 ## License
 
