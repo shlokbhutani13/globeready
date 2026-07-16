@@ -11,7 +11,7 @@
     "lint": "vite build"
   },
   "dependencies": {
-    "react": "^18.2.0",
+    "react": "^19.2.7",
     "react-dom": "^18.2.0",
     "firebase": "^12.1.0",
     "lucide-react": "^0.468.0",
