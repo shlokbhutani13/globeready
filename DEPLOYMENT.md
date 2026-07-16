@@ -1,36 +1,19 @@
-# 🚀 Deploying Globe Ready
+# Deployment
 
-## Deploy to Railway (Easiest)
+## Demo deployment
 
-1. Go to https://railway.app
-2. Click "New Project"
-3. Click "Deploy from GitHub"
-4. Connect your GitHub account
-5. Select this repository
-6. Railway will auto-detect and deploy
+Deploy `client/` to Vercel, Netlify, or Firebase Hosting. The client works in demo mode without environment variables.
 
-Environment Variables to add:
+## Live deployment
 
-PORT=5051
-NODE_ENV=production
-AI_PROVIDER=ollama
-OLLAMA_BASE_URL=http://localhost:11434
-OLLAMA_MODEL=mistral
+1. Create a Firebase project.
+2. Enable email/password and Google authentication.
+3. Deploy `firestore.rules` and `storage.rules`.
+4. Restrict the Firebase web API key to approved domains and APIs.
+5. Deploy `server/` to a Node.js 22 host.
+6. Configure the values from `.env.example`.
+7. Set `VITE_API_URL` to the deployed API and rebuild the client.
+8. Add the client origin to `CLIENT_URL`.
+9. Run all tests and builds before production traffic.
 
-## Deploy to Heroku
-```bash
-heroku login
-heroku create your-app-name
-git push heroku main
-```
-
-## Deploy with Docker
-```bash
-docker build -t globeready .
-docker run -p 5051:5051 globeready
-```
-
-## Production URLs
-
-- Frontend: https://your-domain.com
-- Backend: https://your-domain.com/api
+Do not use real identity documents while testing a new Firebase configuration.
