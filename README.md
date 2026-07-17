@@ -7,6 +7,11 @@
 
 GlobeReady is a full-stack productivity workspace for international students. It brings documents, deadlines, official resources, profile-based guidance, and AI explanations into one focused application.
 
+## See it in action
+
+- [Project overview in my portfolio](https://shlokbhutani13.github.io/)
+- [Browse the source code](https://github.com/shlokbhutani13/globeready)
+
 The repository demonstrates production-minded authentication, user-scoped data, secure file handling, AI integration, responsive product design, automated tests, and documented deployment.
 
 > **Project status:** deployment-ready code with a credential-free demo mode. No public production deployment is attached to this repository.
