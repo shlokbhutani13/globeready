@@ -5,16 +5,17 @@
 [![React 18](https://img.shields.io/badge/React-18-315fda.svg)](client/package.json)
 [![Firebase](https://img.shields.io/badge/Firebase-Auth%20%7C%20Firestore%20%7C%20Storage-f0a534.svg)](firebase.json)
 
-GlobeReady is a full-stack productivity workspace for international students. It brings documents, deadlines, official resources, profile-based guidance, and AI explanations into one focused application.
+GlobeReady is a full-stack productivity workspace for international students. It brings documents, deadlines, official resources, profile-based guidance, and document-grounded AI explanations into one focused application.
 
 ## See it in action
 
-- [Project overview in my portfolio](https://shlokbhutani13.github.io/)
+- [Open the public Firebase preview](https://globe-ready.web.app/)
+- [View the project portfolio](https://shlokbhutani13.github.io/)
 - [Browse the source code](https://github.com/shlokbhutani13/globeready)
 
 The repository demonstrates production-minded authentication, user-scoped data, secure file handling, AI integration, responsive product design, automated tests, and documented deployment.
 
-> **Project status:** deployment-ready code with a credential-free demo mode. No public production deployment is attached to this repository.
+> **Project status:** the public preview runs the Firebase-backed workspace with document uploads and live RAG disabled. The repository contains the tested RAG implementation. Enabling it requires Firebase Storage billing, a deployed API, and a private Gemini key.
 
 ![GlobeReady student dashboard](docs/assets/globeready-dashboard.jpg)
 
@@ -28,8 +29,8 @@ Users can:
 
 - Sign up with email and password or use Google through Firebase Authentication.
 - Store profile, task, document, and saved-resource data under their Firebase UID.
-- Upload PDF, PNG, and JPEG documents up to 10 MB.
-- Request plain-language Gemini explanations for an authorized document.
+- Upload PDF, PNG, and JPEG documents up to 10 MB when Storage is enabled.
+- Index an authorized PDF into private chunks, retrieve relevant excerpts, and receive Gemini answers with document citations.
 - Track deadlines, complete tasks, and save official student resources.
 - Use the full responsive interface with safe sample data when credentials are unavailable.
 
@@ -38,12 +39,12 @@ Users can:
 | Area | Implementation |
 | --- | --- |
 | Identity | Firebase Auth on the client; Firebase Admin ID-token verification on protected API routes |
-| Data isolation | Firestore records and Storage objects live below `users/{uid}` with matching security rules |
+| Data isolation | Firestore records and Storage objects live below `users/{uid}`; RAG chunks are server-only |
 | Document security | Type and size validation, sanitized filenames, user-folder checks before server-side analysis |
-| AI safety | Curated official sources, structured responses, disclaimers, prompt-injection guidance, per-user throttling |
+| AI safety | Private RAG retrieval, citations, curated official sources, structured responses, disclaimers, prompt-injection guidance, per-user throttling |
 | Resilience | Deterministic assistant fallback when Gemini is unavailable; failed metadata writes clean up uploaded files |
-| Delivery | Vite 8 production build, Node.js 22 API, API Dockerfile, Vercel SPA routing, GitHub Actions |
-| Quality | 23 automated tests, clean production builds, zero npm audit findings |
+| Delivery | Vite 8 production build, Firebase Hosting or Vercel SPA routing, Node.js 22 API Dockerfile, GitHub Actions |
+| Quality | Automated server and client tests, clean production builds, zero npm audit findings |
 
 ## Architecture
 
@@ -57,10 +58,13 @@ flowchart LR
     API --> Admin["Firebase Admin token verification"]
     API --> Firestore
     API --> Storage
-    API --> Gemini["Gemini API"]
+    API --> Parser["PDF extraction + chunking"]
+    Parser --> Chunks["Private Firestore RAG chunks"]
+    API --> Chunks
+    API --> Gemini["Gemini embeddings + answers"]
 ```
 
-The browser handles authenticated product data through Firebase. The Express service owns token verification, bounded AI requests, trusted-source selection, and document analysis. Demo mode keeps sample data in memory and never uploads identity documents.
+The browser handles authenticated product data through Firebase. The Express service owns token verification, bounded AI requests, trusted-source selection, PDF extraction, embedding retrieval, and cited document answers. Each document's chunks remain beneath the owning Firebase UID; another user's chunks are never queried. Demo mode keeps sample data in memory and never uploads identity documents.
 
 ## Technology
 
@@ -131,7 +135,7 @@ Read [SECURITY.md](SECURITY.md) and [docs/PRIVACY.md](docs/PRIVACY.md) before co
 
 ## Deployment
 
-The client and API deploy separately. [DEPLOYMENT.md](DEPLOYMENT.md) covers Firebase setup, environment variables, API packaging, Vercel routing, and the production release checklist.
+The client and API deploy separately. [DEPLOYMENT.md](DEPLOYMENT.md) covers Firebase setup, the upload feature flag, environment variables, API packaging, hosting, and the production release checklist.
 
 Live Firebase and Gemini flows require a credentialed end-to-end test against the chosen production project. Use synthetic documents during that validation.
 

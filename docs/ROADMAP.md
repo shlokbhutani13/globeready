@@ -4,8 +4,9 @@
 
 - Firebase email/password and Google authentication
 - User-scoped profiles, tasks, saved resources, and document metadata
-- Firebase Storage upload and deletion
-- Gemini assistant and document explanations with a deterministic fallback
+- Firebase Storage upload and deletion behind an explicit deployment switch
+- Private PDF chunking, Gemini embeddings, scoped retrieval, and cited answers
+- Deterministic trusted-resource guidance when live AI or relevant document context is unavailable
 - Official student resource library
 - Responsive desktop and mobile interface
 - Ownership rules, request throttling, tests, CI, and deployment documentation
@@ -18,6 +19,7 @@
 - Assistant conversation history
 - Document expiration notifications
 - Firebase emulator integration tests
+- Credentialed synthetic-document tests against the chosen deployment
 
 ## Later
 

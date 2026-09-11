@@ -25,3 +25,4 @@ const app = firebaseConfigured
 export const auth = app ? getAuth(app) : null;
 export const db = app ? getFirestore(app) : null;
 export const storage = app ? getStorage(app) : null;
+export const storageAvailable = Boolean(storage && import.meta.env.VITE_DOCUMENT_UPLOADS_ENABLED === "true");

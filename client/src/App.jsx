@@ -10,8 +10,9 @@ import AssistantPage from "./pages/AssistantPage";
 import ProfilePage from "./pages/ProfilePage";
 import { useAuth } from "./lib/auth-context";
 import { apiRequest } from "./lib/api";
+import { storageAvailable } from "./lib/firebase";
 import {
-  createTask, removeDocument, removeTask, saveProfile, subscribeStudentData,
+  createTask, removeDocument, removeTask, saveProfile, saveResource, subscribeStudentData,
   toggleTask, uploadDocument,
 } from "./lib/student-data";
 
@@ -47,11 +48,9 @@ export default function App() {
       profile: (value) => setProfile({ ...emptyProfile, fullName: auth.user.displayName || "", ...value }),
       tasks: setTasks,
       documents: setDocuments,
+      savedResources: setSavedResources,
       error: (error) => setAppError(error?.message || "Could not load your workspace."),
     });
-    apiRequest("/api/resources")
-      .then(setSavedResources)
-      .catch((error) => setAppError(error.message));
     return () => unsubscribers.forEach((unsubscribe) => unsubscribe());
   }, [auth.user]);
 
@@ -78,6 +77,10 @@ export default function App() {
   const addDocument = async (file) => {
     if (live) {
       setAppError("");
+      if (!storageAvailable) {
+        setAppError("Document uploads are not enabled for this deployment.");
+        return;
+      }
       setUploadProgress(1);
       try {
         await uploadDocument(auth.user.uid, file, setUploadProgress);
@@ -90,7 +93,11 @@ export default function App() {
     }
   };
   const deleteDocument = async (document) => live
-    ? removeDocument(auth.user.uid, document).catch((error) => setAppError(error.message))
+    ? removeDocument(
+      auth.user.uid,
+      document,
+      () => apiRequest(`/api/documents/${document.id}`, { method: "DELETE" }),
+    ).catch((error) => setAppError(error.message))
     : setDocuments(documents.filter((item) => item.id !== document.id));
   const analyzeDocument = async (document) => {
     if (!live) {
@@ -101,13 +108,15 @@ export default function App() {
       return;
     }
     setAppError("");
-    const analysis = await apiRequest(`/api/documents/${document.id}/analyze`, { method: "POST" })
+    setDocuments((current) => current.map((item) => item.id === document.id ? { ...item, analysisStatus: "indexing" } : item));
+    const analysis = await apiRequest(`/api/documents/${document.id}/index`, { method: "POST" })
       .catch((error) => {
         setAppError(error.message);
+        setDocuments((current) => current.map((item) => item.id === document.id ? { ...item, analysisStatus: "index_failed" } : item));
         return null;
       });
     if (!analysis) return;
-    setDocuments((current) => current.map((item) => item.id === document.id ? { ...item, analysis } : item));
+    setDocuments((current) => current.map((item) => item.id === document.id ? { ...item, analysis, analysisStatus: "indexed" } : item));
   };
   const updateProfile = async (value) => {
     setProfile(value);
@@ -120,16 +129,7 @@ export default function App() {
   };
   const saveGuide = async (guide) => {
     if (!live) return;
-    const resource = await apiRequest("/api/resources", {
-      method: "POST",
-      body: JSON.stringify({
-        title: guide.title,
-        url: guide.url,
-        category: guide.category,
-        source: guide.source,
-      }),
-    });
-    setSavedResources((current) => [...current, resource]);
+    await saveResource(auth.user.uid, guide);
   };
 
   return (
@@ -138,10 +138,10 @@ export default function App() {
       <Routes>
         <Route element={<AppShell onSignOut={signOut} />}>
           <Route index element={<DashboardPage profile={profile} tasks={tasks} documents={documents} />} />
-          <Route path="documents" element={<DocumentsPage documents={documents} uploadProgress={uploadProgress} onAdd={addDocument} onDelete={deleteDocument} onAnalyze={analyzeDocument} />} />
+          <Route path="documents" element={<DocumentsPage documents={documents} uploadProgress={uploadProgress} storageAvailable={!live || storageAvailable} onAdd={addDocument} onDelete={deleteDocument} onAnalyze={analyzeDocument} />} />
           <Route path="tasks" element={<TasksPage tasks={tasks} onAdd={addTask} onToggle={changeTask} onDelete={deleteTask} />} />
           <Route path="guides" element={<GuidesPage onSave={saveGuide} savedUrls={savedResources.map((resource) => resource.url)} />} />
-          <Route path="assistant" element={<AssistantPage />} />
+          <Route path="assistant" element={<AssistantPage documents={documents.filter((document) => document.analysisStatus === "indexed")} />} />
           <Route path="profile" element={<ProfilePage profile={profile} onSave={updateProfile} />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

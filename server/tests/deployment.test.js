@@ -1,4 +1,6 @@
 import request from "supertest";
+import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
 import { describe, expect, test, vi } from "vitest";
 
 import { createApp } from "../src/app.js";
@@ -6,6 +8,12 @@ import { normalizePrivateKey } from "../src/firebase-admin.js";
 import { createDemoStore } from "../src/store.js";
 
 describe("deployment services", () => {
+  test("documents the storage billing gate and client upload switch", async () => {
+    const deployment = await readFile(resolve(process.cwd(), "../DEPLOYMENT.md"), "utf8");
+    expect(deployment).toContain("Blaze");
+    expect(deployment).toContain("VITE_DOCUMENT_UPLOADS_ENABLED=true");
+  });
+
   test("normalizes escaped service-account private keys", () => {
     expect(normalizePrivateKey("line-one\\nline-two")).toBe("line-one\nline-two");
   });

@@ -32,6 +32,42 @@ function collectionStore(firestore, name) {
   };
 }
 
+function ragChunkStore(firestore) {
+  const reference = (uid) => firestore.collection("users").doc(uid).collection("ragChunks");
+
+  return {
+    async list(uid, { documentId } = {}) {
+      let query = reference(uid);
+      if (documentId) query = query.where("documentId", "==", documentId);
+      const snapshot = await query.get();
+      return snapshot.docs
+        .map((doc) => ({ id: doc.id, ...doc.data() }))
+        .sort((left, right) => left.index - right.index);
+    },
+    async replace(uid, documentId, chunks) {
+      const existing = await reference(uid).where("documentId", "==", documentId).get();
+      const batch = firestore.batch();
+      for (const document of existing.docs) batch.delete(document.ref);
+
+      const now = new Date();
+      const stored = chunks.map((chunk) => {
+        const id = randomUUID();
+        const item = { ...chunk, documentId, createdAt: now, updatedAt: now };
+        batch.set(reference(uid).doc(id), item);
+        return { id, ...item };
+      });
+      await batch.commit();
+      return stored;
+    },
+    async removeForDocument(uid, documentId) {
+      const existing = await reference(uid).where("documentId", "==", documentId).get();
+      const batch = firestore.batch();
+      for (const document of existing.docs) batch.delete(document.ref);
+      await batch.commit();
+    },
+  };
+}
+
 export function createFirestoreStore(firestore) {
   return {
     profiles: {
@@ -49,5 +85,6 @@ export function createFirestoreStore(firestore) {
     documents: collectionStore(firestore, "documents"),
     resources: collectionStore(firestore, "savedResources"),
     conversations: collectionStore(firestore, "conversations"),
+    ragChunks: ragChunkStore(firestore),
   };
 }

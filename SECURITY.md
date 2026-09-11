@@ -22,5 +22,6 @@ GlobeReady expects production operators to:
 - Keep Firebase Admin and Gemini credentials in encrypted host environment settings.
 - Restrict Firebase authorized domains and API-key usage.
 - Deploy the checked-in Firestore and Storage rules.
+- Keep `ragChunks` inaccessible to browser clients and manage it only through the authenticated API.
 - Publish retention, deletion, and AI-processing policies before accepting identity documents.
-- Validate authentication, cross-user isolation, upload deletion, and document analysis with two test accounts before launch.
+- Validate authentication, cross-user isolation, upload deletion, chunk deletion, and cited document answers with two test accounts before launch.

@@ -3,7 +3,7 @@ import {
   serverTimestamp, setDoc, updateDoc,
 } from "firebase/firestore";
 import { deleteObject, ref, uploadBytesResumable } from "firebase/storage";
-import { db, storage } from "./firebase";
+import { db, storage, storageAvailable } from "./firebase";
 
 export function sanitizeFilename(name) {
   const parts = name.split(".");
@@ -20,11 +20,13 @@ export function subscribeStudentData(uid, handlers) {
   const userRef = doc(db, "users", uid);
   const tasksRef = query(collection(db, "users", uid, "tasks"), orderBy("createdAt", "desc"));
   const docsRef = query(collection(db, "users", uid, "documents"), orderBy("uploadedAt", "desc"));
+  const resourcesRef = query(collection(db, "users", uid, "savedResources"), orderBy("createdAt", "desc"));
   const onError = (error) => handlers.error?.(error);
   return [
     onSnapshot(userRef, (snapshot) => handlers.profile(snapshot.exists() ? snapshot.data() : {}), onError),
     onSnapshot(tasksRef, (snapshot) => handlers.tasks(snapshot.docs.map((item) => ({ id: item.id, ...item.data() }))), onError),
     onSnapshot(docsRef, (snapshot) => handlers.documents(snapshot.docs.map((item) => ({ id: item.id, ...item.data() }))), onError),
+    onSnapshot(resourcesRef, (snapshot) => handlers.savedResources?.(snapshot.docs.map((item) => ({ id: item.id, ...item.data() }))), onError),
   ];
 }
 
@@ -39,6 +41,17 @@ export function createTask(uid, title) {
   });
 }
 
+export function saveResource(uid, resource) {
+  return addDoc(collection(db, "users", uid, "savedResources"), {
+    title: resource.title,
+    url: resource.url,
+    category: resource.category,
+    source: resource.source,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+}
+
 export function toggleTask(uid, task) {
   return updateDoc(doc(db, "users", uid, "tasks", task.id), {
     completed: !task.completed, updatedAt: serverTimestamp(),
@@ -50,6 +63,9 @@ export function removeTask(uid, id) {
 }
 
 export async function uploadDocument(uid, file, onProgress = () => {}) {
+  if (!storageAvailable) {
+    throw new Error("Document uploads are not enabled for this deployment.");
+  }
   const documentRef = doc(collection(db, "users", uid, "documents"));
   const storagePath = documentStoragePath(uid, documentRef.id, file.name);
   const task = uploadBytesResumable(ref(storage, storagePath), file, { contentType: file.type });
@@ -70,9 +86,13 @@ export async function uploadDocument(uid, file, onProgress = () => {}) {
   return { id: documentRef.id, ...metadata };
 }
 
-export async function removeDocument(uid, document) {
+export async function removeDocument(
+  uid,
+  document,
+  removeMetadata = () => deleteDoc(doc(db, "users", uid, "documents", document.id)),
+) {
   if (document.storagePath) await deleteObject(ref(storage, document.storagePath)).catch((error) => {
     if (error?.code !== "storage/object-not-found") throw error;
   });
-  await deleteDoc(doc(db, "users", uid, "documents", document.id));
+  await removeMetadata();
 }

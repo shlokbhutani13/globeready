@@ -9,14 +9,16 @@ import { createGeminiAssistant } from "./gemini.js";
 const port = Number(process.env.PORT || 5051);
 const firebase = createFirebaseAdmin();
 const fallback = createAssistant();
+const store = firebase?.firestore ? createFirestoreStore(firebase.firestore) : undefined;
 const assistant = createGeminiAssistant({
   apiKey: process.env.GEMINI_API_KEY,
   bucket: firebase?.bucket,
+  store,
   fallback,
 });
 const app = createApp({
   auth: firebase?.auth || null,
-  store: firebase?.firestore ? createFirestoreStore(firebase.firestore) : undefined,
+  store,
   assistant,
 });
 

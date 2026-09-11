@@ -10,6 +10,11 @@ describe("Firebase ownership rules", () => {
     expect(rules).toContain("request.auth.uid == uid");
   });
 
+  test("Firestore rules reserve RAG chunks for the trusted server", async () => {
+    const rules = await readFile(resolve(root, "firestore.rules"), "utf8");
+    expect(rules).toContain("collection != 'ragChunks'");
+  });
+
   test("Storage rules require the authenticated uid", async () => {
     const rules = await readFile(resolve(root, "storage.rules"), "utf8");
     expect(rules).toContain("request.auth.uid == uid");

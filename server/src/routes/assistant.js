@@ -11,7 +11,15 @@ export function assistantRouter(store, assistant, aiLimiter = (_request, _respon
       });
     }
     const profile = await store.profiles.get(request.user.uid);
-    response.json({ data: await assistant.answer({ question, profile }) });
+    const documentId = cleanText(request.body.documentId, 200) || undefined;
+    response.json({
+      data: await assistant.answer({
+        uid: request.user.uid,
+        question,
+        profile,
+        documentId,
+      }),
+    });
   });
   return router;
 }

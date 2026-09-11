@@ -32,6 +32,44 @@ function createCollection() {
   };
 }
 
+function createRagChunkCollection() {
+  const byUser = new Map();
+  const userItems = (uid) => {
+    if (!byUser.has(uid)) byUser.set(uid, new Map());
+    return byUser.get(uid);
+  };
+
+  return {
+    async list(uid, { documentId } = {}) {
+      return [...userItems(uid).values()]
+        .filter((item) => !documentId || item.documentId === documentId)
+        .sort((left, right) => left.index - right.index);
+    },
+    async replace(uid, documentId, chunks) {
+      const items = userItems(uid);
+      for (const [id, item] of items) {
+        if (item.documentId === documentId) items.delete(id);
+      }
+      const now = new Date().toISOString();
+      const stored = chunks.map((chunk) => ({
+        id: randomUUID(),
+        ...chunk,
+        documentId,
+        createdAt: now,
+        updatedAt: now,
+      }));
+      for (const item of stored) items.set(item.id, item);
+      return stored;
+    },
+    async removeForDocument(uid, documentId) {
+      const items = userItems(uid);
+      for (const [id, item] of items) {
+        if (item.documentId === documentId) items.delete(id);
+      }
+    },
+  };
+}
+
 export function createDemoStore() {
   const profiles = new Map();
   return {
@@ -54,5 +92,6 @@ export function createDemoStore() {
     documents: createCollection(),
     resources: createCollection(),
     conversations: createCollection(),
+    ragChunks: createRagChunkCollection(),
   };
 }
