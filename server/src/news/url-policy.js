@@ -3,9 +3,48 @@ import { BlockList, isIP } from "node:net";
 
 const blockedIpv4Addresses = new BlockList();
 const blockedIpv6Addresses = new BlockList();
-const globallyRoutableIpv6Addresses = new BlockList();
+const allocatedIpv6Addresses = new BlockList();
 
-globallyRoutableIpv6Addresses.addSubnet("2000::", 3, "ipv6");
+for (const [network, prefix] of [
+  ["2001::", 23],
+  ["2001:200::", 23],
+  ["2001:400::", 23],
+  ["2001:600::", 23],
+  ["2001:800::", 22],
+  ["2001:c00::", 23],
+  ["2001:e00::", 23],
+  ["2001:1200::", 23],
+  ["2001:1400::", 22],
+  ["2001:1800::", 23],
+  ["2001:1a00::", 23],
+  ["2001:1c00::", 22],
+  ["2001:2000::", 19],
+  ["2001:4000::", 23],
+  ["2001:4200::", 23],
+  ["2001:4400::", 23],
+  ["2001:4600::", 23],
+  ["2001:4800::", 23],
+  ["2001:4a00::", 23],
+  ["2001:4c00::", 23],
+  ["2001:5000::", 20],
+  ["2001:8000::", 19],
+  ["2001:a000::", 20],
+  ["2001:b000::", 20],
+  ["2002::", 16],
+  ["2003::", 18],
+  ["2400::", 12],
+  ["2410::", 12],
+  ["2600::", 12],
+  ["2610::", 23],
+  ["2620::", 23],
+  ["2630::", 12],
+  ["2800::", 12],
+  ["2a00::", 12],
+  ["2a10::", 12],
+  ["2c00::", 12],
+]) {
+  allocatedIpv6Addresses.addSubnet(network, prefix, "ipv6");
+}
 
 for (const [network, prefix] of [
   ["0.0.0.0", 8],
@@ -57,7 +96,7 @@ function normalizeConfiguredHostname(value) {
   const raw = value.trim();
   const literal = normalizeHostname(raw);
   if (isIP(literal)) return literal;
-  if (/[:/@?#]/u.test(raw)) {
+  if (raw !== value || raw.includes("\\") || /[/:@?#\s]/u.test(raw)) {
     throw new Error(`Source host allowlist entry is invalid: ${value}`);
   }
 
@@ -78,7 +117,7 @@ function assertPublicAddress(address, family) {
 
   const blocked = detectedFamily === 4
     ? blockedIpv4Addresses.check(address, "ipv4")
-    : !globallyRoutableIpv6Addresses.check(address, "ipv6")
+    : !allocatedIpv6Addresses.check(address, "ipv6")
       || blockedIpv6Addresses.check(address, "ipv6");
   if (blocked) {
     throw new Error(`Source hostname must resolve only to public IP addresses: ${address}`);

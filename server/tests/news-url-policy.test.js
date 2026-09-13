@@ -55,6 +55,12 @@ describe("official source URL policy", () => {
     "100::1",
     "2001:db8::1",
     "2002:7f00:1::",
+    "2420::1",
+    "2640::1",
+    "2a20::1",
+    "2d00::1",
+    "3000::1",
+    "3800::1",
     "4000::1",
     "fc00::1",
     "fdff:ffff::1",
@@ -98,6 +104,25 @@ describe("official source URL policy", () => {
     )).resolves.toEqual(expect.objectContaining({ hostname: "official.example" }));
   });
 
+  test.each([
+    "2001:4860:4860::8888",
+    "2404:6800:4003::200e",
+    "241f:ffff:ffff:ffff::1",
+    "2606:4700:4700::1111",
+    "2620:fe::fe",
+    "263f:ffff:ffff:ffff::1",
+    "2800:3f0:4001::200e",
+    "2a00:1450:4001:81b::200e",
+    "2a1f:ffff:ffff:ffff::1",
+    "2c0f:f248::1",
+  ])("accepts IANA-allocated global-unicast IPv6 destination %s", async (address) => {
+    await expect(assertAllowedSourceUrl(
+      "https://official.example/news",
+      { allowedHosts: ["official.example"] },
+      { resolveHost: async () => [{ address, family: 6 }] },
+    )).resolves.toEqual(expect.objectContaining({ hostname: "official.example" }));
+  });
+
   test("normalizes configured internationalized hosts through IDNA", async () => {
     const resolveHost = vi.fn(async () => [{ address: "23.1.1.1", family: 4 }]);
 
@@ -107,5 +132,13 @@ describe("official source URL policy", () => {
       { resolveHost },
     )).resolves.toEqual(expect.objectContaining({ hostname: "xn--bcher-kva.example" }));
     expect(resolveHost).toHaveBeenCalledWith("xn--bcher-kva.example", { all: true });
+  });
+
+  test("rejects a backslash-ambiguous configured hostname", async () => {
+    await expect(assertAllowedSourceUrl(
+      "https://official.example/news",
+      { allowedHosts: ["official.example\\evil.example"] },
+      { resolveHost: async () => [{ address: "23.1.1.1", family: 4 }] },
+    )).rejects.toThrow(/allowlist entry is invalid/i);
   });
 });
