@@ -29,6 +29,24 @@ function isNonBlankString(value) {
   return typeof value === "string" && value.trim().length > 0;
 }
 
+function hasExplicitPort(value) {
+  const schemeEnd = value.indexOf("://");
+  if (schemeEnd === -1) return false;
+
+  const authorityStart = schemeEnd + 3;
+  const pathStart = value.slice(authorityStart).search(/[/?#]/u);
+  const authority = pathStart === -1
+    ? value.slice(authorityStart)
+    : value.slice(authorityStart, authorityStart + pathStart);
+  const hostPort = authority.slice(authority.lastIndexOf("@") + 1);
+
+  if (hostPort.startsWith("[")) {
+    const closingBracket = hostPort.indexOf("]");
+    return closingBracket !== -1 && hostPort[closingBracket + 1] === ":";
+  }
+  return hostPort.includes(":");
+}
+
 function documentError(message) {
   return new Error(`Federal Register document is invalid: ${message}`);
 }
@@ -45,6 +63,7 @@ function assertExpectedField(document, field, predicate) {
 
 function parseHttpsUrl(value, host, label) {
   if (!isNonBlankString(value)) throw documentError(`${label} URL is missing.`);
+  if (hasExplicitPort(value)) throw documentError(`${label} URL must not include a port.`);
 
   let url;
   try {
@@ -99,10 +118,12 @@ function firstString(values) {
 
 function assertAgency(agency) {
   if (!isRecord(agency)) throw documentError("expected agency metadata.");
+  const rawName = hasOwn(agency, "raw_name") ? agency.raw_name : null;
+  const name = hasOwn(agency, "name") ? agency.name : null;
   if (
-    (!hasOwn(agency, "raw_name") || (agency.raw_name !== null && typeof agency.raw_name !== "string"))
-    || (!hasOwn(agency, "name") || (agency.name !== null && typeof agency.name !== "string"))
-    || (!isNonBlankString(agency.raw_name) && !isNonBlankString(agency.name))
+    (rawName !== null && typeof rawName !== "string")
+    || (name !== null && typeof name !== "string")
+    || (!isNonBlankString(rawName) && !isNonBlankString(name))
   ) {
     throw documentError("expected agency name metadata.");
   }
@@ -136,7 +157,7 @@ function assertResponse(response) {
   if (!isRecord(response) || !Array.isArray(response.results)) {
     throw responseError("expected an object with a results array.");
   }
-  if (!hasOwn(response, "next_page_url") || (response.next_page_url !== null && typeof response.next_page_url !== "string")) {
+  if (hasOwn(response, "next_page_url") && response.next_page_url !== null && typeof response.next_page_url !== "string") {
     throw responseError("expected next_page_url to be a string or null.");
   }
 }
@@ -149,8 +170,9 @@ function requestKey(value) {
 }
 
 function paginationUrl(value) {
-  if (value === null) return null;
+  if (value === null || value === undefined) return null;
   if (!isNonBlankString(value)) throw new Error("Federal Register pagination URL is invalid.");
+  if (hasExplicitPort(value)) throw new Error("Federal Register pagination URL is invalid.");
 
   let url;
   try {

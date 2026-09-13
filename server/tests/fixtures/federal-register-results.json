@@ -1,15 +1,22 @@
 {
+  "capture": {
+    "source": "Federal Register API document detail endpoints",
+    "captured_on": "2026-09-13",
+    "documents": [
+      "https://www.federalregister.gov/api/v1/documents/2026-14439.json",
+      "https://www.federalregister.gov/api/v1/documents/2026-14440.json"
+    ]
+  },
   "count": 2,
   "total_pages": 1,
   "next_page_url": null,
   "results": [
     {
-      "abstract": "This final rule establishes a fixed admission period for F, J, and I nonimmigrants and makes related changes to departure procedures.",
+      "abstract": "The Department of Homeland Security (DHS) is amending its regulations to change the admission period in the F, J, and I classifications from duration of status to an admission for a fixed time period, and additional changes to admission and extension requirements. This final rule will provide additional protections and oversight of these nonimmigrant categories and will allow DHS to better evaluate whether these nonimmigrants are maintaining status while temporarily in the United States. This final rule provides amendments to the proposed rule covering this topic that was published in the Federal Register on August 28, 2025.",
       "agencies": [
         {
-          "name": "Homeland Security Department",
           "raw_name": "DEPARTMENT OF HOMELAND SECURITY",
-          "url": "https://www.federalregister.gov/agencies/homeland-security-department"
+          "name": "Homeland Security Department"
         }
       ],
       "document_number": "2026-14439",
@@ -17,40 +24,38 @@
         "DHS Docket No. ICEB-2025-0001"
       ],
       "effective_on": "2026-09-15",
-      "html_url": "https://www.federalregister.gov/documents/2026/07/17/2026-14439/fixed-admission-periods-for-f-j-and-i-nonimmigrants",
+      "html_url": "https://www.federalregister.gov/documents/2026/07/17/2026-14439/establishing-a-fixed-time-period-of-admission-and-an-extension-of-stay-procedure-for-nonimmigrant",
       "pdf_url": "https://www.govinfo.gov/content/pkg/FR-2026-07-17/pdf/2026-14439.pdf",
       "publication_date": "2026-07-17",
       "regulation_id_numbers": [
         "1653-AA95"
       ],
-      "title": "Fixed Admission Periods for F, J, and I Nonimmigrants",
+      "title": "Establishing a Fixed Time Period of Admission and an Extension of Stay Procedure for Nonimmigrant Academic Students, Exchange Visitors, and Representatives of Foreign Information Media",
       "type": "Rule"
     },
     {
-      "abstract": "The Environmental Protection Agency announces a pesticide tolerance exemption.",
+      "abstract": "The Food and Drug Administration (FDA or Agency) is announcing an opportunity for public comment on the proposed collection of certain information by the Agency. Under the Paperwork Reduction Act of 1995 (PRA), Federal Agencies are required to publish notice in the Federal Register concerning each proposed collection of information, including each proposed extension of an existing collection of information, and to allow 60 days for public comment in response to the notice. This notice solicits comments on the Adverse Event Program for Medical Devices (Medical Program Safety Network (MedSun)).",
       "agencies": [
         {
-          "name": "Environmental Protection Agency",
-          "raw_name": "ENVIRONMENTAL PROTECTION AGENCY",
-          "url": "https://www.federalregister.gov/agencies/environmental-protection-agency"
+          "raw_name": "DEPARTMENT OF HEALTH AND HUMAN SERVICES",
+          "name": "Health and Human Services Department"
         },
         {
-          "name": "Office of Pesticide Programs",
-          "raw_name": null,
-          "url": "https://www.federalregister.gov/agencies/environmental-protection-agency"
+          "raw_name": "Food and Drug Administration",
+          "name": "Food and Drug Administration"
         }
       ],
       "document_number": "2026-14440",
       "docket_ids": [
-        "EPA-HQ-OPP-2026-0001"
+        "Docket No. FDA-2026-N-7129"
       ],
       "effective_on": null,
-      "html_url": "https://www.federalregister.gov/documents/2026/07/17/2026-14440/pesticide-tolerance-exemption",
+      "html_url": "https://www.federalregister.gov/documents/2026/07/17/2026-14440/agency-information-collection-activities-proposed-collection-comment-request-adverse-event-program",
       "pdf_url": "https://www.govinfo.gov/content/pkg/FR-2026-07-17/pdf/2026-14440.pdf",
       "publication_date": "2026-07-17",
       "regulation_id_numbers": [],
-      "title": "Pesticide Tolerance Exemption",
-      "type": "Rule"
+      "title": "Agency Information Collection Activities; Proposed Collection; Comment Request; Adverse Event Program for Medical Devices: (Medical Product Safety Network (MedSun))",
+      "type": "Notice"
     }
   ]
 }

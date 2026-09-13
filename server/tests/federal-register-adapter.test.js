@@ -43,9 +43,9 @@ describe("Federal Register adapter", () => {
     expect(candidates).toHaveLength(2);
     expect(candidates[0]).toMatchObject({
       externalId: "2026-14439",
-      canonicalUrl: "https://www.federalregister.gov/documents/2026/07/17/2026-14439/fixed-admission-periods-for-f-j-and-i-nonimmigrants",
+      canonicalUrl: "https://www.federalregister.gov/documents/2026/07/17/2026-14439/establishing-a-fixed-time-period-of-admission-and-an-extension-of-stay-procedure-for-nonimmigrant",
       officialPdfUrl: "https://www.govinfo.gov/content/pkg/FR-2026-07-17/pdf/2026-14439.pdf",
-      title: "Fixed Admission Periods for F, J, and I Nonimmigrants",
+      title: "Establishing a Fixed Time Period of Admission and an Extension of Stay Procedure for Nonimmigrant Academic Students, Exchange Visitors, and Representatives of Foreign Information Media",
       publisher: "DEPARTMENT OF HOMELAND SECURITY",
       publishedAt: "2026-07-17",
       updatedAt: null,
@@ -53,13 +53,13 @@ describe("Federal Register adapter", () => {
       sourceDocumentType: "Rule",
       docketNumber: "DHS Docket No. ICEB-2025-0001",
       regulationIdNumber: "1653-AA95",
-      excerpt: "This final rule establishes a fixed admission period for F, J, and I nonimmigrants and makes related changes to departure procedures.",
-      normalizedText: "This final rule establishes a fixed admission period for F, J, and I nonimmigrants and makes related changes to departure procedures.",
+      excerpt: "The Department of Homeland Security (DHS) is amending its regulations to change the admission period in the F, J, and I classifications from duration of status to an admission for a fixed time period, and additional changes to admission and extension requirements. This final rule will provide additional protections and oversight of these nonimmigrant categories and will allow DHS to better evaluate whether these nonimmigrants are maintaining status while temporarily in the United States. This final rule provides amendments to the proposed rule covering this topic that was published in the Federal Register on August 28, 2025.",
+      normalizedText: "The Department of Homeland Security (DHS) is amending its regulations to change the admission period in the F, J, and I classifications from duration of status to an admission for a fixed time period, and additional changes to admission and extension requirements. This final rule will provide additional protections and oversight of these nonimmigrant categories and will allow DHS to better evaluate whether these nonimmigrants are maintaining status while temporarily in the United States. This final rule provides amendments to the proposed rule covering this topic that was published in the Federal Register on August 28, 2025.",
     });
     expect(candidates[1]).toMatchObject({
       externalId: "2026-14440",
-      publisher: "ENVIRONMENTAL PROTECTION AGENCY, Office of Pesticide Programs",
-      title: "Pesticide Tolerance Exemption",
+      publisher: "DEPARTMENT OF HEALTH AND HUMAN SERVICES, Food and Drug Administration",
+      title: "Agency Information Collection Activities; Proposed Collection; Comment Request; Adverse Event Program for Medical Devices: (Medical Product Safety Network (MedSun))",
       publishedAt: "2026-07-17",
       effectiveAt: null,
       regulationIdNumber: null,
@@ -67,7 +67,7 @@ describe("Federal Register adapter", () => {
     expect(normalizeNewsCandidate(candidates[0], { id: "federal-register", verified: true }))
       .toMatchObject({
         sourceKey: "federal-register:2026-14439",
-        title: "Fixed Admission Periods for F, J, and I Nonimmigrants",
+        title: "Establishing a Fixed Time Period of Admission and an Extension of Stay Procedure for Nonimmigrant Academic Students, Exchange Visitors, and Representatives of Foreign Information Media",
         publisher: "DEPARTMENT OF HOMELAND SECURITY",
         publishedAt: "2026-07-17",
         effectiveAt: "2026-09-15",
@@ -91,6 +91,46 @@ describe("Federal Register adapter", () => {
 
     await expect(adapter.collect({ id: "federal-register", agencies: [] }))
       .resolves.toEqual([expect.objectContaining({ publisher: "Homeland Security Department" })]);
+  });
+
+  test.each([
+    ["only raw_name", [{ raw_name: "Office of Inspector General" }], "Office of Inspector General"],
+    ["only name", [{ name: "Office of Inspector General" }], "Office of Inspector General"],
+    [
+      "multiple partial agency entries",
+      [{ raw_name: "DEPARTMENT OF TREASURY" }, { name: "Office of Inspector General" }],
+      "DEPARTMENT OF TREASURY, Office of Inspector General",
+    ],
+  ])("maps agencies with %s", async (_description, agencies, publisher) => {
+    const adapter = createFederalRegisterAdapter({
+      fetchJson: async () => ({
+        results: [{ ...documentResult("2026-18614", "inspector-general"), agencies }],
+        next_page_url: null,
+      }),
+      now: fixedNow,
+    });
+
+    await expect(adapter.collect({ id: "federal-register", agencies: [] }))
+      .resolves.toEqual([expect.objectContaining({ publisher })]);
+  });
+
+  test("accepts a terminal response that omits next_page_url", async () => {
+    const adapter = createFederalRegisterAdapter({
+      fetchJson: async () => ({ results: [] }),
+      now: fixedNow,
+    });
+
+    await expect(adapter.collect({ id: "federal-register", agencies: [] })).resolves.toEqual([]);
+  });
+
+  test("rejects a non-string non-null next_page_url", async () => {
+    const adapter = createFederalRegisterAdapter({
+      fetchJson: async () => ({ results: [], next_page_url: 2 }),
+      now: fixedNow,
+    });
+
+    await expect(adapter.collect({ id: "federal-register", agencies: [] }))
+      .rejects.toThrow(/next_page_url/i);
   });
 
   test("uses agency, publication-date, pagination, and explicit-field query parameters", async () => {
@@ -168,6 +208,8 @@ describe("Federal Register adapter", () => {
     ["an off-domain pagination URL", "https://attacker.example/api/v1/documents.json?page=2"],
     ["pagination credentials", "https://user@www.federalregister.gov/api/v1/documents.json?page=2"],
     ["a pagination port", "https://www.federalregister.gov:444/api/v1/documents.json?page=2"],
+    ["an explicit default pagination port", "https://WWW.FEDERALREGISTER.GOV:443/api/v1/documents.json?page=2"],
+    ["credentials that resemble a host and port", "https://www.federalregister.gov:443@www.federalregister.gov/api/v1/documents.json?page=2"],
     ["an unexpected pagination path", "https://www.federalregister.gov/documents/2026/07/17/2026-14439/x"],
   ])("rejects %s", async (_description, nextPageUrl) => {
     const adapter = createFederalRegisterAdapter({
@@ -247,9 +289,13 @@ describe("Federal Register adapter", () => {
     ["an off-domain HTML URL", { html_url: "https://attacker.example/documents/2026/07/17/2026-14439/x" }],
     ["an HTTP HTML URL", { html_url: "http://www.federalregister.gov/documents/2026/07/17/2026-14439/x" }],
     ["an HTML URL outside the document path", { html_url: "https://www.federalregister.gov/agencies/homeland-security-department" }],
+    ["an HTML URL with an explicit default port", { html_url: "https://www.federalregister.gov:443/documents/2026/07/17/2026-14439/x" }],
+    ["HTML URL credentials that resemble a host and port", { html_url: "https://www.federalregister.gov:443@www.federalregister.gov/documents/2026/07/17/2026-14439/x" }],
     ["an off-domain PDF URL", { pdf_url: "https://attacker.example/2026-14439.pdf" }],
     ["an HTTP PDF URL", { pdf_url: "http://www.govinfo.gov/content/pkg/FR-2026-07-17/pdf/2026-14439.pdf" }],
     ["a PDF URL outside the GovInfo package path", { pdf_url: "https://www.govinfo.gov/content/pkg/FR-2026-07-17/html/2026-14439.htm" }],
+    ["a PDF URL with an explicit default port", { pdf_url: "https://www.govinfo.gov:443/content/pkg/FR-2026-07-17/pdf/2026-14439.pdf" }],
+    ["PDF URL credentials that resemble a host and port", { pdf_url: "https://www.govinfo.gov:443@www.govinfo.gov/content/pkg/FR-2026-07-17/pdf/2026-14439.pdf" }],
   ])("rejects %s", async (_description, overrides) => {
     const fixture = await readFixture();
     const adapter = createFederalRegisterAdapter({
