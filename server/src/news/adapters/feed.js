@@ -31,6 +31,10 @@ export function normalizeWhitespace(value) {
   return typeof value === "string" ? value.toWellFormed().replace(/\s+/gu, " ").trim() : "";
 }
 
+function normalizeVisibleText(value) {
+  return normalizeWhitespace(value).replace(/\s+([,.;:!?])/gu, "$1");
+}
+
 export function textValue(value) {
   if (typeof value === "string" || typeof value === "number") return String(value);
   if (!value || typeof value !== "object") return "";
@@ -45,10 +49,14 @@ export function textValue(value) {
   return ownText.replace(/([,.;:!?]+)$/u, ` ${childText}$1`);
 }
 
-export function plainText(value) {
+function htmlFragmentText(value) {
   const $ = load(String(value ?? ""), { decodeEntities: true }, false);
   $("script, style, noscript, template").remove();
-  return normalizeWhitespace($.root().text()).replace(/\s+([,.;:!?])/gu, "$1");
+  return $.root().text();
+}
+
+export function plainText(value) {
+  return normalizeVisibleText(htmlFragmentText(value));
 }
 
 export function excerptText(value) {
@@ -153,14 +161,15 @@ function atomLink(entry) {
 
 function feedCandidate(entry, baseUrl, source, atom = false, ordered = {}) {
   if (!entry || typeof entry !== "object") throw adapterError("entry must be an object.");
-  const title = requiredText(ordered.title?.cdata ? plainText(ordered.title.text) : (ordered.title?.text ?? entry.title), "entry title");
+  const title = requiredText(
+    ordered.title ? orderedFieldText(ordered.title, atom ? "atom" : "rss-title") : entry.title,
+    "entry title",
+  );
   const canonicalUrl = approvedItemUrl(atom ? atomLink(entry) : entry.link, baseUrl, source);
   const externalId = normalizeWhitespace(textValue(atom ? entry.id : entry.guid)) || canonicalUrl;
   const excerpt = ordered.excerpt
-    ? ordered.excerpt.cdata
-      ? excerptText(ordered.excerpt.text)
-      : excerptFromDecodedText(ordered.excerpt.text)
-    : excerptText(textValue(atom ? (entry.summary ?? entry.content) : entry.description));
+    ? capCodePoints(orderedFieldText(ordered.excerpt, atom ? "atom" : "rss-html"))
+    : excerptText(textValue(atom ? (entry.summary ?? entry.content) : (entry.description ?? entry.encoded ?? entry.content)));
   return {
     externalId,
     canonicalUrl,
@@ -195,20 +204,24 @@ function parseXml(text, kind, preserveOrder = false) {
   }
 }
 
-function orderedText(value) {
-  if (typeof value === "string" || typeof value === "number") return String(value);
-  if (!value || typeof value !== "object") return "";
-  return asList(value).map((node) => Object.entries(node || {})
-    .filter(([key]) => !key.startsWith("@_"))
-    .map(([, child]) => orderedText(child))
-    .join("")).join("");
-}
-
 function directField(nodes, fieldNames) {
   for (const part of asList(nodes)) {
     if (!part || typeof part !== "object") continue;
     for (const [key, value] of Object.entries(part)) {
       if (fieldNames.has(key)) return value;
+    }
+  }
+  return undefined;
+}
+
+function directElement(nodes, fieldNames) {
+  for (const fieldName of fieldNames) {
+    for (const part of asList(nodes)) {
+      if (!part || typeof part !== "object" || !(fieldName in part)) continue;
+      return {
+        attributes: part[":@"] && typeof part[":@"] === "object" ? part[":@"] : {},
+        children: part[fieldName],
+      };
     }
   }
   return undefined;
@@ -225,20 +238,47 @@ function directChildren(nodes, name) {
   return children;
 }
 
-function hasCdata(value) {
-  if (!value || typeof value !== "object") return false;
-  return Object.entries(value).some(([key, child]) => key === "__cdata" || hasCdata(child));
+function orderedSegments(value, cdata = false, segments = []) {
+  if (typeof value === "string" || typeof value === "number") {
+    segments.push({ cdata, text: String(value) });
+    return segments;
+  }
+  if (!value || typeof value !== "object") return segments;
+  for (const node of asList(value)) {
+    if (!node || typeof node !== "object") continue;
+    for (const [key, child] of Object.entries(node)) {
+      if (key === ":@" || key.startsWith("@_") || ["script", "style", "noscript", "template"].includes(key)) continue;
+      orderedSegments(child, cdata || key === "__cdata", segments);
+    }
+  }
+  return segments;
 }
 
 function orderedField(record, names) {
-  const value = directField(record, new Set(names));
-  return value === undefined ? undefined : { text: orderedText(value), cdata: hasCdata(value) };
+  const element = directElement(record, names);
+  if (!element) return undefined;
+  const rawType = element.attributes["@_type"];
+  return {
+    segments: orderedSegments(element.children),
+    type: typeof rawType === "string" ? rawType.trim().toLowerCase() : null,
+  };
+}
+
+function segmentAwareText(segments) {
+  return normalizeVisibleText(segments.map((segment) => segment.cdata ? htmlFragmentText(segment.text) : segment.text).join(""));
+}
+
+function orderedFieldText(field, format) {
+  const joined = field.segments.map((segment) => segment.text).join("");
+  if (format === "rss-html" || (format === "atom" && field.type === "html")) return plainText(joined);
+  if (format === "atom" && field.type === "text") return normalizeVisibleText(joined);
+  return segmentAwareText(field.segments);
 }
 
 function orderedRecord(record, atom) {
   return {
     title: orderedField(record, ["title"]),
-    excerpt: orderedField(record, atom ? ["summary", "content"] : ["description"]),
+    excerpt: orderedField(record, atom ? ["summary", "content"] : ["description", "encoded", "content"]),
   };
 }
 

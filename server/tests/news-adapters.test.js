@@ -281,4 +281,51 @@ describe("official feed, index-page, and university adapters", () => {
         ["Two", "Second description"],
       ]);
   });
+
+  test("applies Atom text, HTML, and XHTML semantics to their direct entries", async () => {
+    const atom = `<?xml version="1.0"?><feed><extension><entry><title>Decoy</title><content type="html">&lt;p&gt;Wrong&lt;/p&gt;</content></entry></extension><entry><id>atom-text</id><title>Text</title><link href="/news/alerts/atom-text"/><content type="text">Score &lt; 10 and &gt; 5 &amp;amp; stable.</content></entry><entry><id>atom-html</id><title>HTML</title><link href="/news/alerts/atom-html"/><content type="html">&lt;p&gt;Updated &lt;em&gt;guidance&lt;/em&gt;.&lt;/p&gt;&lt;script&gt;ignored()&lt;/script&gt;&lt;style&gt;.ignored{}&lt;/style&gt;</content></entry><foreign><entry><title>Decoy two</title><content type="xhtml"><div>Wrong two</div></content></entry></foreign><entry><id>atom-xhtml</id><title>XHTML</title><link href="/news/alerts/atom-xhtml"/><content type="xhtml"><div>First <strong>visible</strong> and &lt;em&gt;literal&lt;/em&gt;.</div></content></entry></feed>`;
+
+    const candidates = await createFeedAdapter().collect(source, atom);
+
+    expect(candidates.map((candidate) => [candidate.externalId, candidate.excerpt])).toEqual([
+      ["atom-text", "Score < 10 and > 5 &amp; stable."],
+      ["atom-html", "Updated guidance."],
+      ["atom-xhtml", "First visible and <em>literal</em>."],
+    ]);
+  });
+
+  test("preserves escaped XHTML markup beside HTML-bearing CDATA segments", async () => {
+    const atom = `<?xml version="1.0"?><feed><entry><id>mixed-xhtml</id><title>Mixed XHTML</title><link href="/news/alerts/mixed-xhtml"/><content type="xhtml"><div>Show &lt;em&gt;literal&lt;/em&gt; before <strong>visible</strong> and<![CDATA[ <b>CDATA text</b><script>ignored()</script> ]]>after.</div></content></entry></feed>`;
+
+    await expect(createFeedAdapter().collect(source, atom)).resolves.toEqual([expect.objectContaining({
+      excerpt: "Show <em>literal</em> before visible and CDATA text after.",
+    })]);
+  });
+
+  test("decodes Atom plain text entities once even when CDATA is present", async () => {
+    const atom = `<?xml version="1.0"?><feed><entry><id>plain-text</id><title>Plain text</title><link href="/news/alerts/plain-text"/><content type="text">Score &lt; 10 and &gt; 5; XML &amp;amp;; CDATA <![CDATA[&amp;]]>.</content></entry></feed>`;
+
+    await expect(createFeedAdapter().collect(source, atom)).resolves.toEqual([expect.objectContaining({
+      excerpt: "Score < 10 and > 5; XML &amp;; CDATA &amp;.",
+    })]);
+  });
+
+  test("renders RSS CDATA and escaped description HTML without active text", async () => {
+    const rss = `<?xml version="1.0"?><rss><channel><extension><item><title>Decoy</title><description>&lt;p&gt;Wrong&lt;/p&gt;</description></item></extension><item><guid>rss-cdata</guid><title>CDATA</title><link>/news/alerts/rss-cdata</link><description><![CDATA[<p>CDATA <em>guidance</em>.</p><script>ignored()</script><style>.ignored{}</style>]]></description></item><foreign><item><title>Decoy two</title><description><![CDATA[<p>Wrong two</p>]]></description></item></foreign><item><guid>rss-escaped</guid><title>Escaped</title><link>/news/alerts/rss-escaped</link><description>&lt;p&gt;Escaped &lt;strong&gt;guidance&lt;/strong&gt;.&lt;/p&gt;&lt;script&gt;ignored()&lt;/script&gt;&lt;style&gt;.ignored{}&lt;/style&gt;</description></item></channel></rss>`;
+
+    const candidates = await createFeedAdapter().collect(source, rss);
+
+    expect(candidates.map((candidate) => [candidate.externalId, candidate.excerpt])).toEqual([
+      ["rss-cdata", "CDATA guidance."],
+      ["rss-escaped", "Escaped guidance."],
+    ]);
+  });
+
+  test("uses encoded RSS content when a description is absent", async () => {
+    const rss = `<?xml version="1.0"?><rss xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><item><guid>rss-content</guid><title>Encoded content</title><link>/news/alerts/rss-content</link><content:encoded>&lt;p&gt;Detailed &lt;em&gt;guidance&lt;/em&gt;.&lt;/p&gt;&lt;script&gt;ignored()&lt;/script&gt;&lt;style&gt;.ignored{}&lt;/style&gt;</content:encoded></item></channel></rss>`;
+
+    await expect(createFeedAdapter().collect(source, rss)).resolves.toEqual([expect.objectContaining({
+      excerpt: "Detailed guidance.",
+    })]);
+  });
 });
