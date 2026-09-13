@@ -141,4 +141,17 @@ describe("official source URL policy", () => {
       { resolveHost: async () => [{ address: "23.1.1.1", family: 4 }] },
     )).rejects.toThrow(/allowlist entry is invalid/i);
   });
+
+  test.each([
+    ["whitespace-wrapped IPv4", "https://8.8.8.8/news", " 8.8.8.8 "],
+    ["whitespace-wrapped IPv6", "https://[2606:4700:4700::1111]/news", " [2606:4700:4700::1111] "],
+    ["encoded dot", "https://official.example/news", "official%2eexample"],
+    ["encoded letter", "https://official.example/news", "%6ffficial.example"],
+  ])("rejects a configured hostname with %s ambiguity", async (_label, url, allowedHost) => {
+    await expect(assertAllowedSourceUrl(
+      url,
+      { allowedHosts: [allowedHost] },
+      { resolveHost: async () => [{ address: "23.1.1.1", family: 4 }] },
+    )).rejects.toThrow(/allowlist entry is invalid/i);
+  });
 });

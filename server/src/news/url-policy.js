@@ -93,10 +93,14 @@ function normalizeConfiguredHostname(value) {
     throw new Error("Source host allowlist entries must be non-empty hostnames.");
   }
 
-  const raw = value.trim();
+  const raw = value;
+  if (raw !== raw.trim() || raw.includes("%") || raw.includes("\\") || /[/@?#\s]/u.test(raw)) {
+    throw new Error(`Source host allowlist entry is invalid: ${value}`);
+  }
+
   const literal = normalizeHostname(raw);
   if (isIP(literal)) return literal;
-  if (raw !== value || raw.includes("\\") || /[/:@?#\s]/u.test(raw)) {
+  if (raw.includes(":")) {
     throw new Error(`Source host allowlist entry is invalid: ${value}`);
   }
 
