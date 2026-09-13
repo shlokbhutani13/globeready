@@ -48,7 +48,7 @@ describe("demo news store", () => {
     await store.news.upsert("agency:urgent", {
       title: "Urgent notice",
       contentHash: "urgent",
-      editorialState: "approved",
+      editorialState: "published-source-only",
       urgency: "urgent",
       publishedAt: "2026-07-01",
       classifierExplanation: "private reasoning",
@@ -68,6 +68,60 @@ describe("demo news store", () => {
     expect((await store.news.listPublished({}))[0]).not.toHaveProperty("classifierExplanation");
     expect((await store.news.listPublished({}))[1]).not.toHaveProperty("normalizedText");
     expect((await store.news.listPublished({})).map((item) => item.title)).not.toContain("Draft notice");
+  });
+
+  test("does not let ingestion publish direct approvals", async () => {
+    const store = createDemoStore();
+    const created = await store.news.upsert("agency:approval", {
+      title: "Initial notice",
+      contentHash: "one",
+      editorialState: "approved",
+    });
+    const changed = await store.news.upsert("agency:approval", {
+      title: "Changed notice",
+      contentHash: "two",
+      editorialState: "approved",
+    });
+
+    expect(created.item.editorialState).toBe("review-required");
+    expect(changed.item.editorialState).toBe("review-required");
+    expect(await store.news.listPublished({})).toEqual([]);
+  });
+
+  test("requires a matching review record before approving news", async () => {
+    const store = createDemoStore();
+    const { item } = await store.news.upsert("agency:reviewed", {
+      title: "Reviewed notice",
+      contentHash: "one",
+      editorialState: "review-required",
+      normalizedText: "private source text",
+    });
+
+    await expect(store.news.approve(item.id, {
+      reviewerUid: "editor-1",
+      reviewedAt: "2026-09-12T00:00:00.000Z",
+      summary: "Reviewed summary",
+      reviewId: "missing-review",
+    })).rejects.toThrow("matching review record");
+
+    const review = await store.reviewQueue.create({ newsItemId: item.id });
+    const approved = await store.news.approve(item.id, {
+      reviewerUid: "editor-1",
+      reviewedAt: "2026-09-12T00:00:00.000Z",
+      summary: " Reviewed summary ",
+      reviewId: review.id,
+    });
+
+    expect(approved).toMatchObject({
+      editorialState: "approved",
+      plainLanguageSummary: "Reviewed summary",
+      reviewerUid: "editor-1",
+      reviewedAt: "2026-09-12T00:00:00.000Z",
+      reviewId: review.id,
+    });
+    expect(await store.news.listPublished({})).toEqual([
+      expect.objectContaining({ title: "Reviewed notice", plainLanguageSummary: "Reviewed summary" }),
+    ]);
   });
 
   test("keeps added user-scoped news collections isolated by uid", async () => {

@@ -64,7 +64,7 @@ export function createGlobalCollection() {
   };
 }
 
-function createNewsStore() {
+function createNewsStore({ reviewQueue }) {
   const itemsBySourceKey = new Map();
   const revisionsByItemId = new Map();
   const urgency = new Map([
@@ -82,6 +82,12 @@ function createNewsStore() {
     return !filters.legalState || item.legalState === filters.legalState;
   };
 
+  const ingestedEditorialState = (current, input) => {
+    if (input.editorialState === "approved") return "review-required";
+    if (input.editorialState) return input.editorialState;
+    return current?.editorialState === "approved" ? "review-required" : current?.editorialState;
+  };
+
   return {
     async get(id) {
       return [...itemsBySourceKey.values()].find((item) => item.id === id) || null;
@@ -89,10 +95,12 @@ function createNewsStore() {
     async upsert(sourceKey, input) {
       const now = new Date().toISOString();
       const current = itemsBySourceKey.get(sourceKey);
+      const editorialState = ingestedEditorialState(current, input);
       if (!current) {
         const item = {
           id: randomUUID(),
           ...input,
+          editorialState,
           sourceKey,
           firstSeenAt: now,
           lastSeenAt: now,
@@ -121,6 +129,7 @@ function createNewsStore() {
       const item = {
         ...current,
         ...input,
+        editorialState,
         id: current.id,
         sourceKey,
         firstSeenAt: current.firstSeenAt,
@@ -130,6 +139,28 @@ function createNewsStore() {
       };
       itemsBySourceKey.set(sourceKey, item);
       return { item, created: false, changed: true };
+    },
+    async approve(id, { reviewerUid, reviewedAt, summary, reviewId } = {}) {
+      const current = [...itemsBySourceKey.values()].find((item) => item.id === id);
+      const review = await reviewQueue.get(reviewId);
+      if (!current || !review || review.newsItemId !== id) {
+        throw new Error("News approval requires a matching review record.");
+      }
+      if (typeof reviewerUid !== "string" || !reviewerUid.trim() || typeof reviewedAt !== "string" || !reviewedAt) {
+        throw new Error("News approval requires reviewer metadata.");
+      }
+
+      const item = {
+        ...current,
+        editorialState: "approved",
+        plainLanguageSummary: typeof summary === "string" ? summary.trim() : "",
+        reviewerUid: reviewerUid.trim(),
+        reviewedAt,
+        reviewId,
+        recordUpdatedAt: new Date().toISOString(),
+      };
+      itemsBySourceKey.set(item.sourceKey, item);
+      return item;
     },
     async revisions(id) {
       return revisionsByItemId.get(id) || [];
@@ -234,6 +265,7 @@ function createRagChunkCollection() {
 
 export function createDemoStore() {
   const profiles = new Map();
+  const reviewQueue = createGlobalCollection();
   return {
     profiles: {
       async get(uid) {
@@ -255,10 +287,10 @@ export function createDemoStore() {
     resources: createCollection(),
     conversations: createCollection(),
     ragChunks: createRagChunkCollection(),
-    news: createNewsStore(),
+    news: createNewsStore({ reviewQueue }),
     newsSources: createGlobalCollection(),
     newsRuns: createGlobalCollection(),
-    reviewQueue: createGlobalCollection(),
+    reviewQueue,
     newsPreferences: createNewsPreferencesStore(),
     savedNews: createCollection(),
     notifications: createCollection(),
