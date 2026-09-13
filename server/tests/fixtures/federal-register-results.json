@@ -1,0 +1,51 @@
+{
+  "count": 2,
+  "total_pages": 1,
+  "next_page_url": null,
+  "results": [
+    {
+      "abstract": "This final rule establishes a fixed admission period for F, J, and I nonimmigrants and makes related changes to departure procedures.",
+      "agencies": [
+        {
+          "name": "Homeland Security Department",
+          "raw_name": "Department of Homeland Security",
+          "url": "https://www.federalregister.gov/agencies/homeland-security-department"
+        }
+      ],
+      "document_number": "2026-14439",
+      "docket_ids": [
+        "ICEB-2025-0001"
+      ],
+      "effective_on": "2026-09-15",
+      "html_url": "https://www.federalregister.gov/documents/2026/07/17/2026-14439/fixed-admission-periods-for-f-j-and-i-nonimmigrants",
+      "pdf_url": "https://www.govinfo.gov/content/pkg/FR-2026-07-17/pdf/2026-14439.pdf",
+      "publication_date": "2026-07-17",
+      "regulation_id_numbers": [
+        "1653-AA95"
+      ],
+      "title": "Fixed Admission Periods for F, J, and I Nonimmigrants",
+      "type": "Rule"
+    },
+    {
+      "abstract": "The Environmental Protection Agency announces a pesticide tolerance exemption.",
+      "agencies": [
+        {
+          "name": "Environmental Protection Agency",
+          "raw_name": "Environmental Protection Agency",
+          "url": "https://www.federalregister.gov/agencies/environmental-protection-agency"
+        }
+      ],
+      "document_number": "2026-14440",
+      "docket_ids": [
+        "EPA-HQ-OPP-2026-0001"
+      ],
+      "effective_on": null,
+      "html_url": "https://www.federalregister.gov/documents/2026/07/17/pesticide-tolerance-exemption",
+      "pdf_url": "https://www.govinfo.gov/content/pkg/FR-2026-07-17/pdf/2026-14440.pdf",
+      "publication_date": "2026-07-17",
+      "regulation_id_numbers": [],
+      "title": "Pesticide Tolerance Exemption",
+      "type": "Rule"
+    }
+  ]
+}
