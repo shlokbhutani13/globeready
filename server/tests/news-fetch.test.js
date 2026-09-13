@@ -1,3 +1,5 @@
+import { EventEmitter } from "node:events";
+import { Readable } from "node:stream";
 import { describe, expect, test, vi } from "vitest";
 
 import { fetchSource } from "../src/news/fetch-source.js";
@@ -10,6 +12,29 @@ function htmlSource(overrides = {}) {
     allowedHosts: ["www.uscis.gov"],
     acceptedContentTypes: ["text/html"],
     ...overrides,
+  };
+}
+
+function trackedResponse({ status = 200, headers = {}, text = "body" } = {}) {
+  const cancel = vi.fn(async () => {});
+  let read = false;
+  return {
+    response: {
+      status,
+      headers: new Headers(headers),
+      body: {
+        cancel,
+        getReader: () => ({
+          cancel,
+          read: async () => {
+            if (read) return { done: true, value: undefined };
+            read = true;
+            return { done: false, value: new TextEncoder().encode(text) };
+          },
+        }),
+      },
+    },
+    wasCancelled: () => cancel.mock.calls.length > 0,
   };
 }
 
@@ -179,5 +204,189 @@ describe("official source fetching", () => {
     } finally {
       timeout.mockRestore();
     }
+  });
+
+  test("pins the validated address while retaining the original TLS and Host names", async () => {
+    const incoming = Readable.from([Buffer.from("Official update")]);
+    Object.assign(incoming, {
+      statusCode: 200,
+      statusMessage: "OK",
+      headers: { "content-type": "text/html" },
+    });
+    const request = new EventEmitter();
+    request.end = vi.fn();
+    const requestImpl = vi.fn((url, options, onResponse) => {
+      queueMicrotask(() => onResponse(incoming));
+      return request;
+    });
+    const globalFetch = vi.spyOn(globalThis, "fetch")
+      .mockRejectedValue(new Error("an unpinned global fetch must not run"));
+
+    try {
+      const result = await fetchSource(htmlSource(), {
+        requestImpl,
+        resolveHost: async () => [{ address: "23.1.1.1", family: 4 }],
+      });
+
+      expect(result.text).toBe("Official update");
+      expect(globalFetch).not.toHaveBeenCalled();
+      expect(requestImpl).toHaveBeenCalledTimes(1);
+      const [url, options] = requestImpl.mock.calls[0];
+      expect(url.href).toBe("https://www.uscis.gov/newsroom/all-news");
+      expect(options.servername).toBe("www.uscis.gov");
+      expect(options.headers.Host).toBe("www.uscis.gov");
+      await expect(new Promise((resolve, reject) => {
+        options.lookup("www.uscis.gov", {}, (error, address, family) => {
+          if (error) reject(error);
+          else resolve({ address, family });
+        });
+      })).resolves.toEqual({ address: "23.1.1.1", family: 4 });
+    } finally {
+      globalFetch.mockRestore();
+    }
+  });
+
+  test("rejects cross-domain redirects even when both hosts are allowlisted", async () => {
+    const fetchImpl = vi.fn()
+      .mockResolvedValueOnce(new Response(null, {
+        status: 302,
+        headers: { location: "https://www.dhs.gov/news" },
+      }))
+      .mockResolvedValueOnce(new Response("must not be reached", {
+        status: 200,
+        headers: { "content-type": "text/html" },
+      }));
+
+    await expect(fetchSource(htmlSource({
+      allowedHosts: ["www.uscis.gov", "www.dhs.gov"],
+      etag: '"private-to-origin"',
+    }), { fetchImpl, resolveHost: publicDns })).rejects.toThrow(/cross-domain/i);
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  test("applies the overall deadline while DNS resolution is pending", async () => {
+    const controller = new AbortController();
+    const timeout = vi.spyOn(AbortSignal, "timeout").mockReturnValue(controller.signal);
+    let releaseDns;
+    const resolveHost = vi.fn(() => new Promise((resolve) => {
+      releaseDns = resolve;
+    }));
+    const fetchImpl = vi.fn(async () => new Response("late", {
+      status: 200,
+      headers: { "content-type": "text/html" },
+    }));
+
+    try {
+      const pending = fetchSource(htmlSource(), { fetchImpl, resolveHost });
+      await vi.waitFor(() => expect(resolveHost).toHaveBeenCalledTimes(1));
+      controller.abort(new DOMException("Source fetch timed out.", "TimeoutError"));
+      releaseDns([{ address: "23.1.1.1", family: 4 }]);
+
+      await expect(pending).rejects.toThrow(/timed out|timeout|aborted/i);
+      expect(fetchImpl).not.toHaveBeenCalled();
+    } finally {
+      timeout.mockRestore();
+    }
+  });
+
+  test("applies the overall deadline while reading the response body", async () => {
+    const controller = new AbortController();
+    const timeout = vi.spyOn(AbortSignal, "timeout").mockReturnValue(controller.signal);
+    let markReadStarted;
+    const readStarted = new Promise((resolve) => {
+      markReadStarted = resolve;
+    });
+    let releaseBody;
+    let bodyCancelled = false;
+    const body = {
+      getReader: () => ({
+        read: () => {
+          markReadStarted();
+          return new Promise((resolve) => {
+            releaseBody = () => resolve({
+              done: false,
+              value: new TextEncoder().encode("late"),
+            });
+          });
+        },
+        cancel: async () => {
+          bodyCancelled = true;
+          releaseBody?.();
+        },
+      }),
+    };
+
+    try {
+      const pending = fetchSource(htmlSource(), {
+        fetchImpl: async () => ({
+          body,
+          status: 200,
+          headers: new Headers({ "content-type": "text/html" }),
+        }),
+        resolveHost: publicDns,
+      });
+      await readStarted;
+      controller.abort(new DOMException("Source fetch timed out.", "TimeoutError"));
+      setTimeout(() => releaseBody?.(), 10);
+
+      await expect(pending).rejects.toThrow(/timed out|timeout|aborted/i);
+      expect(bodyCancelled).toBe(true);
+    } finally {
+      timeout.mockRestore();
+    }
+  });
+
+  test("rejects non-success HTTP responses before returning content", async () => {
+    const tracked = trackedResponse({
+      status: 404,
+      headers: { "content-type": "text/html" },
+    });
+
+    await expect(fetchSource(htmlSource(), {
+      fetchImpl: async () => tracked.response,
+      resolveHost: publicDns,
+    })).rejects.toThrow(/404/);
+    expect(tracked.wasCancelled()).toBe(true);
+  });
+
+  test("cancels redirect response bodies before following", async () => {
+    const tracked = trackedResponse({ status: 302, headers: { location: "/next" } });
+    const fetchImpl = vi.fn()
+      .mockResolvedValueOnce(tracked.response)
+      .mockResolvedValueOnce(new Response("done", {
+        status: 200,
+        headers: { "content-type": "text/html" },
+      }));
+
+    await fetchSource(htmlSource(), { fetchImpl, resolveHost: publicDns });
+    expect(tracked.wasCancelled()).toBe(true);
+  });
+
+  test.each([
+    ["declared oversized body", { "content-type": "text/html", "content-length": String(5 * 1024 * 1024 + 1) }],
+    ["disallowed response MIME", { "content-type": "application/octet-stream" }],
+  ])("cancels a %s on early rejection", async (_label, headers) => {
+    const tracked = trackedResponse({ headers });
+
+    await expect(fetchSource(htmlSource(), {
+      fetchImpl: async () => tracked.response,
+      resolveHost: publicDns,
+    })).rejects.toThrow();
+    expect(tracked.wasCancelled()).toBe(true);
+  });
+
+  test.each([
+    ["an empty entry", ["text/html", ""]],
+    ["a non-string entry", ["text/html", null]],
+    ["a wildcard entry", ["text/*"]],
+  ])("rejects %s in configured MIME types", async (_label, acceptedContentTypes) => {
+    const tracked = trackedResponse({ headers: { "content-type": "text/html" } });
+    const fetchImpl = vi.fn(async () => tracked.response);
+
+    await expect(fetchSource(htmlSource({ acceptedContentTypes }), {
+      fetchImpl,
+      resolveHost: publicDns,
+    })).rejects.toThrow(/MIME|content type/i);
+    expect(fetchImpl).not.toHaveBeenCalled();
   });
 });

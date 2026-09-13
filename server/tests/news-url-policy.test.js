@@ -54,6 +54,8 @@ describe("official source URL policy", () => {
     "::ffff:127.0.0.1",
     "100::1",
     "2001:db8::1",
+    "2002:7f00:1::",
+    "4000::1",
     "fc00::1",
     "fdff:ffff::1",
     "fe80::1",
@@ -94,5 +96,16 @@ describe("official source URL policy", () => {
         { address: "2606:4700:4700::1111", family: 6 },
       ] },
     )).resolves.toEqual(expect.objectContaining({ hostname: "official.example" }));
+  });
+
+  test("normalizes configured internationalized hosts through IDNA", async () => {
+    const resolveHost = vi.fn(async () => [{ address: "23.1.1.1", family: 4 }]);
+
+    await expect(assertAllowedSourceUrl(
+      "https://bücher.example/news",
+      { allowedHosts: ["BÜCHER.EXAMPLE."] },
+      { resolveHost },
+    )).resolves.toEqual(expect.objectContaining({ hostname: "xn--bcher-kva.example" }));
+    expect(resolveHost).toHaveBeenCalledWith("xn--bcher-kva.example", { all: true });
   });
 });

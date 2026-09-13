@@ -3,6 +3,9 @@ import { BlockList, isIP } from "node:net";
 
 const blockedIpv4Addresses = new BlockList();
 const blockedIpv6Addresses = new BlockList();
+const globallyRoutableIpv6Addresses = new BlockList();
+
+globallyRoutableIpv6Addresses.addSubnet("2000::", 3, "ipv6");
 
 for (const [network, prefix] of [
   ["0.0.0.0", 8],
@@ -31,6 +34,7 @@ for (const [network, prefix] of [
   ["100::", 64],
   ["2001::", 23],
   ["2001:db8::", 32],
+  ["2002::", 16],
   ["3fff::", 20],
   ["5f00::", 16],
   ["fc00::", 7],
@@ -45,6 +49,27 @@ function normalizeHostname(hostname) {
   return hostname.toLowerCase().replace(/^\[|\]$/g, "").replace(/\.$/, "");
 }
 
+function normalizeConfiguredHostname(value) {
+  if (typeof value !== "string" || !value.trim()) {
+    throw new Error("Source host allowlist entries must be non-empty hostnames.");
+  }
+
+  const raw = value.trim();
+  const literal = normalizeHostname(raw);
+  if (isIP(literal)) return literal;
+  if (/[:/@?#]/u.test(raw)) {
+    throw new Error(`Source host allowlist entry is invalid: ${value}`);
+  }
+
+  let parsed;
+  try {
+    parsed = new URL(`https://${raw}`);
+  } catch {
+    throw new Error(`Source host allowlist entry is invalid: ${value}`);
+  }
+  return normalizeHostname(parsed.hostname);
+}
+
 function assertPublicAddress(address, family) {
   const detectedFamily = isIP(address);
   if (!detectedFamily || (family && Number(family) !== detectedFamily)) {
@@ -53,13 +78,14 @@ function assertPublicAddress(address, family) {
 
   const blocked = detectedFamily === 4
     ? blockedIpv4Addresses.check(address, "ipv4")
-    : blockedIpv6Addresses.check(address, "ipv6");
+    : !globallyRoutableIpv6Addresses.check(address, "ipv6")
+      || blockedIpv6Addresses.check(address, "ipv6");
   if (blocked) {
     throw new Error(`Source hostname must resolve only to public IP addresses: ${address}`);
   }
 }
 
-export async function assertAllowedSourceUrl(value, source, { resolveHost = lookup } = {}) {
+export async function resolveAllowedSourceUrl(value, source, { resolveHost = lookup } = {}) {
   let url;
   try {
     url = new URL(value);
@@ -79,7 +105,7 @@ export async function assertAllowedSourceUrl(value, source, { resolveHost = look
 
   const hostname = normalizeHostname(url.hostname);
   const allowedHosts = Array.isArray(source?.allowedHosts)
-    ? source.allowedHosts.map((host) => normalizeHostname(String(host)))
+    ? source.allowedHosts.map(normalizeConfiguredHostname)
     : [];
   if (!allowedHosts.includes(hostname)) {
     throw new Error(`Source hostname is not allowlisted: ${hostname}`);
@@ -88,7 +114,7 @@ export async function assertAllowedSourceUrl(value, source, { resolveHost = look
   const literalFamily = isIP(hostname);
   if (literalFamily) {
     assertPublicAddress(hostname, literalFamily);
-    return url;
+    return { url, addresses: [{ address: hostname, family: literalFamily }] };
   }
 
   const addresses = await resolveHost(hostname, { all: true });
@@ -99,5 +125,13 @@ export async function assertAllowedSourceUrl(value, source, { resolveHost = look
     assertPublicAddress(result?.address, result?.family);
   }
 
+  return {
+    url,
+    addresses: addresses.map(({ address, family }) => ({ address, family: Number(family) })),
+  };
+}
+
+export async function assertAllowedSourceUrl(value, source, options) {
+  const { url } = await resolveAllowedSourceUrl(value, source, options);
   return url;
 }
