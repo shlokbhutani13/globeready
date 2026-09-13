@@ -2,6 +2,29 @@ import { describe, expect, test, vi } from "vitest";
 
 const lookup = vi.hoisted(() => vi.fn(async () => [{ address: "23.1.1.1", family: 4 }]));
 
+const asciiControlCharacters = [
+  ...Array.from({ length: 0x20 }, (_value, code) => [
+    code.toString(16).padStart(4, "0"),
+    String.fromCharCode(code),
+  ]),
+  ["007f", "\x7f"],
+];
+
+const legacyIpv4Hosts = [
+  ["single decimal integer", "134744072"],
+  ["single decimal integer with a root dot", "134744072."],
+  ["dotted octal", "010.010.010.010"],
+  ["dotted octal with a root dot", "010.010.010.010."],
+  ["single hexadecimal integer", "0x08080808"],
+  ["dotted hexadecimal", "0x8.0x8.0x8.0x8"],
+  ["short dotted decimal", "8.8.2056"],
+  ["mixed-radix dotted", "0x8.8.010.8"],
+  ["fullwidth dotted decimal", "８.８.８.８"],
+  ["Unicode-dot decimal", "8。8。8。8"],
+  ["fullwidth single decimal integer", "１３４７４４０７２"],
+  ["fullwidth dotted hexadecimal", "０ｘ８.０ｘ８.０ｘ８.０ｘ８"],
+];
+
 vi.mock("node:dns/promises", () => ({ lookup }));
 
 import { assertAllowedSourceUrl } from "../src/news/url-policy.js";
@@ -153,5 +176,93 @@ describe("official source URL policy", () => {
       { allowedHosts: [allowedHost] },
       { resolveHost: async () => [{ address: "23.1.1.1", family: 4 }] },
     )).rejects.toThrow(/allowlist entry is invalid/i);
+  });
+
+  test.each([
+    ["a missing IPv4 closing bracket", "[8.8.8.8"],
+    ["a missing IPv4 opening bracket", "8.8.8.8]"],
+    ["a missing IPv6 closing bracket", "[2606:4700:4700::1111"],
+    ["bracketed IPv4", "[8.8.8.8]"],
+  ])("rejects %s in the configured hostname", async (_label, allowedHost) => {
+    await expect(assertAllowedSourceUrl(
+      "https://8.8.8.8/news",
+      { allowedHosts: [allowedHost] },
+    )).rejects.toThrow(/allowlist entry is invalid/i);
+  });
+
+  test.each([
+    ["a missing IPv4 closing bracket", "https://[8.8.8.8/news"],
+    ["a missing IPv4 opening bracket", "https://8.8.8.8]/news"],
+    ["a missing IPv6 closing bracket", "https://[2606:4700:4700::1111/news"],
+    ["bracketed IPv4", "https://[8.8.8.8]/news"],
+  ])("rejects a source URL containing %s", async (_label, url) => {
+    await expect(assertAllowedSourceUrl(url, {
+      allowedHosts: ["8.8.8.8", "2606:4700:4700::1111"],
+    })).rejects.toThrow(/valid|invalid/i);
+  });
+
+  test.each(asciiControlCharacters)(
+    "rejects ASCII control U+%s at the end of a configured hostname",
+    async (_code, character) => {
+      await expect(assertAllowedSourceUrl(
+        "https://official.example/news",
+        { allowedHosts: [`official.example${character}`] },
+        { resolveHost: async () => [{ address: "23.1.1.1", family: 4 }] },
+      )).rejects.toThrow(/allowlist entry is invalid/i);
+    },
+  );
+
+  test.each(asciiControlCharacters)(
+    "rejects ASCII control U+%s at the end of a source URL",
+    async (_code, character) => {
+      await expect(assertAllowedSourceUrl(
+        `https://official.example${character}`,
+        { allowedHosts: ["official.example"] },
+        { resolveHost: async () => [{ address: "23.1.1.1", family: 4 }] },
+      )).rejects.toThrow(/valid|control/i);
+    },
+  );
+
+  test.each(legacyIpv4Hosts)(
+    "rejects a configured hostname using the %s IPv4 spelling",
+    async (_label, allowedHost) => {
+      await expect(assertAllowedSourceUrl(
+        "https://8.8.8.8/news",
+        { allowedHosts: [allowedHost] },
+      )).rejects.toThrow(/allowlist entry is invalid/i);
+    },
+  );
+
+  test.each(legacyIpv4Hosts)(
+    "rejects a source URL using the %s IPv4 spelling",
+    async (_label, host) => {
+      await expect(assertAllowedSourceUrl(
+        `https://${host}/news`,
+        { allowedHosts: ["8.8.8.8"] },
+      )).rejects.toThrow(/valid|invalid/i);
+    },
+  );
+
+  test.each([
+    ["bare compressed", "2606:4700:4700::1111"],
+    ["bracketed compressed", "[2606:4700:4700::1111]"],
+    ["bare expanded", "2606:4700:4700:0:0:0:0:1111"],
+    ["bracketed expanded", "[2606:4700:4700:0:0:0:0:1111]"],
+  ])("canonicalizes a %s configured IPv6 hostname", async (_label, allowedHost) => {
+    await expect(assertAllowedSourceUrl(
+      "https://[2606:4700:4700::1111]/news",
+      { allowedHosts: [allowedHost] },
+    )).resolves.toEqual(expect.objectContaining({ hostname: "[2606:4700:4700::1111]" }));
+  });
+
+  test.each([
+    ["ASCII DNS", "https://OFFICIAL.EXAMPLE./news", "official.example"],
+    ["Unicode IDN", "https://bücher.example/news", "BÜCHER.EXAMPLE."],
+    ["canonical IPv4", "https://8.8.8.8/news", "8.8.8.8"],
+    ["expanded bracketed source IPv6", "https://[2606:4700:4700:0:0:0:0:1111]/news", "2606:4700:4700::1111"],
+  ])("preserves a legitimate %s hostname", async (_label, url, allowedHost) => {
+    await expect(assertAllowedSourceUrl(url, {
+      allowedHosts: [allowedHost],
+    })).resolves.toBeInstanceOf(URL);
   });
 });

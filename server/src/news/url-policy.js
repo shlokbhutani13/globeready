@@ -1,5 +1,6 @@
 import { lookup } from "node:dns/promises";
 import { BlockList, isIP } from "node:net";
+import { domainToASCII } from "node:url";
 
 const blockedIpv4Addresses = new BlockList();
 const blockedIpv6Addresses = new BlockList();
@@ -84,33 +85,132 @@ for (const [network, prefix] of [
   blockedIpv6Addresses.addSubnet(network, prefix, "ipv6");
 }
 
-function normalizeHostname(hostname) {
-  return hostname.toLowerCase().replace(/^\[|\]$/g, "").replace(/\.$/, "");
+const asciiControlPattern = /[\u0000-\u001f\u007f]/u;
+const dnsLabelPattern = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/u;
+const numericIpv4PartPattern = /^(?:0x[0-9a-f]+|[0-9]+)$/iu;
+
+function canonicalizeIpv6(hostname) {
+  return new URL(`https://[${hostname}]`).hostname.slice(1, -1).toLowerCase();
+}
+
+function resemblesLegacyIpv4(hostname) {
+  const withoutRootDot = hostname.endsWith(".") ? hostname.slice(0, -1) : hostname;
+  const parts = withoutRootDot.split(".");
+  return parts.length <= 4 && parts.every((part) => numericIpv4PartPattern.test(part));
+}
+
+function normalizeStrictHostname(value, invalid) {
+  if (typeof value !== "string" || !value) invalid();
+  if (asciiControlPattern.test(value) || /[%\\/@?#\s]/u.test(value)) invalid();
+
+  const hasOpeningBracket = value.includes("[");
+  const hasClosingBracket = value.includes("]");
+  if (hasOpeningBracket || hasClosingBracket) {
+    if (!value.startsWith("[") || !value.endsWith("]")) invalid();
+    const literal = value.slice(1, -1);
+    if (isIP(literal) !== 6) invalid();
+    return canonicalizeIpv6(literal);
+  }
+
+  const literalFamily = isIP(value);
+  if (literalFamily === 4) return value;
+  if (literalFamily === 6) return canonicalizeIpv6(value);
+  if (value.includes(":") || resemblesLegacyIpv4(value)) invalid();
+
+  const ascii = domainToASCII(value).toLowerCase();
+  const hostname = ascii.endsWith(".") ? ascii.slice(0, -1) : ascii;
+  const labels = hostname.split(".");
+  if (isIP(hostname) || !hostname || hostname.length > 253
+    || labels.some((label) => !dnsLabelPattern.test(label))) {
+    invalid();
+  }
+  return hostname;
 }
 
 function normalizeConfiguredHostname(value) {
   if (typeof value !== "string" || !value.trim()) {
     throw new Error("Source host allowlist entries must be non-empty hostnames.");
   }
+  return normalizeStrictHostname(value, () => {
+    throw new Error("Source host allowlist entry is invalid.");
+  });
+}
 
-  const raw = value;
-  if (raw !== raw.trim() || raw.includes("%") || raw.includes("\\") || /[/@?#\s]/u.test(raw)) {
-    throw new Error(`Source host allowlist entry is invalid: ${value}`);
+function parseStrictSourceUrl(value) {
+  if (typeof value !== "string" || !value || asciiControlPattern.test(value)) {
+    throw new Error("Source URL cannot contain ASCII control characters.");
   }
 
-  const literal = normalizeHostname(raw);
-  if (isIP(literal)) return literal;
-  if (raw.includes(":")) {
-    throw new Error(`Source host allowlist entry is invalid: ${value}`);
+  const absoluteMatch = /^([a-z][a-z0-9+.-]*):\/\/([^/?#]*)(?=[/?#]|$)/iu.exec(value);
+  if (!absoluteMatch) {
+    throw new Error("Source URL must be a valid absolute URL.");
+  }
+  if (absoluteMatch[1].toLowerCase() !== "https") {
+    throw new Error("Source URL must use HTTPS.");
   }
 
-  let parsed;
+  const authority = absoluteMatch[2];
+  if (!authority) {
+    throw new Error("Source URL must contain a hostname.");
+  }
+  if (authority.includes("@")) {
+    throw new Error("Source URL cannot contain credentials.");
+  }
+
+  let rawHostname;
+  let rawPort;
+  if (authority.startsWith("[")) {
+    const closingBracket = authority.indexOf("]");
+    if (closingBracket === -1) {
+      throw new Error("Source URL hostname is invalid.");
+    }
+    rawHostname = authority.slice(0, closingBracket + 1);
+    const remainder = authority.slice(closingBracket + 1);
+    if (remainder) {
+      const portMatch = /^:([0-9]+)$/u.exec(remainder);
+      if (!portMatch) throw new Error("Source URL hostname is invalid.");
+      rawPort = portMatch[1];
+    }
+  } else {
+    if (authority.includes("[") || authority.includes("]")) {
+      throw new Error("Source URL hostname is invalid.");
+    }
+    const firstColon = authority.indexOf(":");
+    const lastColon = authority.lastIndexOf(":");
+    if (firstColon !== lastColon) {
+      throw new Error("Source URL hostname is invalid.");
+    }
+    if (lastColon === -1) {
+      rawHostname = authority;
+    } else {
+      rawHostname = authority.slice(0, lastColon);
+      rawPort = authority.slice(lastColon + 1);
+      if (!/^[0-9]+$/u.test(rawPort)) {
+        throw new Error("Source URL hostname is invalid.");
+      }
+    }
+  }
+
+  const hostname = normalizeStrictHostname(rawHostname, () => {
+    throw new Error("Source URL hostname is invalid.");
+  });
+  if (rawPort !== undefined && rawPort !== "443") {
+    throw new Error("Source URL cannot use a non-standard port.");
+  }
+
+  let url;
   try {
-    parsed = new URL(`https://${raw}`);
+    url = new URL(value);
   } catch {
-    throw new Error(`Source host allowlist entry is invalid: ${value}`);
+    throw new Error("Source URL must be a valid absolute URL.");
   }
-  return normalizeHostname(parsed.hostname);
+  const parsedHostname = normalizeStrictHostname(url.hostname, () => {
+    throw new Error("Source URL hostname is invalid.");
+  });
+  if (parsedHostname !== hostname) {
+    throw new Error("Source URL hostname is invalid.");
+  }
+  return { hostname, url };
 }
 
 function assertPublicAddress(address, family) {
@@ -129,16 +229,7 @@ function assertPublicAddress(address, family) {
 }
 
 export async function resolveAllowedSourceUrl(value, source, { resolveHost = lookup } = {}) {
-  let url;
-  try {
-    url = new URL(value);
-  } catch {
-    throw new Error("Source URL must be a valid absolute URL.");
-  }
-
-  if (url.protocol !== "https:") {
-    throw new Error("Source URL must use HTTPS.");
-  }
+  const { hostname, url } = parseStrictSourceUrl(value);
   if (url.username || url.password) {
     throw new Error("Source URL cannot contain credentials.");
   }
@@ -146,7 +237,6 @@ export async function resolveAllowedSourceUrl(value, source, { resolveHost = loo
     throw new Error("Source URL cannot use a non-standard port.");
   }
 
-  const hostname = normalizeHostname(url.hostname);
   const allowedHosts = Array.isArray(source?.allowedHosts)
     ? source.allowedHosts.map(normalizeConfiguredHostname)
     : [];
