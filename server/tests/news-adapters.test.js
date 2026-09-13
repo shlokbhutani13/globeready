@@ -243,4 +243,42 @@ describe("official feed, index-page, and university adapters", () => {
     await expect(createUniversitySitemapAdapter().discover({ officialDomain: "example.edu" }, sitemap))
       .resolves.toMatchObject({ urls: [], feeds: [] });
   });
+
+  test("preserves mixed Atom XHTML order for titles and content", async () => {
+    const atom = `<?xml version="1.0"?><feed><entry><id>atom-order</id><title>First <b>second <i>third</i></b> fourth <em>fifth</em>.</title><link href="/news/alerts/atom-order"/><content><div>First <b>second <i>third</i></b> fourth <em>fifth</em>.</div></content></entry></feed>`;
+
+    await expect(createFeedAdapter().collect(source, atom)).resolves.toEqual([expect.objectContaining({
+      title: "First second third fourth fifth.",
+      excerpt: "First second third fourth fifth.",
+    })]);
+  });
+
+  test("preserves visible escaped markup in Atom XHTML text", async () => {
+    const atom = `<?xml version="1.0"?><feed><entry><id>atom-literal</id><title>Literal</title><link href="/news/alerts/atom-literal"/><content><div>Show &lt;em&gt;literal&lt;/em&gt; &amp; safe</div></content></entry></feed>`;
+
+    await expect(createFeedAdapter().collect(source, atom)).resolves.toEqual([expect.objectContaining({
+      excerpt: "Show <em>literal</em> & safe",
+    })]);
+  });
+
+  test("binds Atom ordered text to direct feed entries despite foreign nested decoys", async () => {
+    const atom = `<?xml version="1.0"?><feed><extension><entry><title>Decoy</title><content>Wrong first</content></entry></extension><entry><id>one</id><title>One</title><link href="/news/alerts/one"/><content>First content</content></entry><foreign><entry><title>Decoy two</title><content>Wrong second</content></entry></foreign><entry><id>two</id><title>Two</title><link href="/news/alerts/two"/><content>Second content</content></entry></feed>`;
+
+    const candidates = await createFeedAdapter().collect(source, atom);
+
+    expect(candidates.map((candidate) => [candidate.title, candidate.excerpt]))
+      .toEqual([["One", "First content"], ["Two", "Second content"]]);
+  });
+
+  test("binds RSS ordered titles and descriptions to direct channel items", async () => {
+    const rss = `<?xml version="1.0"?><rss><channel><extension><item><title>Decoy</title><description>Wrong first</description></item></extension><item><title>First <b>second <i>third</i></b> fourth <em>fifth</em>.</title><link>/news/alerts/rss-one</link><description>First description</description></item><foreign><item><title>Decoy two</title><description>Wrong second</description></item></foreign><item><title>Two</title><link>/news/alerts/rss-two</link><description>Second description</description></item></channel></rss>`;
+
+    const candidates = await createFeedAdapter().collect(source, rss);
+
+    expect(candidates.map((candidate) => [candidate.title, candidate.excerpt]))
+      .toEqual([
+        ["First second third fourth fifth.", "First description"],
+        ["Two", "Second description"],
+      ]);
+  });
 });

@@ -151,12 +151,16 @@ function atomLink(entry) {
   return typeof alternate === "object" ? alternate["@_href"] : alternate;
 }
 
-function feedCandidate(entry, baseUrl, source, atom = false, orderedExcerpt = "") {
+function feedCandidate(entry, baseUrl, source, atom = false, ordered = {}) {
   if (!entry || typeof entry !== "object") throw adapterError("entry must be an object.");
-  const title = requiredText(entry.title, "entry title");
+  const title = requiredText(ordered.title?.cdata ? plainText(ordered.title.text) : (ordered.title?.text ?? entry.title), "entry title");
   const canonicalUrl = approvedItemUrl(atom ? atomLink(entry) : entry.link, baseUrl, source);
   const externalId = normalizeWhitespace(textValue(atom ? entry.id : entry.guid)) || canonicalUrl;
-  const excerpt = excerptText(orderedExcerpt || textValue(atom ? (entry.summary ?? entry.content) : entry.description));
+  const excerpt = ordered.excerpt
+    ? ordered.excerpt.cdata
+      ? excerptText(ordered.excerpt.text)
+      : excerptFromDecodedText(ordered.excerpt.text)
+    : excerptText(textValue(atom ? (entry.summary ?? entry.content) : entry.description));
   return {
     externalId,
     canonicalUrl,
@@ -191,17 +195,6 @@ function parseXml(text, kind, preserveOrder = false) {
   }
 }
 
-function orderedElements(nodes, name, found = []) {
-  for (const node of asList(nodes)) {
-    if (!node || typeof node !== "object") continue;
-    for (const [key, value] of Object.entries(node)) {
-      if (key === name) found.push(value);
-      else if (!key.startsWith("@_")) orderedElements(value, name, found);
-    }
-  }
-  return found;
-}
-
 function orderedText(value) {
   if (typeof value === "string" || typeof value === "number") return String(value);
   if (!value || typeof value !== "object") return "";
@@ -211,15 +204,49 @@ function orderedText(value) {
     .join("")).join("");
 }
 
-function orderedExcerpt(entry, atom) {
-  const fieldNames = atom ? new Set(["summary", "content"]) : new Set(["description"]);
-  for (const part of asList(entry)) {
+function directField(nodes, fieldNames) {
+  for (const part of asList(nodes)) {
     if (!part || typeof part !== "object") continue;
     for (const [key, value] of Object.entries(part)) {
-      if (fieldNames.has(key)) return orderedText(value);
+      if (fieldNames.has(key)) return value;
     }
   }
-  return "";
+  return undefined;
+}
+
+function directChildren(nodes, name) {
+  const children = [];
+  for (const part of asList(nodes)) {
+    if (!part || typeof part !== "object") continue;
+    for (const [key, value] of Object.entries(part)) {
+      if (key === name) children.push(value);
+    }
+  }
+  return children;
+}
+
+function hasCdata(value) {
+  if (!value || typeof value !== "object") return false;
+  return Object.entries(value).some(([key, child]) => key === "__cdata" || hasCdata(child));
+}
+
+function orderedField(record, names) {
+  const value = directField(record, new Set(names));
+  return value === undefined ? undefined : { text: orderedText(value), cdata: hasCdata(value) };
+}
+
+function orderedRecord(record, atom) {
+  return {
+    title: orderedField(record, ["title"]),
+    excerpt: orderedField(record, atom ? ["summary", "content"] : ["description"]),
+  };
+}
+
+function orderedRecords(document, atom) {
+  if (atom) return directChildren(directField(document, new Set(["feed"])), "entry");
+  const rss = directField(document, new Set(["rss"]));
+  if (rss !== undefined) return directChildren(directField(rss, new Set(["channel"])), "item");
+  return directChildren(directField(document, new Set(["RDF"])), "item");
 }
 
 function feedEntries(parsed) {
@@ -239,8 +266,8 @@ export function createFeedAdapter() {
       const baseUrl = sourceBaseUrl(source, fetched);
       const { entries, atom } = feedEntries(parseXml(text, "feed"));
       if (entries.length > MAX_ENTRIES) throw adapterError("entry count exceeds the parsing limit.");
-      const ordered = orderedElements(parseXml(text, "feed", true), atom ? "entry" : "item");
-      return entries.map((entry, index) => feedCandidate(entry, baseUrl, source, atom, orderedExcerpt(ordered[index], atom)));
+      const ordered = orderedRecords(parseXml(text, "feed", true), atom);
+      return entries.map((entry, index) => feedCandidate(entry, baseUrl, source, atom, orderedRecord(ordered[index], atom)));
     },
   };
 }
