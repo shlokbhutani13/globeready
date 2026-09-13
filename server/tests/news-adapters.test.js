@@ -197,4 +197,50 @@ describe("official feed, index-page, and university adapters", () => {
     await expect(createFeedAdapter().collect(source, entity)).rejects.toThrow(/entity|malformed/i);
     await expect(createFeedAdapter().collect(source, oversized)).rejects.toThrow(/five megabyte/i);
   });
+
+  test("preserves mixed Atom XHTML document order", async () => {
+    const atom = `<?xml version="1.0"?><feed><entry><id>ordered</id><title>Ordered</title><link href="/news/alerts/ordered"/><content><div>First <strong>second <em>third</em></strong> fourth <b>fifth</b>.</div></content></entry></feed>`;
+
+    await expect(createFeedAdapter().collect(source, atom)).resolves.toEqual([expect.objectContaining({
+      excerpt: "First second third fourth fifth.",
+    })]);
+  });
+
+  test("maps RSS1 Dublin Core dates and rejects impossible RFC calendar dates", async () => {
+    const rdf = `<?xml version="1.0"?><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:dc="http://purl.org/dc/elements/1.1/"><item><title>RSS1 date</title><link>/news/alerts/rss1-date</link><dc:date>2026-08-14T23:30:00-04:00</dc:date></item><item><title>Impossible April</title><link>/news/alerts/april</link><dc:date>Fri, 31 Apr 2026 12:00:00 +0000</dc:date></item><item><title>Impossible leap</title><link>/news/alerts/leap</link><dc:date>Wed, 29 Feb 2023 12:00:00 +0000</dc:date></item></rdf:RDF>`;
+
+    const candidates = await createFeedAdapter().collect(source, rdf);
+
+    expect(candidates.map((candidate) => candidate.publishedAt)).toEqual(["2026-08-15", null, null]);
+  });
+
+  test("keeps visible escaped markup after Cheerio has decoded page text", async () => {
+    const page = "<main><article><a href='/news/alerts/literal'>Literal</a><p>&lt;em&gt;literal&lt;/em&gt; &amp; safe</p></article></main>";
+
+    await expect(createIndexPageAdapter().collect(source, page)).resolves.toEqual([expect.objectContaining({
+      excerpt: "<em>literal</em> & safe",
+    })]);
+  });
+
+  test("resolves relative URLs against an uncanonicalized contained base", async () => {
+    const page = "<head><base href='https://www.uscis.gov/official//'></head><main><article><a href='notice'>Base order</a></article></main>";
+
+    await expect(createIndexPageAdapter().collect(source, page)).resolves.toEqual([expect.objectContaining({
+      canonicalUrl: "https://www.uscis.gov/official//notice",
+    })]);
+  });
+
+  test("uses hyphenated host labels for negative and strong relevance signals", async () => {
+    const sitemap = `<?xml version="1.0"?><urlset><url><loc>https://sports-news.example.edu/international-students</loc></url><url><loc>https://not-athletics.example.edu/visa</loc></url><url><loc>https://international.example.edu/calendar</loc></url></urlset>`;
+
+    await expect(createUniversitySitemapAdapter().discover({ officialDomain: "example.edu" }, sitemap))
+      .resolves.toMatchObject({ urls: ["https://international.example.edu/calendar"] });
+  });
+
+  test("skips sitemap paths with malformed percent escapes without leaking URIError", async () => {
+    const sitemap = `<?xml version="1.0"?><urlset><url><loc>https://international.example.edu/visa%</loc></url></urlset>`;
+
+    await expect(createUniversitySitemapAdapter().discover({ officialDomain: "example.edu" }, sitemap))
+      .resolves.toMatchObject({ urls: [], feeds: [] });
+  });
 });

@@ -6,7 +6,7 @@ const MAX_ENTRIES = 500;
 const trackingParameter = /^(?:utm_.+|fbclid|gclid|msclkid|dclid|mc_cid|mc_eid)$/iu;
 const isoDate = /^(\d{4})-(\d{2})-(\d{2})$/u;
 const isoTimestamp = /^(\d{4})-(\d{2})-(\d{2})T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,9})?)?(?:Z|[+-]\d{2}:\d{2})$/u;
-const rfc2822Timestamp = /^(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun),?\s+\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4}\s+\d{2}:\d{2}(?::\d{2})?\s+(?:UT|UTC|GMT|[+-]\d{4})$/iu;
+const rfc2822Timestamp = /^(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun),?\s+(\d{1,2})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{4})\s+\d{2}:\d{2}(?::\d{2})?\s+(?:UT|UTC|GMT|[+-]\d{4})$/iu;
 
 function adapterError(message) {
   return new Error(`Official feed is invalid: ${message}`);
@@ -53,6 +53,10 @@ export function plainText(value) {
 
 export function excerptText(value) {
   return capCodePoints(plainText(value));
+}
+
+export function excerptFromDecodedText(value) {
+  return capCodePoints(normalizeWhitespace(value));
 }
 
 export function sourceText(fetched) {
@@ -122,7 +126,10 @@ export function sourceDate(value) {
     const timestamp = Date.parse(normalized);
     return Number.isNaN(timestamp) ? null : new Date(timestamp).toISOString().slice(0, 10);
   }
-  if (rfc2822Timestamp.test(normalized)) {
+  const rfcMatch = rfc2822Timestamp.exec(normalized);
+  if (rfcMatch) {
+    const months = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+    if (!validCalendarDate(rfcMatch[3], months.indexOf(rfcMatch[2].toLowerCase()) + 1, rfcMatch[1])) return null;
     const timestamp = Date.parse(normalized);
     return Number.isNaN(timestamp) ? null : new Date(timestamp).toISOString().slice(0, 10);
   }
@@ -144,18 +151,18 @@ function atomLink(entry) {
   return typeof alternate === "object" ? alternate["@_href"] : alternate;
 }
 
-function feedCandidate(entry, baseUrl, source, atom = false) {
+function feedCandidate(entry, baseUrl, source, atom = false, orderedExcerpt = "") {
   if (!entry || typeof entry !== "object") throw adapterError("entry must be an object.");
   const title = requiredText(entry.title, "entry title");
   const canonicalUrl = approvedItemUrl(atom ? atomLink(entry) : entry.link, baseUrl, source);
   const externalId = normalizeWhitespace(textValue(atom ? entry.id : entry.guid)) || canonicalUrl;
-  const excerpt = excerptText(textValue(atom ? (entry.summary ?? entry.content) : entry.description));
+  const excerpt = excerptText(orderedExcerpt || textValue(atom ? (entry.summary ?? entry.content) : entry.description));
   return {
     externalId,
     canonicalUrl,
     title,
     publisher: normalizeWhitespace(source?.publisher) || baseUrl.hostname,
-    publishedAt: sourceDate(textValue(atom ? entry.published : entry.pubDate)),
+    publishedAt: sourceDate(textValue(atom ? entry.published : (entry.pubDate ?? entry.date))),
     updatedAt: sourceDate(textValue(entry.updated)),
     effectiveAt: null,
     sourceDocumentType: normalizeWhitespace(source?.sourceDocumentType) || "Notice",
@@ -166,7 +173,7 @@ function feedCandidate(entry, baseUrl, source, atom = false) {
   };
 }
 
-function parseXml(text, kind) {
+function parseXml(text, kind, preserveOrder = false) {
   if (/<!DOCTYPE|<!ENTITY/iu.test(text)) throw adapterError(`${kind} XML cannot contain entity declarations.`);
   if (XMLValidator.validate(text) !== true) throw adapterError(`${kind} XML is malformed.`);
   try {
@@ -175,12 +182,44 @@ function parseXml(text, kind) {
       cdataPropName: "__cdata",
       ignoreAttributes: false,
       removeNSPrefix: true,
+      preserveOrder,
       textNodeName: "#text",
       trimValues: false,
     }).parse(text);
   } catch {
     throw adapterError(`${kind} XML cannot be parsed.`);
   }
+}
+
+function orderedElements(nodes, name, found = []) {
+  for (const node of asList(nodes)) {
+    if (!node || typeof node !== "object") continue;
+    for (const [key, value] of Object.entries(node)) {
+      if (key === name) found.push(value);
+      else if (!key.startsWith("@_")) orderedElements(value, name, found);
+    }
+  }
+  return found;
+}
+
+function orderedText(value) {
+  if (typeof value === "string" || typeof value === "number") return String(value);
+  if (!value || typeof value !== "object") return "";
+  return asList(value).map((node) => Object.entries(node || {})
+    .filter(([key]) => !key.startsWith("@_"))
+    .map(([, child]) => orderedText(child))
+    .join("")).join("");
+}
+
+function orderedExcerpt(entry, atom) {
+  const fieldNames = atom ? new Set(["summary", "content"]) : new Set(["description"]);
+  for (const part of asList(entry)) {
+    if (!part || typeof part !== "object") continue;
+    for (const [key, value] of Object.entries(part)) {
+      if (fieldNames.has(key)) return orderedText(value);
+    }
+  }
+  return "";
 }
 
 function feedEntries(parsed) {
@@ -200,7 +239,8 @@ export function createFeedAdapter() {
       const baseUrl = sourceBaseUrl(source, fetched);
       const { entries, atom } = feedEntries(parseXml(text, "feed"));
       if (entries.length > MAX_ENTRIES) throw adapterError("entry count exceeds the parsing limit.");
-      return entries.map((entry) => feedCandidate(entry, baseUrl, source, atom));
+      const ordered = orderedElements(parseXml(text, "feed", true), atom ? "entry" : "item");
+      return entries.map((entry, index) => feedCandidate(entry, baseUrl, source, atom, orderedExcerpt(ordered[index], atom)));
     },
   };
 }

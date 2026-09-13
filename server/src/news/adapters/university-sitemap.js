@@ -73,7 +73,11 @@ function parseSitemap(text) {
 }
 
 function pathTokens(url) {
-  return decodeURIComponent(url.pathname).toLowerCase().match(word) || [];
+  try {
+    return decodeURIComponent(url.pathname).toLowerCase().match(word) || [];
+  } catch {
+    return null;
+  }
 }
 
 function hasPhrase(tokens, ...phrase) {
@@ -86,7 +90,9 @@ function hasAny(tokens, values) {
 
 function isRelevantUniversityUrl(url, domain) {
   const tokens = pathTokens(url);
-  const hostLabels = url.hostname.toLowerCase().replace(new RegExp(`\\.${domain}$`, "u"), "").split(".");
+  if (!tokens) return false;
+  const hostLabels = url.hostname.toLowerCase().replace(new RegExp(`\\.${domain}$`, "u"), "")
+    .split(".").flatMap((label) => label.split("-")).filter(Boolean);
   if (hasAny(tokens, ["athletics", "sport", "sports"]) || hasAny(hostLabels, ["athletics", "sport", "sports"])) return false;
   if (feedPath.test(url.pathname) && hasAny(hostLabels, ["international", "registrar", "global"])) return true;
   if (hasPhrase(tokens, "international", "students") || hasPhrase(tokens, "global", "services")) return true;
@@ -94,6 +100,7 @@ function isRelevantUniversityUrl(url, domain) {
   if (tokens.includes("academic") && tokens.includes("calendar")) return true;
   if (tokens.includes("registrar") && tokens.includes("calendar")) return true;
   if (hostLabels.includes("registrar") && tokens.includes("calendar")) return true;
+  if (hostLabels.includes("international") && tokens.includes("calendar")) return true;
   return hostLabels.includes("international") && hasAny(tokens, ["news", "alert", "alerts", "update", "updates", "announcement", "announcements", "notice", "notices"]);
 }
 
