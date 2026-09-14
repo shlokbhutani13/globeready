@@ -138,6 +138,20 @@ function matchingTerms(text, terms) {
   return terms.filter((term) => includesTerm(text, term));
 }
 
+function includesAffirmedTerm(text, term) {
+  const escaped = term.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&").replace(/\s+/gu, "\\s+");
+  const matcher = new RegExp(`(?:^|[^a-z0-9])(${escaped})(?=$|[^a-z0-9])`, "giu");
+  for (const match of text.matchAll(matcher)) {
+    const prefix = text.slice(Math.max(0, match.index - 32), match.index).trimEnd();
+    if (!/(?:\bno|\bnot|\bwithout|does\s+not|doesn't)\s*$/iu.test(prefix)) return true;
+  }
+  return false;
+}
+
+function matchingAffirmedTerms(text, terms) {
+  return terms.filter((term) => includesAffirmedTerm(text, term));
+}
+
 function sourceDocumentType(value) {
   const text = cleanText(value).toLowerCase();
   if (!text) return null;
@@ -186,13 +200,18 @@ function currentIsoDate(clock) {
 
 function classifyLegalState(candidate, text, documentType, today) {
   const explicit = cleanText(candidate?.sourceLegalState).toLowerCase();
-  if (legalStates.has(explicit)) return explicit;
+  const futureEffectiveDate = validIsoDate(candidate?.effectiveAt) && candidate.effectiveAt > today;
+  if (legalStates.has(explicit)) {
+    return explicit === "effective" && futureEffectiveDate ? "scheduled" : explicit;
+  }
 
   for (const [state, terms] of legalStateTerms) {
-    if (matchingTerms(text, terms).length > 0) return state;
+    if (state === "effective" && futureEffectiveDate) continue;
+    if (matchingAffirmedTerms(text, terms).length > 0) return state;
   }
 
   if (documentType === "proposed-rule") return "proposed";
+  if (futureEffectiveDate) return "scheduled";
   if (documentType === "final-rule") {
     if (validIsoDate(candidate?.effectiveAt)) {
       return candidate.effectiveAt > today ? "scheduled" : "effective";
@@ -230,8 +249,8 @@ export function classifyCandidate(candidate = {}, { clock = () => new Date() } =
   const legalState = classifyLegalState(candidate, text, documentType, today);
   const topic = classifyTopic(text);
   const topicMatches = matchingTerms(text, topicTerms.get(topic) || []);
-  const impactMatches = matchingTerms(text, highImpactTerms);
-  const relevanceMatches = matchingTerms(text, relevanceTerms);
+  const impactMatches = matchingAffirmedTerms(text, highImpactTerms);
+  const relevanceMatches = matchingAffirmedTerms(text, relevanceTerms);
   const visaTypes = [];
   const visaMatches = [];
 
@@ -243,11 +262,21 @@ export function classifyCandidate(candidate = {}, { clock = () => new Date() } =
     }
   }
 
+  if (/\bF\s*,\s*M\s*,?\s*(?:and|&)\s*J\b/iu.test(text)) {
+    visaTypes.push("f-1", "m-1", "j-1");
+    visaMatches.push("f/m/j students");
+  }
+
   const highImpact = impactMatches.length > 0;
-  const audienceMatched = visaTypes.length > 0 || includesTerm(text, "international student");
+  const uniqueVisaTypes = [...new Set(visaTypes)];
+  const audienceMatched = uniqueVisaTypes.length > 0
+    || includesTerm(text, "international student")
+    || includesTerm(text, "student visa")
+    || includesTerm(text, "student dependent")
+    || includesTerm(text, "sevis");
   const contextualRelevance = audienceMatched
     && (topic === "travel-entry" || topic === "taxes-social-security");
-  const relevance = relevanceMatches.length > 0 || contextualRelevance
+  const relevance = audienceMatched && (relevanceMatches.length > 0 || contextualRelevance)
     ? "relevant"
     : audienceMatched
       ? "borderline"
@@ -264,7 +293,7 @@ export function classifyCandidate(candidate = {}, { clock = () => new Date() } =
     + (explicitDocumentType ? 0.15 : 0)
     + (topic !== "general" ? 0.15 : 0)
     + (relevanceMatches.length > 0 ? 0.15 : 0)
-    + (visaTypes.length > 0 ? 0.1 : 0)
+    + (uniqueVisaTypes.length > 0 ? 0.1 : 0)
     - (invalidEffectiveDate || unknownSourceDocumentType ? 0.2 : 0)
   ).toFixed(2)));
   const urgency = classifyUrgency({ highImpact, legalState, topic, effectiveAt: candidate.effectiveAt }, today);
@@ -278,7 +307,7 @@ export function classifyCandidate(candidate = {}, { clock = () => new Date() } =
     legalState,
     topic,
     topics: topic === "general" ? [] : [topic],
-    visaTypes,
+    visaTypes: uniqueVisaTypes,
     highImpact,
     urgency,
     relevance,

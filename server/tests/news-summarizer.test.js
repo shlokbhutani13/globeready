@@ -63,6 +63,30 @@ describe("source-bound generated news summaries", () => {
     expect(result.error).toMatch(/verified official URL/i);
   });
 
+  test("does not trust an off-registry candidate canonical URL", async () => {
+    const hostile = { ...candidate, canonicalUrl: "https://attacker.example/apply" };
+    const summarizer = createNewsSummarizer({ generate: async () => generated({
+      actions: [{ label: "Apply", sourceUrl: hostile.canonicalUrl }],
+    }) });
+
+    const result = await summarizer.summarize(hostile, { verifiedDomains: ["www.uscis.gov"] });
+
+    expect(result).toMatchObject({ ok: false, reviewRequired: true, publishable: false });
+    expect(result.error).toMatch(/verified official URL/i);
+  });
+
+  test.each(["javascript:alert(1)", "data:text/html,owned", "file:///etc/passwd", "vbscript:msgbox(1)", "javascript&#58;alert(1)"])(
+    "rejects dangerous URI scheme %s anywhere in generated text",
+    async (uri) => {
+      const result = await summarize(generated({
+        plainLanguageSummary: `Use [official instructions](${uri}) for this update.`,
+      }));
+
+      expect(result).toMatchObject({ ok: false, reviewRequired: true, publishable: false });
+      expect(result.error).toMatch(/URL|scheme/i);
+    },
+  );
+
   test("rejects dates that do not occur in source metadata or source text", async () => {
     const result = await summarize(generated({
       plainLanguageSummary: "The new edition takes effect on 2026-11-01.",
@@ -70,6 +94,40 @@ describe("source-bound generated news summaries", () => {
 
     expect(result).toMatchObject({ ok: false, reviewRequired: true, publishable: false, draft: null });
     expect(result.error).toMatch(/date.*source/i);
+  });
+
+  test("accepts an unambiguous natural-language rendering of a source date", async () => {
+    const result = await summarize(generated({
+      plainLanguageSummary: "USCIS says the new edition takes effect on October 1, 2026.",
+    }));
+
+    expect(result).toMatchObject({ ok: true, reviewRequired: true, publishable: false });
+  });
+
+  test("accepts a common abbreviated official date rendering", async () => {
+    const result = await summarize(generated({
+      plainLanguageSummary: "USCIS says the new edition takes effect on Oct. 1, 2026.",
+    }));
+
+    expect(result).toMatchObject({ ok: true, reviewRequired: true, publishable: false });
+  });
+
+  test("rejects a substituted natural-language date", async () => {
+    const result = await summarize(generated({
+      plainLanguageSummary: "USCIS says the new edition takes effect on November 1, 2026.",
+    }));
+
+    expect(result).toMatchObject({ ok: false, reviewRequired: true, publishable: false });
+    expect(result.error).toMatch(/date.*source/i);
+  });
+
+  test("fails closed on ambiguous numeric dates", async () => {
+    const result = await summarize(generated({
+      plainLanguageSummary: "USCIS says the new edition takes effect on 10/01/2026.",
+    }));
+
+    expect(result).toMatchObject({ ok: false, reviewRequired: true, publishable: false });
+    expect(result.error).toMatch(/ambiguous date/i);
   });
 
   test("rejects unknown values in closed enum fields without coercion", async () => {

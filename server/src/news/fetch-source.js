@@ -178,6 +178,7 @@ export async function fetchSource(source, {
   fetchImpl,
   requestImpl = httpsRequest,
   resolveHost,
+  signal: externalSignal,
 } = {}) {
   if (fetchImpl !== undefined && typeof fetchImpl !== "function") {
     throw new Error("Source fetch implementation must be a function.");
@@ -187,7 +188,11 @@ export async function fetchSource(source, {
   }
 
   const allowedContentTypes = acceptedContentTypes(source || {});
-  const signal = AbortSignal.timeout(REQUEST_TIMEOUT_MS);
+  if (externalSignal !== undefined && !(externalSignal instanceof AbortSignal)) {
+    throw new Error("Source fetch abort signal is invalid.");
+  }
+  const timeoutSignal = AbortSignal.timeout(REQUEST_TIMEOUT_MS);
+  const signal = externalSignal ? AbortSignal.any([timeoutSignal, externalSignal]) : timeoutSignal;
   const headers = { "User-Agent": USER_AGENT };
   if (source?.etag) headers["If-None-Match"] = source.etag;
   if (source?.lastModified) headers["If-Modified-Since"] = source.lastModified;

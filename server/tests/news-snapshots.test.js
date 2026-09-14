@@ -41,6 +41,7 @@ describe("private source snapshots", () => {
     const store = createSnapshotStore({ bucket, clock: fixedClock });
     const contentHash = "a".repeat(64);
 
+    expect(store.isPrivate).toBe(true);
     const result = await store.save("federal-register", contentHash, "  Official\r\n  source   text  ");
     const file = bucket.file(`news-source-snapshots/federal-register/${contentHash}.txt`);
 
@@ -85,10 +86,29 @@ describe("private source snapshots", () => {
       scanned: 3,
       deleted: 1,
       retained: 2,
+      invalid: 0,
     });
     expect(oldDeleted.calls.delete).toBe(1);
     expect(oldRetained.calls.delete).toBe(0);
     expect(fresh.calls.delete).toBe(0);
+  });
+
+  test("retains a snapshot whose metadata hash does not match its object-path hash", async () => {
+    const pathHash = "a".repeat(64);
+    const metadataHash = "b".repeat(64);
+    const mismatched = fakeFile(`news-source-snapshots/source/${pathHash}.txt`, {
+      timeCreated: "2026-05-01T00:00:00.000Z",
+      metadata: { contentHash: metadataHash },
+    });
+    const store = createSnapshotStore({ bucket: fakeBucket([mismatched]), clock: fixedClock });
+
+    await expect(store.removeExpired({ retainHashes: new Set([metadataHash]) })).resolves.toEqual({
+      scanned: 1,
+      deleted: 0,
+      retained: 1,
+      invalid: 1,
+    });
+    expect(mismatched.calls.delete).toBe(0);
   });
 
   test("rejects unsafe source identifiers before constructing an object path", async () => {

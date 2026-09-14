@@ -51,6 +51,16 @@ export function createGlobalCollection() {
       items.set(item.id, item);
       return item;
     },
+    async upsert(id, input) {
+      if (typeof id !== "string" || !id) throw new Error("Collection upsert ID is required.");
+      const now = new Date().toISOString();
+      const current = items.get(id);
+      const item = current
+        ? { ...current, ...input, id, updatedAt: now }
+        : { id, ...input, createdAt: now, updatedAt: now };
+      items.set(id, item);
+      return { item, created: !current, changed: !current || JSON.stringify(current) !== JSON.stringify(item) };
+    },
     async update(id, input) {
       const current = items.get(id);
       if (!current) return null;
@@ -92,6 +102,19 @@ function createNewsStore({ reviewQueue }) {
     async get(id) {
       return [...itemsBySourceKey.values()].find((item) => item.id === id) || null;
     },
+    async getBySourceKey(sourceKey) {
+      return itemsBySourceKey.get(sourceKey) || null;
+    },
+    async listInternal() {
+      return [...itemsBySourceKey.values()];
+    },
+    async updateInternal(id, input) {
+      const current = [...itemsBySourceKey.values()].find((item) => item.id === id);
+      if (!current) return null;
+      const item = { ...current, ...input, id, sourceKey: current.sourceKey, recordUpdatedAt: new Date().toISOString() };
+      itemsBySourceKey.set(current.sourceKey, item);
+      return item;
+    },
     async upsert(sourceKey, input) {
       const now = new Date().toISOString();
       const current = itemsBySourceKey.get(sourceKey);
@@ -106,6 +129,9 @@ function createNewsStore({ reviewQueue }) {
           lastSeenAt: now,
           createdAt: now,
           recordUpdatedAt: now,
+          relatedIds: [],
+          supersedesIds: [],
+          supersededByIds: [],
         };
         itemsBySourceKey.set(sourceKey, item);
         return { item, created: true, changed: true };
@@ -137,10 +163,14 @@ function createNewsStore({ reviewQueue }) {
         createdAt: current.createdAt,
         recordUpdatedAt: now,
       };
+      delete item.reviewerUid;
+      delete item.reviewedAt;
+      delete item.reviewId;
+      delete item.approvalEvidence;
       itemsBySourceKey.set(sourceKey, item);
       return { item, created: false, changed: true };
     },
-    async approve(id, { reviewerUid, reviewedAt, summary, reviewId } = {}) {
+    async approve(id, { reviewerUid, reviewedAt, summary, reviewId, approvalEvidence } = {}) {
       const current = [...itemsBySourceKey.values()].find((item) => item.id === id);
       const review = await reviewQueue.get(reviewId);
       if (!current || !review || review.newsItemId !== id) {
@@ -157,6 +187,7 @@ function createNewsStore({ reviewQueue }) {
         reviewerUid: reviewerUid.trim(),
         reviewedAt,
         reviewId,
+        approvalEvidence: approvalEvidence || null,
         recordUpdatedAt: new Date().toISOString(),
       };
       itemsBySourceKey.set(item.sourceKey, item);
@@ -175,6 +206,30 @@ function createNewsStore({ reviewQueue }) {
           return String(right.publishedAt || "").localeCompare(String(left.publishedAt || ""));
         })
         .map(publicNewsItem);
+    },
+  };
+}
+
+function createLeaseStore() {
+  const leases = new Map();
+  return {
+    async acquire(key, owner, expiresAt) {
+      const current = leases.get(key);
+      if (current && Date.parse(current.expiresAt) > Date.now()) return false;
+      leases.set(key, { owner, expiresAt });
+      return true;
+    },
+    async renew(key, owner, expiresAt) {
+      const current = leases.get(key);
+      if (!current || current.owner !== owner) return false;
+      leases.set(key, { owner, expiresAt });
+      return true;
+    },
+    async release(key, owner) {
+      const current = leases.get(key);
+      if (!current || current.owner !== owner) return false;
+      leases.delete(key);
+      return true;
     },
   };
 }
@@ -291,6 +346,7 @@ export function createDemoStore() {
     newsSources: createGlobalCollection(),
     newsRuns: createGlobalCollection(),
     reviewQueue,
+    leases: createLeaseStore(),
     newsPreferences: createNewsPreferencesStore(),
     savedNews: createCollection(),
     notifications: createCollection(),

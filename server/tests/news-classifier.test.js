@@ -36,6 +36,59 @@ describe("deterministic news classification", () => {
     });
   });
 
+  test("does not let effective language override a future effective date", () => {
+    expect(classifyCandidate({
+      sourceDocumentType: "Final Rule",
+      title: "F-1 duration of status rule takes effect immediately",
+      effectiveAt: "2026-10-01",
+    }, { clock: fixedClock })).toMatchObject({
+      documentType: "final-rule",
+      legalState: "scheduled",
+    });
+  });
+
+  test("uses scheduled for a future-dated notice that contains effective language", () => {
+    expect(classifyCandidate({
+      sourceDocumentType: "Notice",
+      title: "F-1 policy takes effect",
+      effectiveAt: "2026-10-01",
+    }, { clock: fixedClock })).toMatchObject({ legalState: "scheduled" });
+  });
+
+  test("requires student or visa audience context for generic high-impact language", () => {
+    expect(classifyCandidate({
+      sourceDocumentType: "Notice",
+      title: "IRS filing fee notice",
+      excerpt: "A new filing fee applies to corporate return preparers.",
+    }, { clock: fixedClock })).toMatchObject({
+      highImpact: true,
+      relevance: "not-relevant",
+    });
+
+    expect(classifyCandidate({
+      sourceDocumentType: "Notice",
+      title: "F, M, and J student filing fee notice",
+      excerpt: "International students in F, M, and J visa categories must use the new fee.",
+    }, { clock: fixedClock })).toMatchObject({
+      highImpact: true,
+      relevance: "relevant",
+      visaTypes: expect.arrayContaining(["f-1", "m-1", "j-1"]),
+    });
+  });
+
+  test("does not treat a negated injunction as enjoined or urgent", () => {
+    expect(classifyCandidate({
+      sourceDocumentType: "Notice",
+      title: "F-1 program litigation update",
+      excerpt: "No injunction applies to F-1 students.",
+    }, { clock: fixedClock })).toMatchObject({
+      legalState: "informational",
+      urgency: "low",
+      highImpact: false,
+      relevance: "borderline",
+    });
+  });
+
   test("prefers explicit source document metadata over conflicting title words", () => {
     expect(classifyCandidate({
       sourceDocumentType: "Notice",

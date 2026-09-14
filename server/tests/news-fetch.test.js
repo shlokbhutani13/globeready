@@ -206,6 +206,21 @@ describe("official source fetching", () => {
     }
   });
 
+  test("honors an owning synchronization abort signal across the secure boundary", async () => {
+    const owner = new AbortController();
+    const fetchImpl = vi.fn(async (_url, { signal }) => {
+      owner.abort(new Error("lease lost"));
+      await new Promise((resolve, reject) => {
+        signal.addEventListener("abort", () => reject(signal.reason), { once: true });
+        if (signal.aborted) reject(signal.reason);
+      });
+    });
+
+    await expect(fetchSource(htmlSource(), { fetchImpl, resolveHost: publicDns, signal: owner.signal }))
+      .rejects.toThrow(/lease lost/i);
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
   test("pins the validated address while retaining the original TLS and Host names", async () => {
     const incoming = Readable.from([Buffer.from("Official update")]);
     Object.assign(incoming, {

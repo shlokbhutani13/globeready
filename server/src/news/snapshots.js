@@ -25,9 +25,12 @@ function normalizedContent(value) {
 
 function metadataHash(file, metadata) {
   const stored = metadata?.metadata?.contentHash;
-  if (typeof stored === "string") return stored;
-  const match = /\/([a-f0-9]{64})\.txt$/u.exec(file?.name || "");
-  return match?.[1] || null;
+  const match = /^news-source-snapshots\/[a-z0-9](?:[a-z0-9_-]{0,198}[a-z0-9])?\/([a-f0-9]{64})\.txt$/iu.exec(file?.name || "");
+  const pathHash = match?.[1] || null;
+  return {
+    hash: pathHash,
+    valid: Boolean(pathHash && typeof stored === "string" && stored === pathHash),
+  };
 }
 
 export function createSnapshotStore({ bucket, clock = () => new Date(), retentionDays = 90 } = {}) {
@@ -39,6 +42,7 @@ export function createSnapshotStore({ bucket, clock = () => new Date(), retentio
   }
 
   return {
+    isPrivate: true,
     async save(sourceId, contentHash, content) {
       const now = nowFrom(clock);
       const path = snapshotPath(sourceId, contentHash);
@@ -68,12 +72,18 @@ export function createSnapshotStore({ bucket, clock = () => new Date(), retentio
       const [files] = await bucket.getFiles({ prefix: snapshotPrefix });
       let deleted = 0;
       let retained = 0;
+      let invalid = 0;
 
       for (const file of files) {
         const [metadata] = await file.getMetadata();
         const createdAt = Date.parse(metadata?.timeCreated || "");
-        const hash = metadataHash(file, metadata);
-        if (!Number.isFinite(createdAt) || createdAt >= cutoff || (hash && retainedHashes.has(hash))) {
+        const identity = metadataHash(file, metadata);
+        if (!identity.valid) {
+          invalid += 1;
+          retained += 1;
+          continue;
+        }
+        if (!Number.isFinite(createdAt) || createdAt >= cutoff || retainedHashes.has(identity.hash)) {
           retained += 1;
           continue;
         }
@@ -81,7 +91,7 @@ export function createSnapshotStore({ bucket, clock = () => new Date(), retentio
         deleted += 1;
       }
 
-      return { scanned: files.length, deleted, retained };
+      return { scanned: files.length, deleted, retained, invalid };
     },
   };
 }

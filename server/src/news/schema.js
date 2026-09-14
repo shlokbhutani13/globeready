@@ -82,6 +82,10 @@ export function publicNewsItem(item) {
     classifierConfidence,
     classifierMatchedTerms,
     classifierExplanation,
+    reviewerUid,
+    reviewedAt,
+    reviewId,
+    approvalEvidence,
     ...safe
   } = item;
   return safe;
@@ -96,7 +100,9 @@ export function normalizeNewsCandidate(candidate = {}, source = {}) {
 
   return {
     sourceId,
+    externalId,
     sourceKey: externalId ? `${sourceId}:${externalId}` : `${sourceId}:${canonicalUrl}`,
+    relatedExternalId: cleanText(candidate.relatedExternalId, 500),
     canonicalUrl,
     officialPdfUrl: cleanText(candidate.officialPdfUrl, 2_000),
     sourceVerified: source.verified === true,
@@ -106,6 +112,7 @@ export function normalizeNewsCandidate(candidate = {}, source = {}) {
     updatedAt: cleanDate(candidate.updatedAt),
     effectiveAt: cleanDate(candidate.effectiveAt),
     sourceDocumentType: cleanText(candidate.sourceDocumentType),
+    sourceLegalState: cleanText(candidate.sourceLegalState, 100),
     documentType,
     legalState: legalStateFor(documentType),
     editorialState: source.verified === true ? "published-source-only" : "review-required",

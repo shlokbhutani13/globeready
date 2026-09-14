@@ -1,4 +1,6 @@
-import { describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
+
+afterEach(() => vi.useRealTimers());
 
 import { createDemoStore } from "../src/store.js";
 
@@ -133,5 +135,18 @@ describe("demo news store", () => {
     expect(await store.savedNews.list("student-b")).toEqual([]);
     expect(await store.notifications.list("student-b")).toEqual([]);
     expect(await store.conversationMessages.list("student-b", "conversation-1")).toEqual([]);
+  });
+
+  test("never lets an expired lease owner release a replacement owner's lease", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-14T12:00:00.000Z"));
+    const store = createDemoStore();
+    expect(await store.leases.acquire("source", "first", "2026-09-14T12:00:01.000Z")).toBe(true);
+    vi.setSystemTime(new Date("2026-09-14T12:00:02.000Z"));
+    expect(await store.leases.acquire("source", "second", "2026-09-14T12:01:00.000Z")).toBe(true);
+
+    expect(await store.leases.release("source", "first")).toBe(false);
+    expect(await store.leases.acquire("source", "third", "2026-09-14T12:02:00.000Z")).toBe(false);
+    expect(await store.leases.release("source", "second")).toBe(true);
   });
 });

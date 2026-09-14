@@ -22,6 +22,15 @@ const rootFields = new Set([
 const actionFields = new Set(["label", "sourceUrl"]);
 const isoDatePattern = /\b\d{4}-\d{2}-\d{2}\b/gu;
 const urlPattern = /https?:\/\/[^\s<>"']+/giu;
+const schemePattern = /\b[a-z][a-z0-9+.-]*:(?:\/\/)?[^\s<>"']+/giu;
+const ambiguousDatePattern = /\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b/u;
+const monthDatePattern = /\b(?:(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember|t)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\.?\s+(\d{1,2})(?:st|nd|rd|th)?[,]?\s+(\d{4})|(\d{1,2})(?:st|nd|rd|th)?\s+(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember|t)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\.?[,]?\s+(\d{4}))\b/giu;
+const months = new Map([
+  ["jan", 1], ["january", 1], ["feb", 2], ["february", 2], ["mar", 3], ["march", 3],
+  ["apr", 4], ["april", 4], ["may", 5], ["jun", 6], ["june", 6], ["jul", 7],
+  ["july", 7], ["aug", 8], ["august", 8], ["sep", 9], ["sept", 9], ["september", 9],
+  ["oct", 10], ["october", 10], ["nov", 11], ["november", 11], ["dec", 12], ["december", 12],
+]);
 
 function isRecord(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -147,35 +156,74 @@ function trimUrlPunctuation(value) {
   return value.replace(/[),.;:\]}]+$/u, "");
 }
 
+function uriScanText(value) {
+  return value.replace(/(?:&#0*58;|&#x0*3a;|&colon;)/giu, ":");
+}
+
+function normalizedDate(yearValue, monthValue, dayValue) {
+  const year = Number(yearValue);
+  const month = typeof monthValue === "number" ? monthValue : months.get(String(monthValue).toLowerCase());
+  const day = Number(dayValue);
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  if (!month || parsed.getUTCFullYear() !== year || parsed.getUTCMonth() !== month - 1 || parsed.getUTCDate() !== day) {
+    throw new Error("Generated summary contains an invalid date.");
+  }
+  return `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+function datesIn(value) {
+  const dates = value.match(isoDatePattern) || [];
+  for (const match of value.matchAll(monthDatePattern)) {
+    dates.push(match[1]
+      ? normalizedDate(match[3], match[1], match[2])
+      : normalizedDate(match[6], match[5], match[4]));
+  }
+  return dates;
+}
+
+function verifiedOfficialUrl(value, domains) {
+  let url;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new Error("Generated summary contains a malformed URL.");
+  }
+  const hostname = url.hostname.toLowerCase();
+  const verified = domains.some((domain) => hostname === domain || hostname.endsWith(`.${domain}`));
+  if (url.protocol !== "https:" || url.username || url.password || url.port || !verified) {
+    throw new Error(`Generated summary contains an unverified official URL: ${value}.`);
+  }
+}
+
 function validateSourceBounds(draft, candidate, verifiedDomains) {
   const material = sourceMaterial(candidate);
   const strings = allStrings(draft);
-  const dates = [...new Set(strings.flatMap((value) => value.match(isoDatePattern) || []))];
+  if (strings.some((value) => ambiguousDatePattern.test(value))) {
+    throw new Error("Generated summary contains an ambiguous date.");
+  }
+  const sourceDates = new Set(datesIn(material));
+  const dates = [...new Set(strings.flatMap(datesIn))];
   for (const date of dates) {
-    if (!material.includes(date)) {
+    if (!sourceDates.has(date)) {
       throw new Error(`Generated date does not occur in source material: ${date}.`);
     }
   }
 
   const domains = registryDomains(verifiedDomains);
-  const canonicalUrl = typeof candidate?.canonicalUrl === "string" ? candidate.canonicalUrl : "";
+  verifiedOfficialUrl(candidate?.canonicalUrl, domains);
+  if (candidate?.officialPdfUrl) verifiedOfficialUrl(candidate.officialPdfUrl, domains);
+  for (const value of strings.flatMap((entry) => uriScanText(entry).match(schemePattern) || [])) {
+    const url = trimUrlPunctuation(value);
+    if (!url.toLowerCase().startsWith("https://")) {
+      throw new Error(`Generated summary contains a dangerous unverified official URL scheme: ${url}.`);
+    }
+  }
   const urls = [...new Set([
     ...draft.actions.map((action) => action.sourceUrl),
     ...strings.flatMap((value) => (value.match(urlPattern) || []).map(trimUrlPunctuation)),
   ])];
   for (const value of urls) {
-    let url;
-    try {
-      url = new URL(value);
-    } catch {
-      throw new Error("Generated summary contains a malformed URL.");
-    }
-    const hostname = url.hostname.toLowerCase();
-    const verified = value === canonicalUrl
-      || domains.some((domain) => hostname === domain || hostname.endsWith(`.${domain}`));
-    if (url.protocol !== "https:" || url.username || url.password || url.port || !verified) {
-      throw new Error(`Generated summary contains an unverified official URL: ${value}.`);
-    }
+    verifiedOfficialUrl(value, domains);
   }
 }
 
