@@ -75,7 +75,15 @@ export function isPublished(item) {
 }
 
 export function publicNewsItem(item) {
-  const { normalizedText, contentHash, classifierExplanation, ...safe } = item;
+  const {
+    normalizedText,
+    contentHash,
+    snapshotPath,
+    classifierConfidence,
+    classifierMatchedTerms,
+    classifierExplanation,
+    ...safe
+  } = item;
   return safe;
 }
 
