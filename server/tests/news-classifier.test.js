@@ -55,6 +55,27 @@ describe("deterministic news classification", () => {
     }, { clock: fixedClock })).toMatchObject({ legalState: "scheduled" });
   });
 
+  test.each(["final", "informational"])(
+    "future effectiveAt overrides explicit source legal state %s",
+    (sourceLegalState) => {
+      expect(classifyCandidate({
+        sourceDocumentType: "Notice",
+        sourceLegalState,
+        title: "F-1 policy update",
+        effectiveAt: "2026-10-01",
+      }, { clock: fixedClock })).toMatchObject({ legalState: "scheduled" });
+    },
+  );
+
+  test("preserves a supported intervening state over a future schedule", () => {
+    expect(classifyCandidate({
+      sourceDocumentType: "Notice",
+      sourceLegalState: "withdrawn",
+      title: "F-1 policy withdrawn",
+      effectiveAt: "2026-10-01",
+    }, { clock: fixedClock })).toMatchObject({ legalState: "withdrawn" });
+  });
+
   test("requires student or visa audience context for generic high-impact language", () => {
     expect(classifyCandidate({
       sourceDocumentType: "Notice",
@@ -87,6 +108,15 @@ describe("deterministic news classification", () => {
       highImpact: false,
       relevance: "borderline",
     });
+  });
+
+  test.each([
+    "The court did not issue an injunction affecting F-1 students.",
+    "No court has issued an injunction affecting F-1 students.",
+    "There are no changes to OPT eligibility for F-1 students.",
+  ])("does not inflate a negated or non-change clause: %s", (excerpt) => {
+    expect(classifyCandidate({ sourceDocumentType: "Notice", title: "F-1 update", excerpt }, { clock: fixedClock }))
+      .toMatchObject({ highImpact: false, urgency: "low", relevance: "borderline" });
   });
 
   test("prefers explicit source document metadata over conflicting title words", () => {

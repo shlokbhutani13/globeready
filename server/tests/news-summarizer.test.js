@@ -87,6 +87,22 @@ describe("source-bound generated news summaries", () => {
     },
   );
 
+  test.each([
+    "javascript\n:alert(1)",
+    "java\tscript:alert(1)",
+    "data\r\n:text/html,owned",
+    "file\u0000:///etc/passwd",
+    "gopher\v:\f//attacker.example",
+    "http\n:\t//attacker.example",
+  ])("rejects a control-folded dangerous URI %s", async (uri) => {
+    const result = await summarize(generated({
+      plainLanguageSummary: `Use [official instructions](${uri}) for this update.`,
+    }));
+
+    expect(result).toMatchObject({ ok: false, reviewRequired: true, publishable: false });
+    expect(result.error).toMatch(/URL|scheme/i);
+  });
+
   test("rejects dates that do not occur in source metadata or source text", async () => {
     const result = await summarize(generated({
       plainLanguageSummary: "The new edition takes effect on 2026-11-01.",
@@ -111,6 +127,42 @@ describe("source-bound generated news summaries", () => {
 
     expect(result).toMatchObject({ ok: true, reviewRequired: true, publishable: false });
   });
+
+  test("normalizes an ordinal-of-month official date", async () => {
+    const ordinalCandidate = {
+      ...candidate,
+      excerpt: "The edition takes effect on 2026-09-16.",
+      normalizedText: "The edition takes effect on 2026-09-16.",
+      effectiveAt: "2026-09-16",
+    };
+    const summarizer = createNewsSummarizer({ generate: async () => generated({
+      plainLanguageSummary: "The edition takes effect on the 16th of September, 2026.",
+    }) });
+
+    await expect(summarizer.summarize(ordinalCandidate, { verifiedDomains: ["www.uscis.gov"] }))
+      .resolves.toMatchObject({ ok: true, reviewRequired: true, publishable: false });
+  });
+
+  test("rejects an unsupported ordinal-of-month substitution", async () => {
+    const result = await summarize(generated({
+      plainLanguageSummary: "The edition takes effect on the 16th of September, 2026.",
+    }));
+
+    expect(result).toMatchObject({ ok: false, reviewRequired: true, publishable: false });
+    expect(result.error).toMatch(/date.*source/i);
+  });
+
+  test.each(["today", "tomorrow", "next week"])(
+    "fails closed on relative temporal claim %s",
+    async (relative) => {
+      const result = await summarize(generated({
+        plainLanguageSummary: `USCIS says the new edition takes effect ${relative}.`,
+      }));
+
+      expect(result).toMatchObject({ ok: false, reviewRequired: true, publishable: false });
+      expect(result.error).toMatch(/relative|temporal/i);
+    },
+  );
 
   test("rejects a substituted natural-language date", async () => {
     const result = await summarize(generated({

@@ -136,6 +136,10 @@ function normalizeConfiguredHostname(value) {
   });
 }
 
+export function canonicalSourceHostname(value) {
+  return normalizeConfiguredHostname(value);
+}
+
 function parseStrictSourceUrl(value) {
   if (typeof value !== "string" || !value || asciiControlPattern.test(value)) {
     throw new Error("Source URL cannot contain ASCII control characters.");

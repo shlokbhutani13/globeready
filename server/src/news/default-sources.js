@@ -43,7 +43,8 @@ export const defaultNewsSources = Object.freeze([
     adapter: "index-page",
     url: "https://www.uscis.gov/newsroom/all-news",
     allowedHosts: ["www.uscis.gov"],
-    itemSelector: "main .view-content > .views-row",
+    enabled: false,
+    pendingReason: "A faithful current live listing capture and stable bounded selector have not been verified.",
   }),
   source({
     id: "ice-sevp",
@@ -51,7 +52,8 @@ export const defaultNewsSources = Object.freeze([
     adapter: "index-page",
     url: "https://www.ice.gov/sevis/whats-new",
     allowedHosts: ["www.ice.gov", "www.federalregister.gov", "studyinthestates.dhs.gov"],
-    itemSelector: "main .usa-card-group > .usa-card",
+    enabled: false,
+    pendingReason: "Pending: live cards mix multiple official targets and lack a verified stable canonical/date contract.",
   }),
   source({
     id: "study-in-the-states",
@@ -87,7 +89,8 @@ export const defaultNewsSources = Object.freeze([
     adapter: "index-page",
     url: "https://www.cbp.gov/newsroom/media-releases/all?combine=&field_date_release_value=All&field_newsroom_type_target_id_1=81",
     allowedHosts: ["www.cbp.gov"],
-    itemSelector: "main .view-content .usa-collection__item",
+    enabled: false,
+    pendingReason: "Pending: live listing date markup is not reliable enough for a bounded current contract.",
   }),
   source({
     id: "irs",

@@ -4,6 +4,7 @@ import { classifyCandidate } from "./classifier.js";
 import { createFederalRegisterAdapter } from "./adapters/federal-register.js";
 import { defaultNewsSources } from "./default-sources.js";
 import { documentTypes, legalStates, normalizeNewsCandidate } from "./schema.js";
+import { canonicalSourceHostname } from "./url-policy.js";
 
 const defaultLeaseMilliseconds = 15 * 60 * 1_000;
 const urgencyValues = new Set(["low", "medium", "high", "urgent", "critical"]);
@@ -75,6 +76,16 @@ function safeError(stage, error, details = {}) {
     message: error instanceof Error ? error.message : "News synchronization failed.",
     ...details,
   };
+}
+
+function leaseOwnershipError() {
+  const error = new Error("News synchronization lease ownership was lost.");
+  error.code = "LEASE_LOST";
+  return error;
+}
+
+function errorStage(error, fallback) {
+  return error?.code === "LEASE_LOST" ? "lease" : fallback;
 }
 
 function verifiedUrl(value, allowedHosts, { required = true } = {}) {
@@ -212,31 +223,48 @@ function runRecord(source, result, context) {
 }
 
 function sourceNeedsRobots(source) {
+  const canonicalHost = (value) => {
+    try { return canonicalSourceHostname(String(value)); } catch { return ""; }
+  };
   let hostname = "";
-  try { hostname = new URL(source?.url).hostname.toLowerCase(); } catch { /* fetch policy will reject malformed URLs */ }
+  try { hostname = canonicalHost(new URL(source?.url).hostname); } catch { /* fetch policy will reject malformed URLs */ }
   return source?.respectRobotsTxt === true
     || source?.sourceType === "university"
     || source?.adapter === "university-sitemap"
     || hostname.endsWith(".edu")
-    || String(source?.officialDomain || "").toLowerCase().endsWith(".edu")
-    || source?.allowedHosts?.some((host) => String(host).toLowerCase().endsWith(".edu"));
+    || canonicalHost(source?.officialDomain || "").endsWith(".edu")
+    || source?.allowedHosts?.some((host) => canonicalHost(host).endsWith(".edu"));
 }
 
 function relationMatches(left, right) {
   const sameDocket = left.docketNumber && right.docketNumber && left.docketNumber === right.docketNumber;
   const sameRin = left.regulationIdNumber && right.regulationIdNumber
     && left.regulationIdNumber === right.regulationIdNumber;
-  const explicit = left.relatedExternalId && left.relatedExternalId === right.externalId
-    || right.relatedExternalId && right.relatedExternalId === left.externalId;
+  const sameSource = left.sourceId && left.sourceId === right.sourceId;
+  const explicit = sameSource && (left.relatedExternalId && left.relatedExternalId === right.externalId
+    || right.relatedExternalId && right.relatedExternalId === left.externalId);
   return Boolean(sameDocket || sameRin || explicit);
 }
 
-function priorTransition(current, prior) {
-  if (current.documentType === "final-rule" && prior.documentType === "proposed-rule") return "superseded";
-  if (current.documentType === "correction" && prior.documentType !== "proposed-rule") return "superseded";
-  if (current.legalState === "delayed" && ["final", "scheduled", "effective"].includes(prior.legalState)) return "delayed";
-  if (current.legalState === "withdrawn" && ["final", "scheduled", "effective", "delayed"].includes(prior.legalState)) return "withdrawn";
-  return null;
+function transitionRank(item) {
+  if (item.legalState === "withdrawn") return 5;
+  if (item.legalState === "delayed") return 4;
+  if (item.documentType === "correction") return 3;
+  if (item.documentType === "final-rule") return 2;
+  if (item.documentType === "proposed-rule") return 1;
+  return 0;
+}
+
+function transitionPair(left, right) {
+  const leftRank = transitionRank(left);
+  const rightRank = transitionRank(right);
+  if (!leftRank || !rightRank || leftRank === rightRank) return null;
+  const successor = leftRank > rightRank ? left : right;
+  const prior = successor === left ? right : left;
+  const legalState = successor.legalState === "withdrawn"
+    ? "withdrawn"
+    : successor.legalState === "delayed" ? "delayed" : "superseded";
+  return { successor, prior, legalState };
 }
 
 function emptyResult() {
@@ -270,7 +298,8 @@ export function createNewsSync({
     || !store?.newsRuns || typeof store.newsRuns.create !== "function"
     || !store?.newsSources || typeof store.newsSources.upsert !== "function"
     || !store?.leases || typeof store.leases.acquire !== "function"
-    || typeof store.leases.renew !== "function" || typeof store.leases.release !== "function") {
+    || typeof store.leases.renew !== "function" || typeof store.leases.release !== "function"
+    || typeof store.leases.owns !== "function") {
     throw new Error("News sync requires news, review, run, and lease stores.");
   }
   if (typeof fetchSource !== "function") throw new Error("News sync requires a source fetch function.");
@@ -302,38 +331,61 @@ export function createNewsSync({
     throw new Error(`Unknown news source: ${sourceId}.`);
   }
 
-  async function upsertReview(payload) {
+  async function upsertReview(payload, { external = (operation) => operation(), fence } = {}) {
     const id = reviewId(payload.sourceKey, payload.contentHash, payload.reason);
-    return store.reviewQueue.upsert(id, payload);
+    const current = await external(() => store.reviewQueue.get(id));
+    if (current) return { item: current, created: false, changed: false };
+    return external(() => store.reviewQueue.upsert(id, payload, { fence }));
   }
 
-  async function linkRelations(item) {
-    if (typeof store.news.listInternal !== "function" || typeof store.news.updateInternal !== "function") return;
-    const related = (await store.news.listInternal()).filter((other) => other.id !== item.id && relationMatches(item, other));
-    const relatedIds = related.map(({ id }) => id);
-    const superseded = related.filter((prior) => priorTransition(item, prior));
-    const supersedesIds = superseded.map(({ id }) => id);
-    await store.news.updateInternal(item.id, {
-      relatedIds: [...new Set([...(item.relatedIds || []), ...relatedIds])],
-      supersedesIds: [...new Set([...(item.supersedesIds || []), ...supersedesIds])],
-    });
-    for (const prior of related) {
-      const isSuperseded = supersedesIds.includes(prior.id);
-      await store.news.updateInternal(prior.id, {
-        relatedIds: [...new Set([...(prior.relatedIds || []), item.id])],
-        supersededByIds: isSuperseded
-          ? [...new Set([...(prior.supersededByIds || []), item.id])]
-          : prior.supersededByIds || [],
-        legalState: isSuperseded ? priorTransition(item, prior) : prior.legalState,
-      });
+  async function linkRelations(item, { external = (operation) => operation(), fence } = {}) {
+    if (typeof store.news.listInternal !== "function" || typeof store.news.updateInternal !== "function"
+      || typeof store.news.reviseInternal !== "function") return;
+    const related = (await external(() => store.news.listInternal()))
+      .filter((other) => other.id !== item.id && relationMatches(item, other));
+    if (related.length === 0) return;
+    let currentPatch = {
+      relatedIds: [...new Set([...(item.relatedIds || []), ...related.map(({ id }) => id)])],
+      supersedesIds: [...(item.supersedesIds || [])],
+      supersededByIds: [...(item.supersededByIds || [])],
+      legalState: item.legalState,
+    };
+    for (const other of related) {
+      const transition = transitionPair(item, other);
+      const currentIsSuccessor = transition?.successor.id === item.id;
+      const currentIsPrior = transition?.prior.id === item.id;
+      if (currentIsSuccessor) currentPatch.supersedesIds.push(other.id);
+      if (currentIsPrior) {
+        currentPatch.supersededByIds.push(other.id);
+        currentPatch.legalState = transition.legalState;
+      }
+      const otherPatch = {
+        relatedIds: [...new Set([...(other.relatedIds || []), item.id])],
+        supersedesIds: transition?.successor.id === other.id
+          ? [...new Set([...(other.supersedesIds || []), item.id])]
+          : other.supersedesIds || [],
+        supersededByIds: transition?.prior.id === other.id
+          ? [...new Set([...(other.supersededByIds || []), item.id])]
+          : other.supersededByIds || [],
+        legalState: transition?.prior.id === other.id ? transition.legalState : other.legalState,
+      };
+      await external(() => store.news.reviseInternal(other.id, otherPatch, { fence }));
     }
+    currentPatch = {
+      ...currentPatch,
+      relatedIds: [...new Set(currentPatch.relatedIds)],
+      supersedesIds: [...new Set(currentPatch.supersedesIds)],
+      supersededByIds: [...new Set(currentPatch.supersededByIds)],
+    };
+    await external(() => store.news.updateInternal(item.id, currentPatch, { fence }));
   }
 
-  async function generateSummary(candidate, sourceInput, dryRun) {
+  async function generateSummary(candidate, sourceInput, dryRun, external = (operation) => operation()) {
     if (!summarizer || dryRun) return null;
     try {
-      return await summarizer.summarize(candidate, { verifiedDomains: sourceInput.allowedHosts || [] });
+      return await external(() => summarizer.summarize(candidate, { verifiedDomains: sourceInput.allowedHosts || [] }));
     } catch (error) {
+      if (error?.code === "LEASE_LOST") throw error;
       return {
         ok: false,
         reviewRequired: true,
@@ -344,7 +396,11 @@ export function createNewsSync({
     }
   }
 
-  async function synchronizeCandidate(candidate, sourceInput, result, { dryRun, leaseValid = () => true }) {
+  async function synchronizeCandidate(candidate, sourceInput, result, {
+    dryRun,
+    external = (operation) => operation(),
+    fence,
+  }) {
     let normalized;
     let classification;
     try {
@@ -352,14 +408,17 @@ export function createNewsSync({
       if (!normalized.title || !normalized.canonicalUrl || !normalized.sourceKey) {
         throw new Error("News candidate is missing a title, canonical URL, or source key.");
       }
-      classification = validatedClassification(await classifier(normalized, { clock }));
+      classification = validatedClassification(await external(() => classifier(normalized, { clock })));
     } catch (error) {
+      if (error?.code === "LEASE_LOST") throw error;
       result.errors.push(safeError("classify", error, { sourceKey: normalized?.sourceKey || null }));
-      result.estimatedWrites += 1;
       const failedHash = normalized ? contentHash(normalized) : null;
       const failedReviewId = reviewId(normalized?.sourceKey || null, failedHash, "classification-failed");
       if (dryRun) {
-        if (!await store.reviewQueue.get(failedReviewId)) result.reviewRequired += 1;
+        if (!await external(() => store.reviewQueue.get(failedReviewId))) {
+          result.estimatedWrites += 1;
+          result.reviewRequired += 1;
+        }
       } else {
         try {
           const reviewed = await upsertReview({
@@ -381,10 +440,15 @@ export function createNewsSync({
               effectiveAt: normalized.effectiveAt,
               sourceDocumentType: normalized.sourceDocumentType,
             } : null,
-          });
-          if (reviewed.created) result.reviewRequired += 1;
+          }, { external, fence });
+          if (reviewed.created) {
+            result.estimatedWrites += 1;
+            result.reviewRequired += 1;
+          }
         } catch (reviewError) {
-          result.errors.push(safeError("review", reviewError, { sourceKey: normalized?.sourceKey || null }));
+          result.errors.push(safeError(errorStage(reviewError, "review"), reviewError, {
+            sourceKey: normalized?.sourceKey || null,
+          }));
         }
       }
       return;
@@ -393,7 +457,7 @@ export function createNewsSync({
     const sourceUrlsVerified = hasVerifiedSourceUrls(normalized, sourceInput);
     const publisherVerified = Boolean(normalized.publisher.trim());
     const sourceOnly = sourceUrlsVerified && publisherVerified && classification.relevance === "relevant";
-    const summary = await generateSummary(normalized, sourceInput, dryRun);
+    const summary = await generateSummary(normalized, sourceInput, dryRun, external);
     if (summary?.ok === false) {
       result.errors.push(safeError("summarize", new Error(summary.error || "Summary validation failed."), {
         sourceKey: normalized.sourceKey,
@@ -403,30 +467,23 @@ export function createNewsSync({
     const requiresReview = Boolean(reason);
     const hash = contentHash({ ...normalized, ...classification });
     const current = typeof store.news.getBySourceKey === "function"
-      ? await store.news.getBySourceKey(normalized.sourceKey)
+      ? await external(() => store.news.getBySourceKey(normalized.sourceKey))
       : null;
     result.estimatedWrites += 1;
     if (snapshotStore) result.estimatedWrites += 1;
-    if (requiresReview) result.estimatedWrites += 1;
     if (dryRun) {
       if (!current) result.created += 1;
       else if (current.contentHash === hash) result.unchanged += 1;
       else result.changed += 1;
-      if (requiresReview && current?.contentHash !== hash) {
-        const existingReview = await store.reviewQueue.get(reviewId(normalized.sourceKey, hash, reason));
-        if (!existingReview) result.reviewRequired += 1;
+      if (requiresReview) {
+        const existingReview = await external(() => store.reviewQueue.get(reviewId(normalized.sourceKey, hash, reason)));
+        if (!existingReview) {
+          result.estimatedWrites += 1;
+          result.reviewRequired += 1;
+        }
       }
       return;
     }
-
-    const stopForLostLease = () => {
-      if (leaseValid()) return false;
-      result.errors.push(safeError("lease", new Error("News synchronization lease ownership was lost."), {
-        sourceKey: normalized.sourceKey,
-      }));
-      return true;
-    };
-    if (stopForLostLease()) return;
 
     let snapshot = null;
     if (!snapshotStore || snapshotStore.isPrivate !== true) {
@@ -437,19 +494,17 @@ export function createNewsSync({
     }
     if (snapshotStore) {
       try {
-        snapshot = await snapshotStore.save(sourceInput.id, hash, snapshotText(normalized));
+        snapshot = await external(() => snapshotStore.save(sourceInput.id, hash, snapshotText(normalized)));
         const expectedPath = `news-source-snapshots/${sourceInput.id}/${hash}.txt`;
         if (snapshot?.path !== expectedPath) throw new Error("Snapshot store returned invalid private provenance.");
       } catch (error) {
-        result.errors.push(safeError("snapshot", error, { sourceKey: normalized.sourceKey }));
+        result.errors.push(safeError(errorStage(error, "snapshot"), error, { sourceKey: normalized.sourceKey }));
         return;
       }
     }
-    if (stopForLostLease()) return;
-
     let upserted;
     try {
-      upserted = await store.news.upsert(normalized.sourceKey, {
+      upserted = await external(() => store.news.upsert(normalized.sourceKey, {
         ...normalized,
         documentType: classification.documentType,
         legalState: classification.legalState,
@@ -467,9 +522,11 @@ export function createNewsSync({
         plainLanguageSummary: "",
         summaryProvenance: null,
         actions: [],
-      });
+      }, { fence }));
     } catch (error) {
-      result.errors.push(safeError("upsert", error, { sourceKey: normalized.sourceKey }));
+      result.errors.push(safeError(error?.code === "LEASE_LOST" ? "lease" : "upsert", error, {
+        sourceKey: normalized.sourceKey,
+      }));
       return;
     }
 
@@ -479,9 +536,9 @@ export function createNewsSync({
 
     if (upserted.changed) {
       try {
-        await linkRelations(upserted.item);
+        await linkRelations(upserted.item, { external, fence });
       } catch (error) {
-        result.errors.push(safeError("relation", error, { sourceKey: normalized.sourceKey }));
+        result.errors.push(safeError(errorStage(error, "relation"), error, { sourceKey: normalized.sourceKey }));
       }
     }
     if (!requiresReview) return;
@@ -504,10 +561,13 @@ export function createNewsSync({
         },
         draft: summary?.ok === true ? summary.draft : null,
         summaryError: summary?.ok === false ? summary.error : null,
-      });
-      if (reviewed.created) result.reviewRequired += 1;
+      }, { external, fence });
+      if (reviewed.created) {
+        result.estimatedWrites += 1;
+        result.reviewRequired += 1;
+      }
     } catch (error) {
-      result.errors.push(safeError("review", error, { sourceKey: normalized.sourceKey }));
+      result.errors.push(safeError(errorStage(error, "review"), error, { sourceKey: normalized.sourceKey }));
     }
   }
 
@@ -518,12 +578,8 @@ export function createNewsSync({
       const sourceInput = await resolveSource(sourceId.trim());
       const result = emptyResult();
       const startedAt = dateFrom(clock);
-      const previousState = await store.newsSources.get(sourceInput.id) || {};
-      const sourceWithValidators = {
-        ...sourceInput,
-        etag: previousState.etag || null,
-        lastModified: previousState.lastModified || null,
-      };
+      let previousState = {};
+      let sourceWithValidators = sourceInput;
       let fetched = null;
       const responses = [];
       let acquired = false;
@@ -533,8 +589,9 @@ export function createNewsSync({
       const abortController = new AbortController();
       const leaseKey = `news-source:${sourceInput.id}`;
       const owner = randomUUID();
+      const fence = { key: leaseKey, owner };
 
-      if (dryRun) result.estimatedWrites = 1;
+      if (dryRun) result.estimatedWrites = 2;
       if (!dryRun) {
         const expiresAt = new Date(Date.now() + leaseDurationMs).toISOString();
         acquired = Boolean(await store.leases.acquire(leaseKey, owner, expiresAt));
@@ -543,6 +600,7 @@ export function createNewsSync({
           result.errors.push(safeError("lease", new Error("News source already has an active synchronization lease.")));
           return result;
         }
+        result.estimatedWrites = 2;
         heartbeat = setInterval(() => {
           if (renewal) return;
           renewal = Promise.resolve(store.leases.renew(
@@ -564,7 +622,30 @@ export function createNewsSync({
         heartbeat.unref?.();
       }
 
+      const assertLease = async () => {
+        if (dryRun) return;
+        if (leaseLost || !await store.leases.owns(leaseKey, owner)) {
+          leaseLost = true;
+          if (!abortController.signal.aborted) abortController.abort(leaseOwnershipError());
+          throw leaseOwnershipError();
+        }
+      };
+      const external = async (operation) => {
+        await assertLease();
+        const value = await operation();
+        await assertLease();
+        return value;
+      };
+
       try {
+        previousState = dryRun
+          ? await store.newsSources.get(sourceInput.id) || {}
+          : await external(() => store.newsSources.get(sourceInput.id)) || {};
+        sourceWithValidators = {
+          ...sourceInput,
+          etag: previousState.etag ?? null,
+          lastModified: previousState.lastModified ?? null,
+        };
         if (!dryRun && (!snapshotStore || snapshotStore.isPrivate !== true)) {
           result.errors.push(safeError("snapshot", new Error("News publication requires a private snapshot store.")));
         }
@@ -573,7 +654,7 @@ export function createNewsSync({
             result.errors.push(safeError("robots", new Error("News source requires a robots policy decision.")));
           } else {
             try {
-              const allowed = await robotsPolicy.isAllowed(sourceInput);
+              const allowed = await external(() => robotsPolicy.isAllowed(sourceInput));
               if (!allowed) throw new Error("News source path is disallowed by robots.txt.");
             } catch (error) {
               result.errors.push(safeError("robots", error));
@@ -588,21 +669,21 @@ export function createNewsSync({
               const adapter = createFederalRegisterAdapter({
                 now: clock,
                 fetchJson: async (url) => {
-                  const response = await fetchSource({
+                  const response = await external(() => fetchSource({
                     ...sourceWithValidators,
                     url,
                     etag: responses.length === 0 ? sourceWithValidators.etag : null,
                     lastModified: responses.length === 0 ? sourceWithValidators.lastModified : null,
-                  }, { signal: abortController.signal });
+                  }, { signal: abortController.signal }));
                   responses.push(response);
                   fetched ||= response;
                   if (response.notModified) return { results: [], next_page_url: null };
                   try { return JSON.parse(response.text); } catch { throw new Error("Federal Register returned invalid JSON."); }
                 },
               });
-              candidates = await adapter.collect(sourceWithValidators);
+              candidates = await external(() => adapter.collect(sourceWithValidators));
             } catch (error) {
-              result.errors.push(safeError(leaseLost ? "lease" : "fetch", error));
+              result.errors.push(safeError(errorStage(error, leaseLost ? "lease" : "fetch"), error));
             }
           } else {
             let adapter;
@@ -613,7 +694,7 @@ export function createNewsSync({
             }
             if (adapter) {
               try {
-                fetched = await fetchSource(sourceWithValidators, { signal: abortController.signal });
+                fetched = await external(() => fetchSource(sourceWithValidators, { signal: abortController.signal }));
                 responses.push(fetched);
               } catch (error) {
                 result.errors.push(safeError(leaseLost ? "lease" : "fetch", error));
@@ -621,7 +702,7 @@ export function createNewsSync({
             }
             if (adapter && result.errors.length === 0 && fetched?.notModified !== true) {
               try {
-                candidates = await adapter.collect(sourceWithValidators, fetched || undefined);
+                candidates = await external(() => adapter.collect(sourceWithValidators, fetched || undefined));
                 if (!Array.isArray(candidates)) throw new Error("News source adapter must return a candidate array.");
               } catch (error) {
                 result.errors.push(safeError("adapt", error));
@@ -639,17 +720,17 @@ export function createNewsSync({
           try {
             await synchronizeCandidate(candidate, sourceInput, result, {
               dryRun,
-              leaseValid: () => !leaseLost,
+              external,
+              fence,
             });
           } catch (error) {
-            result.errors.push(safeError("candidate", error));
+            result.errors.push(safeError(errorStage(error, "candidate"), error));
           }
         }
         result.status = statusFor(result);
 
-        if (!dryRun) {
+        if (!dryRun && !leaseLost) {
           const endedAt = dateFrom(clock);
-          result.estimatedWrites += 1;
           const run = runRecord(sourceInput, result, {
             startedAt,
             endedAt,
@@ -657,18 +738,22 @@ export function createNewsSync({
             responses,
             previousFailures: Number(previousState.consecutiveFailures) || 0,
           });
-          const successfulValidator = run.status === "success" ? fetched : null;
-          await store.newsSources.upsert(sourceInput.id, {
+          const validators = run.status !== "success"
+            ? { etag: previousState.etag ?? null, lastModified: previousState.lastModified ?? null }
+            : fetched?.notModified === true
+              ? { etag: previousState.etag ?? null, lastModified: previousState.lastModified ?? null }
+              : { etag: fetched?.etag ?? null, lastModified: fetched?.lastModified ?? null };
+          await external(() => store.newsSources.upsert(sourceInput.id, {
             sourceId: sourceInput.id,
-            etag: successfulValidator?.etag || previousState.etag || null,
-            lastModified: successfulValidator?.lastModified || previousState.lastModified || null,
+            ...validators,
             consecutiveFailures: run.consecutiveFailures,
             lastRunStatus: run.status,
             lastCheckedAt: endedAt.toISOString(),
             nextRetry: run.nextRetry,
-          });
-          await store.newsRuns.create(run);
+          }, { fence }));
+          await external(() => store.newsRuns.create(run, { fence }));
         }
+        if (leaseLost) result.status = statusFor(result);
         return result;
       } finally {
         if (heartbeat) clearInterval(heartbeat);

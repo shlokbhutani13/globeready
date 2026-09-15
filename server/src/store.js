@@ -33,7 +33,20 @@ function createCollection() {
   };
 }
 
-export function createGlobalCollection() {
+function leaseLostError() {
+  const error = new Error("News synchronization lease ownership was lost.");
+  error.code = "LEASE_LOST";
+  return error;
+}
+
+async function assertFence(leases, fence) {
+  if (!fence) return;
+  if (!leases || typeof leases.owns !== "function" || !await leases.owns(fence.key, fence.owner)) {
+    throw leaseLostError();
+  }
+}
+
+export function createGlobalCollection({ leases } = {}) {
   const items = new Map();
 
   return {
@@ -45,14 +58,16 @@ export function createGlobalCollection() {
     async get(id) {
       return items.get(id) || null;
     },
-    async create(input) {
+    async create(input, { fence } = {}) {
+      await assertFence(leases, fence);
       const now = new Date().toISOString();
       const item = { id: randomUUID(), ...input, createdAt: now, updatedAt: now };
       items.set(item.id, item);
       return item;
     },
-    async upsert(id, input) {
+    async upsert(id, input, { fence } = {}) {
       if (typeof id !== "string" || !id) throw new Error("Collection upsert ID is required.");
+      await assertFence(leases, fence);
       const now = new Date().toISOString();
       const current = items.get(id);
       const item = current
@@ -61,9 +76,10 @@ export function createGlobalCollection() {
       items.set(id, item);
       return { item, created: !current, changed: !current || JSON.stringify(current) !== JSON.stringify(item) };
     },
-    async update(id, input) {
+    async update(id, input, { fence } = {}) {
       const current = items.get(id);
       if (!current) return null;
+      await assertFence(leases, fence);
       const item = { ...current, ...input, id, updatedAt: new Date().toISOString() };
       items.set(id, item);
       return item;
@@ -74,7 +90,7 @@ export function createGlobalCollection() {
   };
 }
 
-function createNewsStore({ reviewQueue }) {
+function createNewsStore({ reviewQueue, leases }) {
   const itemsBySourceKey = new Map();
   const revisionsByItemId = new Map();
   const urgency = new Map([
@@ -108,17 +124,49 @@ function createNewsStore({ reviewQueue }) {
     async listInternal() {
       return [...itemsBySourceKey.values()];
     },
-    async updateInternal(id, input) {
+    async updateInternal(id, input, { fence } = {}) {
       const current = [...itemsBySourceKey.values()].find((item) => item.id === id);
       if (!current) return null;
+      await assertFence(leases, fence);
       const item = { ...current, ...input, id, sourceKey: current.sourceKey, recordUpdatedAt: new Date().toISOString() };
       itemsBySourceKey.set(current.sourceKey, item);
       return item;
     },
-    async upsert(sourceKey, input) {
+    async reviseInternal(id, input, { fence } = {}) {
+      const current = [...itemsBySourceKey.values()].find((item) => item.id === id);
+      if (!current) return null;
+      const changed = Object.entries(input).some(([key, value]) => JSON.stringify(current[key]) !== JSON.stringify(value));
+      if (!changed) return current;
+      await assertFence(leases, fence);
+      const now = new Date().toISOString();
+      const revision = { ...current, id: randomUUID(), newsItemId: current.id, revisedAt: now };
+      if (!revisionsByItemId.has(current.id)) revisionsByItemId.set(current.id, []);
+      revisionsByItemId.get(current.id).push(revision);
+      const item = {
+        ...current,
+        ...input,
+        id: current.id,
+        sourceKey: current.sourceKey,
+        editorialState: current.sourceVerified && current.relevance === "relevant"
+          ? "published-source-only"
+          : "review-required",
+        plainLanguageSummary: "",
+        summaryProvenance: null,
+        actions: [],
+        recordUpdatedAt: now,
+      };
+      delete item.reviewerUid;
+      delete item.reviewedAt;
+      delete item.reviewId;
+      delete item.approvalEvidence;
+      itemsBySourceKey.set(current.sourceKey, item);
+      return item;
+    },
+    async upsert(sourceKey, input, { fence } = {}) {
       const now = new Date().toISOString();
       const current = itemsBySourceKey.get(sourceKey);
       const editorialState = ingestedEditorialState(current, input);
+      await assertFence(leases, fence);
       if (!current) {
         const item = {
           id: randomUUID(),
@@ -221,9 +269,13 @@ function createLeaseStore() {
     },
     async renew(key, owner, expiresAt) {
       const current = leases.get(key);
-      if (!current || current.owner !== owner) return false;
+      if (!current || current.owner !== owner || Date.parse(current.expiresAt) <= Date.now()) return false;
       leases.set(key, { owner, expiresAt });
       return true;
+    },
+    async owns(key, owner) {
+      const current = leases.get(key);
+      return Boolean(current && current.owner === owner && Date.parse(current.expiresAt) > Date.now());
     },
     async release(key, owner) {
       const current = leases.get(key);
@@ -320,7 +372,8 @@ function createRagChunkCollection() {
 
 export function createDemoStore() {
   const profiles = new Map();
-  const reviewQueue = createGlobalCollection();
+  const leases = createLeaseStore();
+  const reviewQueue = createGlobalCollection({ leases });
   return {
     profiles: {
       async get(uid) {
@@ -342,11 +395,11 @@ export function createDemoStore() {
     resources: createCollection(),
     conversations: createCollection(),
     ragChunks: createRagChunkCollection(),
-    news: createNewsStore({ reviewQueue }),
-    newsSources: createGlobalCollection(),
-    newsRuns: createGlobalCollection(),
+    news: createNewsStore({ reviewQueue, leases }),
+    newsSources: createGlobalCollection({ leases }),
+    newsRuns: createGlobalCollection({ leases }),
     reviewQueue,
-    leases: createLeaseStore(),
+    leases,
     newsPreferences: createNewsPreferencesStore(),
     savedNews: createCollection(),
     notifications: createCollection(),

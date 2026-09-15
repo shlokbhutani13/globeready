@@ -25,6 +25,12 @@ const urlPattern = /https?:\/\/[^\s<>"']+/giu;
 const schemePattern = /\b[a-z][a-z0-9+.-]*:(?:\/\/)?[^\s<>"']+/giu;
 const ambiguousDatePattern = /\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b/u;
 const monthDatePattern = /\b(?:(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember|t)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\.?\s+(\d{1,2})(?:st|nd|rd|th)?[,]?\s+(\d{4})|(\d{1,2})(?:st|nd|rd|th)?\s+(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember|t)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\.?[,]?\s+(\d{4}))\b/giu;
+const ordinalDatePattern = /\b(?:the\s+)?(\d{1,2})(?:st|nd|rd|th)\s+of\s+(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember|t)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)[,]?\s+(\d{4})\b/giu;
+const relativeTimePattern = /\b(?:today|tomorrow|yesterday|(?:next|this|last)\s+(?:week|month|year)|in\s+\d+\s+days?)\b/iu;
+const dangerousSchemes = [
+  "javascript", "data", "file", "vbscript", "blob", "http", "https", "ftp", "gopher",
+  "ws", "wss", "mailto", "tel", "sms", "ssh", "intent", "about", "chrome", "resource",
+];
 const months = new Map([
   ["jan", 1], ["january", 1], ["feb", 2], ["february", 2], ["mar", 3], ["march", 3],
   ["apr", 4], ["april", 4], ["may", 5], ["jun", 6], ["june", 6], ["jul", 7],
@@ -160,6 +166,15 @@ function uriScanText(value) {
   return value.replace(/(?:&#0*58;|&#x0*3a;|&colon;)/giu, ":");
 }
 
+function hasFoldedDangerousScheme(value) {
+  const decoded = uriScanText(value);
+  return dangerousSchemes.some((scheme) => {
+    const folded = [...scheme].join("[\\u0000-\\u0020]*");
+    const match = new RegExp(`(?:^|[^a-z0-9+.-])(${folded}[\\u0000-\\u0020]*:)`, "iu").exec(decoded);
+    return Boolean(match && /[\u0000-\u0020]/u.test(match[1]));
+  });
+}
+
 function normalizedDate(yearValue, monthValue, dayValue) {
   const year = Number(yearValue);
   const month = typeof monthValue === "number" ? monthValue : months.get(String(monthValue).toLowerCase());
@@ -177,6 +192,9 @@ function datesIn(value) {
     dates.push(match[1]
       ? normalizedDate(match[3], match[1], match[2])
       : normalizedDate(match[6], match[5], match[4]));
+  }
+  for (const match of value.matchAll(ordinalDatePattern)) {
+    dates.push(normalizedDate(match[3], match[2], match[1]));
   }
   return dates;
 }
@@ -198,6 +216,9 @@ function verifiedOfficialUrl(value, domains) {
 function validateSourceBounds(draft, candidate, verifiedDomains) {
   const material = sourceMaterial(candidate);
   const strings = allStrings(draft);
+  if (strings.some((value) => relativeTimePattern.test(value))) {
+    throw new Error("Generated summary contains a relative temporal claim.");
+  }
   if (strings.some((value) => ambiguousDatePattern.test(value))) {
     throw new Error("Generated summary contains an ambiguous date.");
   }
@@ -212,6 +233,9 @@ function validateSourceBounds(draft, candidate, verifiedDomains) {
   const domains = registryDomains(verifiedDomains);
   verifiedOfficialUrl(candidate?.canonicalUrl, domains);
   if (candidate?.officialPdfUrl) verifiedOfficialUrl(candidate.officialPdfUrl, domains);
+  if (strings.some(hasFoldedDangerousScheme)) {
+    throw new Error("Generated summary contains a dangerous unverified official URL scheme.");
+  }
   for (const value of strings.flatMap((entry) => uriScanText(entry).match(schemePattern) || [])) {
     const url = trimUrlPunctuation(value);
     if (!url.toLowerCase().startsWith("https://")) {

@@ -1,15 +1,6 @@
-import { readFile } from "node:fs/promises";
-
 import { describe, expect, test } from "vitest";
 
-import { createIndexPageAdapter } from "../src/news/adapters/index-page.js";
 import { defaultNewsSource, defaultNewsSources } from "../src/news/default-sources.js";
-
-const fixtureNames = new Map([
-  ["uscis", "uscis-index-2026-09-14.html"],
-  ["ice-sevp", "ice-sevp-index-2026-09-14.html"],
-  ["cbp", "cbp-index-2026-09-14.html"],
-]);
 
 describe("operational default news source registry", () => {
   test("uses current Federal Register agency slugs", () => {
@@ -23,15 +14,9 @@ describe("operational default news source registry", () => {
     expect(defaultNewsSource("federal-register").agencies.every((slug) => /^[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(slug))).toBe(true);
   });
 
-  test.each([...fixtureNames])("parses only the bounded %s listing contract", async (sourceId, fixtureName) => {
-    const source = defaultNewsSource(sourceId);
-    const html = await readFile(new URL(`./fixtures/${fixtureName}`, import.meta.url), "utf8");
-    const candidates = await createIndexPageAdapter().collect(source, html);
-
-    expect(source).toMatchObject({ enabled: true, checkedAt: "2026-09-14" });
-    expect(source.itemSelector).toBeTruthy();
-    expect(candidates).toHaveLength(1);
-    expect(candidates[0].title).not.toMatch(/Navigation|Contact|Newsroom/u);
+  test("enables only the bounded Federal Register JSON contract", () => {
+    expect(defaultNewsSources.filter(({ enabled }) => enabled).map(({ id }) => id))
+      .toEqual(["federal-register"]);
   });
 
   test("keeps unreliable sources disabled with a checked reason", () => {
@@ -45,5 +30,9 @@ describe("operational default news source registry", () => {
       enabled: false,
       url: "https://studyinthestates.dhs.gov/",
     });
+    for (const sourceId of ["uscis", "ice-sevp", "cbp"]) {
+      expect(defaultNewsSource(sourceId)).toMatchObject({ enabled: false, checkedAt: "2026-09-14" });
+      expect(defaultNewsSource(sourceId).pendingReason).toMatch(/live|current|bounded|stable/i);
+    }
   });
 });

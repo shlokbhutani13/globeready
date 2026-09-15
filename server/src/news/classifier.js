@@ -142,8 +142,17 @@ function includesAffirmedTerm(text, term) {
   const escaped = term.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&").replace(/\s+/gu, "\\s+");
   const matcher = new RegExp(`(?:^|[^a-z0-9])(${escaped})(?=$|[^a-z0-9])`, "giu");
   for (const match of text.matchAll(matcher)) {
-    const prefix = text.slice(Math.max(0, match.index - 32), match.index).trimEnd();
-    if (!/(?:\bno|\bnot|\bwithout|does\s+not|doesn't)\s*$/iu.test(prefix)) return true;
+    const rawPrefix = text.slice(Math.max(0, match.index - 160), match.index);
+    const boundary = Math.max(
+      rawPrefix.search(/[^.!?;:\n]*$/u),
+      ...[...rawPrefix.matchAll(/\b(?:but|however|although|yet)\b/giu)].map((entry) => entry.index + entry[0].length),
+    );
+    const prefix = rawPrefix.slice(Math.max(0, boundary));
+    const negated = /\bno\b/iu.test(prefix)
+      || /\bwithout\b/iu.test(prefix)
+      || /\b(?:do|does|did|has|have|had|is|are|was|were|will|would|can|could)\s+not\b/iu.test(prefix)
+      || /\b(?:doesn't|didn't|hasn't|haven't|isn't|aren't|wasn't|weren't|won't|wouldn't|can't|couldn't)\b/iu.test(prefix);
+    if (!negated) return true;
   }
   return false;
 }
@@ -202,7 +211,9 @@ function classifyLegalState(candidate, text, documentType, today) {
   const explicit = cleanText(candidate?.sourceLegalState).toLowerCase();
   const futureEffectiveDate = validIsoDate(candidate?.effectiveAt) && candidate.effectiveAt > today;
   if (legalStates.has(explicit)) {
-    return explicit === "effective" && futureEffectiveDate ? "scheduled" : explicit;
+    return futureEffectiveDate && ["effective", "final", "informational"].includes(explicit)
+      ? "scheduled"
+      : explicit;
   }
 
   for (const [state, terms] of legalStateTerms) {

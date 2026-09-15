@@ -38,19 +38,30 @@ function officialCandidate(overrides = {}) {
 
 function createLeaseStore(store, { acquire = true } = {}) {
   const events = [];
-  store.leases = {
+  const leases = store.leases;
+  const original = {
+    acquire: leases.acquire.bind(leases),
+    release: leases.release.bind(leases),
+    renew: leases.renew.bind(leases),
+    owns: leases.owns.bind(leases),
+  };
+  Object.assign(leases, {
     async acquire(key, owner, expiresAt) {
       events.push({ type: "acquire", key, owner, expiresAt });
-      return acquire;
+      return acquire ? original.acquire(key, owner, expiresAt) : false;
     },
     async release(key, owner) {
       events.push({ type: "release", key, owner });
+      return original.release(key, owner);
     },
     async renew(key, owner, expiresAt) {
       events.push({ type: "renew", key, owner, expiresAt });
-      return true;
+      return original.renew(key, owner, expiresAt);
     },
-  };
+    async owns(key, owner) {
+      return original.owns(key, owner);
+    },
+  });
   return events;
 }
 
@@ -171,6 +182,34 @@ describe("news source synchronization", () => {
     ]);
   });
 
+  test.each(["final", "informational"])(
+    "public sync keeps future-dated source legal state %s scheduled",
+    async (sourceLegalState) => {
+      const { sync, store } = fixtureSync({ candidates: [officialCandidate({ sourceLegalState })] });
+
+      await sync.syncSource("federal-register");
+
+      await expect(store.news.listPublished({})).resolves.toEqual([
+        expect.objectContaining({ legalState: "scheduled", effectiveAt: "2026-10-01" }),
+      ]);
+    },
+  );
+
+  test("withholds a negated OPT non-change notice from substantive source-only publication", async () => {
+    const { sync, store } = fixtureSync({ candidates: [officialCandidate({
+      sourceDocumentType: "Notice",
+      title: "F-1 program update",
+      effectiveAt: null,
+      excerpt: "There are no changes to OPT eligibility for F-1 students.",
+      normalizedText: "There are no changes to OPT eligibility for F-1 students.",
+    })] });
+
+    const result = await sync.syncSource("federal-register");
+
+    expect(result).toMatchObject({ created: 1, reviewRequired: 1 });
+    await expect(store.news.listPublished({})).resolves.toEqual([]);
+  });
+
   test("does not publish a source-only item without a nonblank publisher", async () => {
     const { sync, store } = fixtureSync({
       candidates: [officialCandidate({ publisher: "" })],
@@ -248,12 +287,48 @@ describe("news source synchronization", () => {
     currentCandidate = officialCandidate({ normalizedText: "Changed official F-1 status text." });
     const changed = await sync.syncSource("federal-register", { dryRun: true });
 
-    expect(unchanged).toMatchObject({ created: 0, changed: 0, unchanged: 1, reviewRequired: 0 });
-    expect(changed).toMatchObject({ created: 0, changed: 1, unchanged: 0, reviewRequired: 1 });
+    expect(unchanged).toMatchObject({
+      created: 0,
+      changed: 0,
+      unchanged: 1,
+      reviewRequired: 0,
+      estimatedWrites: 4,
+    });
+    expect(changed).toMatchObject({
+      created: 0,
+      changed: 1,
+      unchanged: 0,
+      reviewRequired: 1,
+      estimatedWrites: 5,
+    });
     expect(summarizer.summarize).not.toHaveBeenCalled();
     expect(snapshotWrites).toEqual([]);
     expect(await store.newsRuns.listGlobal()).toHaveLength(runCount);
     expect(await store.reviewQueue.listGlobal()).toHaveLength(reviewCount);
+  });
+
+  test("dry run recounts a missing deterministic review for unchanged content without mutations", async () => {
+    const summarizer = { summarize: vi.fn() };
+    const { sync, store, snapshotWrites } = fixtureSync({ summarizer });
+    await sync.syncSource("federal-register");
+    const [review] = await store.reviewQueue.listGlobal();
+    await store.reviewQueue.remove(review.id);
+    summarizer.summarize.mockClear();
+    snapshotWrites.length = 0;
+    const newsBefore = await store.news.getBySourceKey("federal-register:2026-10001");
+    const sourceBefore = await store.newsSources.get("federal-register");
+    const runCount = (await store.newsRuns.listGlobal()).length;
+
+    const result = await sync.syncSource("federal-register", { dryRun: true });
+
+    // Estimated writes exclude lease lifecycle and include snapshot, news, review, source state, and run.
+    expect(result).toMatchObject({ unchanged: 1, reviewRequired: 1, estimatedWrites: 5, errors: [] });
+    expect(summarizer.summarize).not.toHaveBeenCalled();
+    expect(snapshotWrites).toEqual([]);
+    expect(await store.reviewQueue.listGlobal()).toEqual([]);
+    expect(await store.news.getBySourceKey("federal-register:2026-10001")).toEqual(newsBefore);
+    expect(await store.newsSources.get("federal-register")).toEqual(sourceBefore);
+    expect(await store.newsRuns.listGlobal()).toHaveLength(runCount);
   });
 
   test("keeps repeated source runs idempotent", async () => {
@@ -387,6 +462,35 @@ describe("news source synchronization", () => {
       success: true,
       nextRetry: null,
     });
+  });
+
+  test("clears stale validators after a fresh response omits them and retains only across 304", async () => {
+    const requests = [];
+    const responses = [
+      { status: 200, text: "fixture body", etag: '"v1"', lastModified: "Mon, 14 Sep 2026 10:00:00 GMT", notModified: false },
+      { status: 200, text: "fixture body", etag: null, lastModified: null, notModified: false },
+      { status: 304, text: "", etag: null, lastModified: null, notModified: true },
+    ];
+    const { sync, store } = fixtureSync({
+      collect: async () => [officialCandidate()],
+      fetch: async (input) => {
+        requests.push(input);
+        return responses.shift();
+      },
+    });
+
+    const first = await sync.syncSource("federal-register");
+    const initial = await store.newsSources.get("federal-register");
+    await sync.syncSource("federal-register");
+    const cleared = await store.newsSources.get("federal-register");
+    await sync.syncSource("federal-register");
+
+    expect(first).toMatchObject({ status: "success", errors: [] });
+    expect(initial).toMatchObject({ etag: '"v1"', lastModified: "Mon, 14 Sep 2026 10:00:00 GMT" });
+    expect(requests[1]).toMatchObject({ etag: '"v1"', lastModified: "Mon, 14 Sep 2026 10:00:00 GMT" });
+    expect(cleared).toMatchObject({ etag: null, lastModified: null });
+    expect(requests[2]).toMatchObject({ etag: null, lastModified: null });
+    expect(await store.newsSources.get("federal-register")).toMatchObject({ etag: null, lastModified: null });
   });
 
   test("routes paginated Federal Register JSON through secure source fetching with truthful metadata", async () => {
@@ -549,6 +653,24 @@ describe("news source synchronization", () => {
     expect(result.errors).toEqual([expect.objectContaining({ stage: "robots" })]);
   });
 
+  test("canonicalizes root-dot and IDN host spellings before edu robots detection", async () => {
+    let fetched = false;
+    const { sync } = fixtureSync({
+      sourceOverride: {
+        id: "idn-campus",
+        url: "https://büro.example.edu./news",
+        allowedHosts: ["BÜRO.EXAMPLE.EDU."],
+        sourceType: undefined,
+      },
+      fetch: async () => { fetched = true; return { status: 200, text: "" }; },
+    });
+
+    const result = await sync.syncSource("idn-campus");
+
+    expect(fetched).toBe(false);
+    expect(result.errors).toEqual([expect.objectContaining({ stage: "robots" })]);
+  });
+
   test("requires a private snapshot store for non-dry-run publication", async () => {
     const { sync, store } = fixtureSync({ snapshotStore: { async save() { return { path: "public/file" }; } } });
 
@@ -638,6 +760,123 @@ describe("news source synchronization", () => {
     expect(correction).toMatchObject({ supersedesIds: [original.id], relatedIds: [original.id] });
   });
 
+  test("does not link an explicit external ID across different sources", async () => {
+    const store = createDemoStore();
+    const current = { sourceId: "source-a", candidates: [officialCandidate({ externalId: "shared", docketNumber: "", regulationIdNumber: "" })] };
+    const sync = createNewsSync({
+      store,
+      adapters: { fixture: { async collect(sourceInput) { return current.sourceId === sourceInput.id ? current.candidates : []; } } },
+      fetchSource: async () => ({ status: 200, text: "fixture body", notModified: false }),
+      snapshotStore: {
+        isPrivate: true,
+        async save(sourceId, hash) { return { path: `news-source-snapshots/${sourceId}/${hash}.txt` }; },
+      },
+      sources: [
+        { ...source, id: "source-a" },
+        { ...source, id: "source-b" },
+      ],
+      clock: fixedClock,
+    });
+    await sync.syncSource("source-a");
+    current.sourceId = "source-b";
+    current.candidates = [officialCandidate({
+      externalId: "correction",
+      relatedExternalId: "shared",
+      docketNumber: "",
+      regulationIdNumber: "",
+      sourceDocumentType: "Correction",
+    })];
+    await sync.syncSource("source-b");
+
+    const original = await store.news.getBySourceKey("source-a:shared");
+    const correction = await store.news.getBySourceKey("source-b:correction");
+    expect(original.relatedIds).toEqual([]);
+    expect(correction.relatedIds).toEqual([]);
+  });
+
+  test("orders proposal and final transitions deterministically when the final arrives first", async () => {
+    let candidates = [officialCandidate({ externalId: "final-first", sourceDocumentType: "Final Rule" })];
+    const { sync, store } = fixtureSync({ collect: async () => candidates });
+    await sync.syncSource("federal-register");
+    candidates = [officialCandidate({ externalId: "proposal-late", sourceDocumentType: "Proposed Rule", effectiveAt: null })];
+    await sync.syncSource("federal-register");
+
+    const final = await store.news.getBySourceKey("federal-register:final-first");
+    const proposal = await store.news.getBySourceKey("federal-register:proposal-late");
+    expect(final).toMatchObject({ supersedesIds: [proposal.id], relatedIds: [proposal.id] });
+    expect(proposal).toMatchObject({ legalState: "superseded", supersededByIds: [final.id], relatedIds: [final.id] });
+  });
+
+  test.each([
+    ["correction", { sourceDocumentType: "Correction" }, "superseded"],
+    ["delay", {
+      sourceDocumentType: "Notice",
+      title: "F-1 rule delayed",
+      normalizedText: "The F-1 duration of status rule is delayed.",
+    }, "delayed"],
+    ["withdrawal", {
+      sourceDocumentType: "Notice",
+      title: "F-1 rule withdrawn",
+      normalizedText: "The F-1 duration of status rule is withdrawn.",
+    }, "withdrawn"],
+  ])("orders a %s transition deterministically when it arrives before the final", async (externalId, overrides, expectedState) => {
+    let candidates = [officialCandidate({ externalId, ...overrides })];
+    const { sync, store } = fixtureSync({ collect: async () => candidates });
+    await sync.syncSource("federal-register");
+    candidates = [officialCandidate({ externalId: `final-after-${externalId}`, sourceDocumentType: "Final Rule" })];
+    await sync.syncSource("federal-register");
+
+    const successor = await store.news.getBySourceKey(`federal-register:${externalId}`);
+    const final = await store.news.getBySourceKey(`federal-register:final-after-${externalId}`);
+    expect(successor.supersedesIds).toContain(final.id);
+    expect(final).toMatchObject({ legalState: expectedState, supersededByIds: [successor.id] });
+  });
+
+  test("relation-driven changes create a revision and clear stale summary and private approval evidence", async () => {
+    let candidates = [officialCandidate({ externalId: "proposal", sourceDocumentType: "Proposed Rule", effectiveAt: null })];
+    const { sync, store } = fixtureSync({ collect: async () => candidates });
+    await sync.syncSource("federal-register");
+    const proposal = await store.news.getBySourceKey("federal-register:proposal");
+    await store.news.updateInternal(proposal.id, {
+      actions: [{ label: "Stale action", sourceUrl: proposal.canonicalUrl }],
+      summaryProvenance: { model: "private-model" },
+    });
+    const review = await store.reviewQueue.create({ newsItemId: proposal.id });
+    await store.news.approve(proposal.id, {
+      reviewerUid: "private-editor",
+      reviewedAt: "2026-09-14T13:00:00.000Z",
+      reviewId: review.id,
+      summary: "Stale approved summary",
+      approvalEvidence: { privateTicket: "secret" },
+    });
+    candidates = [officialCandidate({ externalId: "final", sourceDocumentType: "Final Rule" })];
+
+    await sync.syncSource("federal-register");
+
+    const updated = await store.news.get(proposal.id);
+    expect(updated).toMatchObject({
+      legalState: "superseded",
+      editorialState: "published-source-only",
+      plainLanguageSummary: "",
+      actions: [],
+      summaryProvenance: null,
+    });
+    expect(updated).not.toHaveProperty("reviewerUid");
+    expect(updated).not.toHaveProperty("reviewedAt");
+    expect(updated).not.toHaveProperty("reviewId");
+    expect(updated).not.toHaveProperty("approvalEvidence");
+    expect(await store.news.revisions(proposal.id)).toEqual([
+      expect.objectContaining({
+        editorialState: "approved",
+        plainLanguageSummary: "Stale approved summary",
+        reviewerUid: "private-editor",
+      }),
+    ]);
+    const [publicProposal] = (await store.news.listPublished({})).filter((item) => item.id === proposal.id);
+    expect(publicProposal).not.toHaveProperty("reviewerUid");
+    expect(publicProposal).not.toHaveProperty("approvalEvidence");
+  });
+
   test("renews the persistent lease and aborts safely if ownership is lost", async () => {
     const { sync, store } = fixtureSync({
       fetch: async (_source, { signal } = {}) => {
@@ -646,7 +885,10 @@ describe("news source synchronization", () => {
         return { status: 200, text: "fixture body", notModified: false };
       },
     });
-    store.leases.renew = vi.fn().mockResolvedValue(false);
+    store.leases.renew = vi.fn(async (key, owner) => {
+      await store.leases.release(key, owner);
+      return false;
+    });
     const shortSync = createNewsSync({
       store,
       adapters: { fixture: { async collect() { return [officialCandidate()]; } } },
@@ -666,6 +908,37 @@ describe("news source synchronization", () => {
     expect(store.leases.renew).toHaveBeenCalled();
     expect(result.errors).toEqual([expect.objectContaining({ stage: "lease" })]);
     expect(await store.news.listPublished({})).toEqual([]);
+  });
+
+  test("fences a slow news upsert after lease loss and records no success mutations", async () => {
+    const store = createDemoStore();
+    const originalUpsert = store.news.upsert.bind(store.news);
+    store.news.upsert = async (...args) => {
+      await new Promise((resolve) => setTimeout(resolve, 30));
+      return originalUpsert(...args);
+    };
+    store.leases.renew = vi.fn(async (key, owner) => {
+      await store.leases.release(key, owner);
+      return false;
+    });
+    const sync = createNewsSync({
+      store,
+      adapters: { fixture: { async collect() { return [officialCandidate()]; } } },
+      fetchSource: async () => ({ status: 200, text: "fixture body", notModified: false }),
+      snapshotStore: { isPrivate: true, async save(_id, hash) { return { path: `news-source-snapshots/federal-register/${hash}.txt` }; } },
+      sources: [source],
+      leaseDurationMs: 20,
+      leaseHeartbeatMs: 5,
+    });
+
+    const result = await sync.syncSource("federal-register");
+
+    expect(result.status).not.toBe("success");
+    expect(result.errors).toEqual([expect.objectContaining({ stage: "lease" })]);
+    expect(await store.news.listInternal()).toEqual([]);
+    expect(await store.reviewQueue.listGlobal()).toEqual([]);
+    expect(await store.newsSources.listGlobal()).toEqual([]);
+    expect(await store.newsRuns.listGlobal()).toEqual([]);
   });
 
   test("keeps a second worker out after the nominal TTL while the first heartbeat is active", async () => {
