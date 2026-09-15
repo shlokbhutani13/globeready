@@ -79,6 +79,7 @@ export function publicNewsItem(item) {
     normalizedText,
     contentHash,
     snapshotPath,
+    snapshotCommitId,
     classifierConfidence,
     classifierMatchedTerms,
     classifierExplanation,

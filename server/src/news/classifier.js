@@ -138,10 +138,37 @@ function matchingTerms(text, terms) {
   return terms.filter((term) => includesTerm(text, term));
 }
 
+const changePredicatePattern = /\b(?:change[ds]?|changing|expand(?:s|ed|ing)?|increas(?:e|es|ed|ing)|decreas(?:e|es|ed|ing)|reduc(?:e|es|ed|ing|tion)|extend(?:s|ed|ing)?|shorten(?:s|ed|ing)?|open(?:s|ed|ing)?|clos(?:e|es|ed|ing)|begin(?:s|ning)?|end(?:s|ed|ing)?|remain(?:s|ed|ing)?|stay(?:s|ed|ing)?|unchanged|unaffected|the\s+same)\b/iu;
+const rightClausePredicatePattern = /^\s+(?:the\s+|a\s+|an\s+)?(?:[a-z0-9]+(?:-[a-z0-9]+)?\s+){0,8}(?:change[ds]?|expand(?:s|ed|ing)?|increas(?:e|es|ed|ing)|decreas(?:e|es|ed|ing)|reduc(?:e|es|ed|ing)|extend(?:s|ed|ing)?|shorten(?:s|ed|ing)?|open(?:s|ed|ing)?|clos(?:e|es|ed|ing)|begin(?:s|ning)?|end(?:s|ed|ing)?|remain(?:s|ed|ing)?|stay(?:s|ed|ing)?|does?\s+not\s+change|do\s+not\s+change|will\s+(?:change|expand|increase|decrease|reduce|extend|shorten|open|close|begin|end|remain|stay))\b/iu;
+
+function splitCoordinatingClaims(clause) {
+  const parts = [];
+  let start = 0;
+  const separator = /\band\b/giu;
+  for (const match of clause.matchAll(separator)) {
+    const left = clause.slice(start, match.index);
+    const right = clause.slice(match.index + match[0].length);
+    if (changePredicatePattern.test(left) && rightClausePredicatePattern.test(right)) {
+      if (left.trim()) parts.push(left.trim());
+      start = match.index + match[0].length;
+    }
+  }
+  const tail = clause.slice(start).trim();
+  if (tail) parts.push(tail);
+  return parts;
+}
+
 function claimClauses(text) {
   return text.split(/(?:[.!?;:\n]+|,\s*(?:and|but|however|yet)\b|\b(?:but|however|yet)\b)/iu)
-    .map((clause) => clause.trim())
+    .flatMap(splitCoordinatingClaims)
     .filter(Boolean);
+}
+
+function hasPostTermNoChange(suffix) {
+  const unchanged = /\b(?:(?:remains?|stays?|is|are|was|were|will\s+remain)\s+(?:unchanged|unaffected|the\s+same)|(?:does|do|did)\s+not\s+change)\b/iu.exec(suffix);
+  if (!unchanged) return false;
+  const changed = /\b(?:change[ds]?|expand(?:s|ed|ing)?|increas(?:e|es|ed|ing)|decreas(?:e|es|ed|ing)|reduc(?:e|es|ed|ing)|extend(?:s|ed|ing)?|shorten(?:s|ed|ing)?|open(?:s|ed|ing)?|clos(?:e|es|ed|ing)|begin(?:s|ning)?|end(?:s|ed|ing)?)\b/iu.exec(suffix);
+  return !changed || unchanged.index <= changed.index;
 }
 
 function includesAffirmedTerm(text, term) {
@@ -155,8 +182,7 @@ function includesAffirmedTerm(text, term) {
       const negatedBefore = /\b(?:no|without)\b/iu.test(prefix)
         || /\b(?:do|does|did|has|have|had|is|are|was|were|will|would|can|could)\s+not\b/iu.test(prefix)
         || /\b(?:doesn't|didn't|hasn't|haven't|isn't|aren't|wasn't|weren't|won't|wouldn't|can't|couldn't)\b/iu.test(prefix);
-      const negatedAfter = /^\s+(?:[a-z-]+\s+){0,3}(?:(?:remains?|is|are|was|were|will\s+remain)\s+(?:unchanged|unaffected|the\s+same)\b|(?:does|do|did)\s+not\s+change\b)/iu
-        .test(suffix);
+      const negatedAfter = hasPostTermNoChange(suffix);
       if (!negatedBefore && !negatedAfter) return true;
     }
   }

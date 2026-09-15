@@ -75,7 +75,7 @@ describe("source-bound generated news summaries", () => {
     expect(result.error).toMatch(/verified official URL/i);
   });
 
-  test.each(["javascript:alert(1)", "data:text/html,owned", "file:///etc/passwd", "vbscript:msgbox(1)", "webcal://attacker.example", "javascript&#58;alert(1)"])(
+  test.each(["javascript:alert(1)", "data:text/html,owned", "file:///etc/passwd", "vbscript:msgbox(1)", "webcal://attacker.example", "javascript&#58;alert(1)", "javascript&#58alert(1)"])(
     "rejects dangerous URI scheme %s anywhere in generated text",
     async (uri) => {
       const result = await summarize(generated({
@@ -86,6 +86,18 @@ describe("source-bound generated news summaries", () => {
       expect(result.error).toMatch(/URL|scheme/i);
     },
   );
+
+  test.each([
+    "For details:",
+    "USCIS says:",
+    "Read more: https://www.uscis.gov/newsroom/alerts/form-i-765-update",
+  ])("does not mistake safe prose punctuation for a URI scheme: %s", async (text) => {
+    const result = await summarize(generated({
+      plainLanguageSummary: `${text} The new edition takes effect on 2026-10-01.`,
+    }));
+
+    expect(result).toMatchObject({ ok: true, reviewRequired: true, publishable: false });
+  });
 
   test.each([
     "javascript\n:alert(1)",
@@ -180,6 +192,36 @@ describe("source-bound generated news summaries", () => {
   });
 
   test.each([
+    "November first, 2026",
+    "the first of November 2026",
+  ])("normalizes a source-bound word ordinal date: %s", async (date) => {
+    const ordinalCandidate = {
+      ...candidate,
+      excerpt: "The edition takes effect on 2026-11-01.",
+      normalizedText: "The edition takes effect on 2026-11-01.",
+      effectiveAt: "2026-11-01",
+    };
+    const summarizer = createNewsSummarizer({ generate: async () => generated({
+      plainLanguageSummary: `The edition takes effect on ${date}.`,
+    }) });
+
+    await expect(summarizer.summarize(ordinalCandidate, { verifiedDomains: ["www.uscis.gov"] }))
+      .resolves.toMatchObject({ ok: true, reviewRequired: true, publishable: false });
+  });
+
+  test.each([
+    "November second, 2026",
+    "the second of November 2026",
+  ])("rejects an unsupported word ordinal date: %s", async (date) => {
+    const result = await summarize(generated({
+      plainLanguageSummary: `The edition takes effect on ${date}.`,
+    }));
+
+    expect(result).toMatchObject({ ok: false, reviewRequired: true, publishable: false });
+    expect(result.error).toMatch(/date.*source/i);
+  });
+
+  test.each([
     "today",
     "tomorrow",
     "next week",
@@ -188,6 +230,10 @@ describe("source-bound generated news summaries", () => {
     "next day",
     "previous week",
     "the following month",
+    "two weeks from now",
+    "in two weeks",
+    "in 2 months",
+    "3 years from now",
   ])(
     "fails closed on relative temporal claim %s",
     async (relative) => {
@@ -213,6 +259,23 @@ describe("source-bound generated news summaries", () => {
     await expect(summarizer.summarize(relativeCandidate, { verifiedDomains: ["www.uscis.gov"] }))
       .resolves.toMatchObject({ ok: true, reviewRequired: true, publishable: false });
   });
+
+  test.each(["two weeks from now", "in two weeks", "in 2 months", "3 years from now"])(
+    "accepts an exact broader source-bound relative temporal phrase: %s",
+    async (relative) => {
+      const relativeCandidate = {
+        ...candidate,
+        excerpt: `USCIS says the filing window opens ${relative}.`,
+        normalizedText: `USCIS says the filing window opens ${relative}.`,
+      };
+      const summarizer = createNewsSummarizer({ generate: async () => generated({
+        plainLanguageSummary: `USCIS says the filing window opens ${relative}.`,
+      }) });
+
+      await expect(summarizer.summarize(relativeCandidate, { verifiedDomains: ["www.uscis.gov"] }))
+        .resolves.toMatchObject({ ok: true, reviewRequired: true, publishable: false });
+    },
+  );
 
   test("rejects a substituted natural-language date", async () => {
     const result = await summarize(generated({

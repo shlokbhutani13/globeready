@@ -133,11 +133,35 @@ describe("deterministic news classification", () => {
 
   test.each([
     "No filing fee increase, and OPT eligibility expands for F-1 students.",
+    "No filing fee increase and OPT eligibility expands for F-1 students.",
+    "OPT eligibility does not change and the filing fee increases for F-1 students.",
+    "Filing fees stay the same and STEM OPT employment authorization expands for F-1 students.",
     "No injunction was issued. OPT eligibility expands for F-1 students.",
     "OPT eligibility remains unchanged; the filing fee increases for F-1 students.",
   ])("does not carry negation across an independent positive clause: %s", (excerpt) => {
     expect(classifyCandidate({ sourceDocumentType: "Notice", title: "F-1 update", excerpt }, { clock: fixedClock }))
       .toMatchObject({ highImpact: true, relevance: "relevant" });
+  });
+
+  test.each([
+    "OPT eligibility for F-1 students enrolled at accredited universities remains unchanged.",
+    "Filing fee requirements for F-1 and J-1 students remain the same.",
+    "There is no change to OPT eligibility for F-1 and J-1 students.",
+  ])("keeps coordinated audiences and longer non-change predicates negated: %s", (excerpt) => {
+    expect(classifyCandidate({ sourceDocumentType: "Notice", title: "Student program update", excerpt }, { clock: fixedClock }))
+      .toMatchObject({ highImpact: false, urgency: "low", relevance: "borderline" });
+  });
+
+  test("keeps F-1 and J-1 as one coordinated audience phrase", () => {
+    expect(classifyCandidate({
+      sourceDocumentType: "Notice",
+      title: "Student program update",
+      excerpt: "F-1 and J-1 students have no filing fee increase.",
+    }, { clock: fixedClock })).toMatchObject({
+      highImpact: false,
+      visaTypes: expect.arrayContaining(["f-1", "j-1"]),
+      relevance: "borderline",
+    });
   });
 
   test("preserves a positive injunction control", () => {

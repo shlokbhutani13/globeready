@@ -4,6 +4,7 @@ import { classifyCandidate } from "./classifier.js";
 import { createFederalRegisterAdapter } from "./adapters/federal-register.js";
 import { defaultNewsSources } from "./default-sources.js";
 import { documentTypes, legalStates, normalizeNewsCandidate } from "./schema.js";
+import { SNAPSHOT_COMMIT_PROTOCOL } from "./snapshots.js";
 import { canonicalSourceHostname } from "./url-policy.js";
 
 const defaultLeaseMilliseconds = 15 * 60 * 1_000;
@@ -236,6 +237,14 @@ function sourceNeedsRobots(source) {
     || source?.allowedHosts?.some((host) => canonicalHost(host).endsWith(".edu"));
 }
 
+function hasSnapshotCommitProtocol(snapshotStore) {
+  return snapshotStore?.isPrivate === true
+    && snapshotStore.supportsFencing === true
+    && snapshotStore.commitProtocol === SNAPSHOT_COMMIT_PROTOCOL
+    && typeof snapshotStore.save === "function"
+    && typeof snapshotStore.discard === "function";
+}
+
 function relationMatches(left, right) {
   if (!left.sourceId || left.sourceId !== right.sourceId) return false;
   const sameDocket = left.docketNumber && right.docketNumber && left.docketNumber === right.docketNumber;
@@ -282,6 +291,37 @@ function transitionedLegalState(successor) {
   return successorState === "withdrawn"
     ? "withdrawn"
     : successorState === "delayed" ? "delayed" : "superseded";
+}
+
+function relationComponent(seed, items) {
+  const component = [seed];
+  for (let index = 0; index < component.length; index += 1) {
+    for (const candidate of items) {
+      if (!component.some(({ id }) => id === candidate.id) && relationMatches(component[index], candidate)) {
+        component.push(candidate);
+      }
+    }
+  }
+  return component;
+}
+
+function relationPatch(member, component) {
+  const ordered = [...component].sort(compareRelationOrder);
+  const memberRank = transitionRank(member);
+  const lower = memberRank
+    ? ordered.filter((candidate) => transitionRank(candidate) > 0 && transitionRank(candidate) < memberRank)
+    : [];
+  const higher = memberRank
+    ? ordered.filter((candidate) => transitionRank(candidate) > memberRank)
+    : [];
+  return {
+    relatedIds: ordered.filter(({ id }) => id !== member.id).map(({ id }) => id),
+    supersedesIds: lower.map(({ id }) => id),
+    supersededByIds: higher.map(({ id }) => id),
+    legalState: higher.length > 0
+      ? transitionedLegalState(higher.at(-1))
+      : baseLegalState(member),
+  };
 }
 
 function emptyResult() {
@@ -348,6 +388,19 @@ export function createNewsSync({
     throw new Error(`Unknown news source: ${sourceId}.`);
   }
 
+  async function cleanupSnapshot(snapshot, originalError) {
+    if (!snapshot) return originalError;
+    try {
+      await snapshotStore.discard(snapshot);
+      return originalError;
+    } catch (cleanupError) {
+      const error = new Error("Snapshot commit cleanup failed after synchronization stopped.", { cause: originalError });
+      if (originalError?.code) error.code = originalError.code;
+      error.cleanupCause = cleanupError;
+      return error;
+    }
+  }
+
   async function upsertReview(payload, { external = (operation) => operation(), fence } = {}) {
     const id = reviewId(payload.sourceKey, payload.contentHash, payload.reason);
     const current = await external(() => store.reviewQueue.get(id));
@@ -355,38 +408,35 @@ export function createNewsSync({
     return external(() => store.reviewQueue.upsert(id, payload, { fence }));
   }
 
-  async function linkRelations(item, { external = (operation) => operation(), fence } = {}) {
+  async function linkRelations(item, { external = (operation) => operation(), fence, previousItem = null } = {}) {
     if (typeof store.news.listInternal !== "function" || typeof store.news.updateInternal !== "function"
       || typeof store.news.reviseInternal !== "function") return;
     const allItems = await external(() => store.news.listInternal());
-    const group = [item];
-    for (let index = 0; index < group.length; index += 1) {
-      for (const candidate of allItems) {
-        if (!group.some(({ id }) => id === candidate.id) && relationMatches(group[index], candidate)) {
-          group.push(candidate);
-        }
-      }
+    const priorItems = previousItem
+      ? allItems.map((candidate) => candidate.id === item.id ? previousItem : candidate)
+      : allItems;
+    const affectedIds = new Set([
+      ...relationComponent(previousItem || item, priorItems).map(({ id }) => id),
+      ...relationComponent(item, allItems).map(({ id }) => id),
+    ]);
+    const byId = new Map(allItems.map((candidate) => [candidate.id, candidate]));
+    const components = [];
+    while (affectedIds.size > 0) {
+      const [seedId] = affectedIds;
+      const seed = byId.get(seedId);
+      affectedIds.delete(seedId);
+      if (!seed) continue;
+      const component = relationComponent(seed, allItems);
+      for (const member of component) affectedIds.delete(member.id);
+      components.push(component);
     }
-    if (group.length === 1) return;
-    const ordered = [...group].sort(compareRelationOrder);
-    for (const member of ordered) {
-      const memberRank = transitionRank(member);
-      const lower = memberRank
-        ? ordered.filter((candidate) => transitionRank(candidate) > 0 && transitionRank(candidate) < memberRank)
-        : [];
-      const higher = memberRank
-        ? ordered.filter((candidate) => transitionRank(candidate) > memberRank)
-        : [];
-      const patch = {
-        relatedIds: ordered.filter(({ id }) => id !== member.id).map(({ id }) => id),
-        supersedesIds: lower.map(({ id }) => id),
-        supersededByIds: higher.map(({ id }) => id),
-        legalState: higher.length > 0
-          ? transitionedLegalState(higher.at(-1))
-          : baseLegalState(member),
-      };
-      const update = member.id === item.id ? store.news.updateInternal : store.news.reviseInternal;
-      await external(() => update.call(store.news, member.id, patch, { fence }));
+
+    for (const component of components) {
+      for (const member of [...component].sort(compareRelationOrder)) {
+        const patch = relationPatch(member, component);
+        const update = member.id === item.id ? store.news.updateInternal : store.news.reviseInternal;
+        await external(() => update.call(store.news, member.id, patch, { fence }));
+      }
     }
   }
 
@@ -413,6 +463,7 @@ export function createNewsSync({
     dryRun,
     external = (operation) => operation(),
     fence,
+    signal,
   }) {
     let normalized;
     let classification;
@@ -499,19 +550,25 @@ export function createNewsSync({
     }
 
     let snapshot = null;
-    if (!snapshotStore || snapshotStore.isPrivate !== true || snapshotStore.supportsFencing !== true) {
-      result.errors.push(safeError("snapshot", new Error("News publication requires a private fenced snapshot store."), {
+    if (!hasSnapshotCommitProtocol(snapshotStore)) {
+      result.errors.push(safeError("snapshot", new Error("News publication requires a private atomic fenced snapshot commit protocol."), {
         sourceKey: normalized.sourceKey,
       }));
       return;
     }
     if (snapshotStore) {
       try {
-        snapshot = await external(() => snapshotStore.save(sourceInput.id, hash, snapshotText(normalized), { fence }));
+        await fence.assertOwned();
+        snapshot = await snapshotStore.save(sourceInput.id, hash, snapshotText(normalized), { fence, signal });
+        await fence.assertOwned();
         const expectedPath = `news-source-snapshots/${sourceInput.id}/${hash}.txt`;
-        if (snapshot?.path !== expectedPath) throw new Error("Snapshot store returned invalid private provenance.");
+        if (snapshot?.path !== expectedPath || snapshot?.committed !== true
+          || typeof snapshot.commitId !== "string" || !snapshot.commitId) {
+          throw new Error("Snapshot store returned invalid committed private provenance.");
+        }
       } catch (error) {
-        result.errors.push(safeError(errorStage(error, "snapshot"), error, { sourceKey: normalized.sourceKey }));
+        const stopped = await cleanupSnapshot(snapshot, error);
+        result.errors.push(safeError(errorStage(stopped, "snapshot"), stopped, { sourceKey: normalized.sourceKey }));
         return;
       }
     }
@@ -530,6 +587,7 @@ export function createNewsSync({
         visaTypes: [...classification.visaTypes],
         contentHash: hash,
         snapshotPath: snapshot?.path || null,
+        snapshotCommitId: snapshot?.commitId || null,
         classifierConfidence: classification.confidence,
         classifierMatchedTerms: Array.isArray(classification.matchedTerms) ? [...classification.matchedTerms] : [],
         classifierExplanation: classification.explanation || "",
@@ -538,7 +596,8 @@ export function createNewsSync({
         actions: [],
       }, { fence }));
     } catch (error) {
-      result.errors.push(safeError(error?.code === "LEASE_LOST" ? "lease" : "upsert", error, {
+      const stopped = await cleanupSnapshot(snapshot, error);
+      result.errors.push(safeError(stopped?.code === "LEASE_LOST" ? "lease" : "upsert", stopped, {
         sourceKey: normalized.sourceKey,
       }));
       return;
@@ -550,7 +609,7 @@ export function createNewsSync({
 
     if (upserted.changed) {
       try {
-        await linkRelations(upserted.item, { external, fence });
+        await linkRelations(upserted.item, { external, fence, previousItem: current });
       } catch (error) {
         result.errors.push(safeError(errorStage(error, "relation"), error, { sourceKey: normalized.sourceKey }));
       }
@@ -661,8 +720,8 @@ export function createNewsSync({
           etag: previousState.etag ?? null,
           lastModified: previousState.lastModified ?? null,
         };
-        if (!dryRun && (!snapshotStore || snapshotStore.isPrivate !== true || snapshotStore.supportsFencing !== true)) {
-          result.errors.push(safeError("snapshot", new Error("News publication requires a private fenced snapshot store.")));
+        if (!dryRun && !hasSnapshotCommitProtocol(snapshotStore)) {
+          result.errors.push(safeError("snapshot", new Error("News publication requires a private atomic fenced snapshot commit protocol.")));
         }
         if (sourceNeedsRobots(sourceInput)) {
           if (!robotsPolicy || typeof robotsPolicy.isAllowed !== "function") {
@@ -737,6 +796,7 @@ export function createNewsSync({
               dryRun,
               external,
               fence,
+              signal: abortController.signal,
             });
           } catch (error) {
             result.errors.push(safeError(errorStage(error, "candidate"), error));

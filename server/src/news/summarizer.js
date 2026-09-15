@@ -27,13 +27,28 @@ const ambiguousDatePattern = /\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b/u;
 const monthDatePattern = /\b(?:(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember|t)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\.?\s+(\d{1,2})(?:st|nd|rd|th)?[,]?\s+(\d{4})|(\d{1,2})(?:st|nd|rd|th)?\s+(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember|t)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\.?[,]?\s+(\d{4}))\b/giu;
 const ordinalDatePattern = /\b(?:the\s+)?(\d{1,2})(?:st|nd|rd|th)\s+of\s+(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember|t)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)[,]?\s+(\d{4})\b/giu;
 const monthTheOrdinalPattern = /\b(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember|t)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\.?\s+the\s+(\d{1,2})(?:st|nd|rd|th)[,]?\s+(\d{4})\b/giu;
-const relativeTimePattern = /\b(?:today|tomorrow|yesterday|(?:(?:one|two|three|four|five|six|seven|eight|nine|ten|\d+)\s+days?\s+from\s+now)|(?:(?:the\s+)?following|next|previous|this|last)\s+(?:day|week|month|year)|in\s+(?:one|two|three|four|five|six|seven|eight|nine|ten|\d+)\s+days?)\b/giu;
-const schemeControlPattern = /[\u0000-\u0020\u007f-\u009f]/u;
+const monthNameSource = "(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember|t)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)";
+const ordinalWordSource = "(?:first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|eleventh|twelfth|thirteenth|fourteenth|fifteenth|sixteenth|seventeenth|eighteenth|nineteenth|twentieth|twenty[- ]first|twenty[- ]second|twenty[- ]third|twenty[- ]fourth|twenty[- ]fifth|twenty[- ]sixth|twenty[- ]seventh|twenty[- ]eighth|twenty[- ]ninth|thirtieth|thirty[- ]first)";
+const monthWordOrdinalPattern = new RegExp(`\\b(${monthNameSource})\\.?\\s+(?:the\\s+)?(${ordinalWordSource})[,]?\\s+(\\d{4})\\b`, "giu");
+const wordOrdinalDatePattern = new RegExp(`\\b(?:the\\s+)?(${ordinalWordSource})\\s+of\\s+(${monthNameSource})[,]?\\s+(\\d{4})\\b`, "giu");
+const numberWordSource = "(?:zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety)(?:[- ](?:one|two|three|four|five|six|seven|eight|nine))?";
+const relativeTimePattern = new RegExp(`\\b(?:today|tomorrow|yesterday|(?:(?:${numberWordSource}|\\d+)\\s+(?:seconds?|minutes?|hours?|days?|weeks?|months?|years?)\\s+from\\s+now)|(?:(?:the\\s+)?following|next|previous|this|last)\\s+(?:day|week|month|year)|in\\s+(?:${numberWordSource}|\\d+)\\s+(?:seconds?|minutes?|hours?|days?|weeks?|months?|years?))\\b`, "giu");
+const schemeControlPattern = /[\u0000-\u001f\u007f-\u009f]/gu;
 const months = new Map([
   ["jan", 1], ["january", 1], ["feb", 2], ["february", 2], ["mar", 3], ["march", 3],
   ["apr", 4], ["april", 4], ["may", 5], ["jun", 6], ["june", 6], ["jul", 7],
   ["july", 7], ["aug", 8], ["august", 8], ["sep", 9], ["sept", 9], ["september", 9],
   ["oct", 10], ["october", 10], ["nov", 11], ["november", 11], ["dec", 12], ["december", 12],
+]);
+const ordinalDays = new Map([
+  ["first", 1], ["second", 2], ["third", 3], ["fourth", 4], ["fifth", 5],
+  ["sixth", 6], ["seventh", 7], ["eighth", 8], ["ninth", 9], ["tenth", 10],
+  ["eleventh", 11], ["twelfth", 12], ["thirteenth", 13], ["fourteenth", 14],
+  ["fifteenth", 15], ["sixteenth", 16], ["seventeenth", 17], ["eighteenth", 18],
+  ["nineteenth", 19], ["twentieth", 20], ["twenty-first", 21], ["twenty-second", 22],
+  ["twenty-third", 23], ["twenty-fourth", 24], ["twenty-fifth", 25], ["twenty-sixth", 26],
+  ["twenty-seventh", 27], ["twenty-eighth", 28], ["twenty-ninth", 29], ["thirtieth", 30],
+  ["thirty-first", 31],
 ]);
 
 function isRecord(value) {
@@ -163,7 +178,7 @@ function trimUrlPunctuation(value) {
 function uriScanText(value) {
   const named = new Map([["colon", ":"], ["tab", "\t"], ["newline", "\n"]]);
   return value
-    .replace(/&#(?:x([0-9a-f]+)|(\d+));/giu, (entity, hexadecimal, decimal) => {
+    .replace(/&#(?:x([0-9a-f]+)|(\d+));?/giu, (entity, hexadecimal, decimal) => {
       const point = Number.parseInt(hexadecimal || decimal, hexadecimal ? 16 : 10);
       return Number.isInteger(point) && point >= 0 && point <= 0x10ffff
         && !(point >= 0xd800 && point <= 0xdfff)
@@ -173,16 +188,25 @@ function uriScanText(value) {
     .replace(/&(colon|tab|newline);/giu, (_entity, name) => named.get(name.toLowerCase()));
 }
 
-function hasFoldedDangerousScheme(value) {
+function foldedUriText(value) {
+  return uriScanText(value).replace(schemeControlPattern, "");
+}
+
+function explicitSchemesIn(value) {
+  return foldedUriText(value).match(schemePattern) || [];
+}
+
+function hasControlObfuscatedHierarchicalScheme(value) {
   const decoded = uriScanText(value);
-  const foldedScheme = /(?:^|[^a-z0-9+.-])([a-z](?:[\u0000-\u0020\u007f-\u009f]*[a-z0-9+.-])*[\u0000-\u0020\u007f-\u009f]*:)/giu;
-  return [...decoded.matchAll(foldedScheme)].some((match) => schemeControlPattern.test(match[1]));
+  if (!/[\u0000-\u001f\u007f-\u009f]/u.test(decoded)) return false;
+  return /(?:^|[^a-z0-9+.-])[a-z](?:[a-z0-9+.-]|[\u0000-\u001f\u007f-\u009f])+\s*:\s*\/\//iu.test(decoded);
 }
 
 function normalizedDate(yearValue, monthValue, dayValue) {
   const year = Number(yearValue);
   const month = typeof monthValue === "number" ? monthValue : months.get(String(monthValue).toLowerCase());
-  const day = Number(dayValue);
+  const normalizedDay = String(dayValue).toLowerCase().replace(/\s+/gu, "-");
+  const day = ordinalDays.get(normalizedDay) || Number(dayValue);
   const parsed = new Date(Date.UTC(year, month - 1, day));
   if (!month || parsed.getUTCFullYear() !== year || parsed.getUTCMonth() !== month - 1 || parsed.getUTCDate() !== day) {
     throw new Error("Generated summary contains an invalid date.");
@@ -202,6 +226,12 @@ function datesIn(value) {
   }
   for (const match of value.matchAll(monthTheOrdinalPattern)) {
     dates.push(normalizedDate(match[3], match[1], match[2]));
+  }
+  for (const match of value.matchAll(monthWordOrdinalPattern)) {
+    dates.push(normalizedDate(match[3], match[1], match[2]));
+  }
+  for (const match of value.matchAll(wordOrdinalDatePattern)) {
+    dates.push(normalizedDate(match[3], match[2], match[1]));
   }
   return dates;
 }
@@ -224,9 +254,10 @@ function verifiedOfficialUrl(value, domains) {
   }
 }
 
-function validateSourceBounds(draft, candidate, verifiedDomains) {
+function validateSourceBounds(draft, candidate, verifiedDomains, rawDraft = draft) {
   const material = sourceMaterial(candidate);
   const strings = allStrings(draft);
+  const uriStrings = allStrings(rawDraft);
   const sourceRelativeClaims = new Set(relativeClaimsIn(material));
   const generatedRelativeClaims = [...new Set(strings.flatMap(relativeClaimsIn))];
   if (generatedRelativeClaims.some((claim) => !sourceRelativeClaims.has(claim))) {
@@ -246,10 +277,11 @@ function validateSourceBounds(draft, candidate, verifiedDomains) {
   const domains = registryDomains(verifiedDomains);
   verifiedOfficialUrl(candidate?.canonicalUrl, domains);
   if (candidate?.officialPdfUrl) verifiedOfficialUrl(candidate.officialPdfUrl, domains);
-  if (strings.some(hasFoldedDangerousScheme)) {
+  if (uriStrings.some(hasControlObfuscatedHierarchicalScheme)) {
     throw new Error("Generated summary contains a dangerous unverified official URL scheme.");
   }
-  for (const value of strings.flatMap((entry) => uriScanText(entry).match(schemePattern) || [])) {
+  const explicitSchemes = uriStrings.flatMap(explicitSchemesIn);
+  for (const value of explicitSchemes) {
     const url = trimUrlPunctuation(value);
     if (!url.toLowerCase().startsWith("https://")) {
       throw new Error(`Generated summary contains a dangerous unverified official URL scheme: ${url}.`);
@@ -258,6 +290,7 @@ function validateSourceBounds(draft, candidate, verifiedDomains) {
   const urls = [...new Set([
     ...draft.actions.map((action) => action.sourceUrl),
     ...strings.flatMap((value) => (value.match(urlPattern) || []).map(trimUrlPunctuation)),
+    ...explicitSchemes.filter((value) => value.toLowerCase().startsWith("https://")).map(trimUrlPunctuation),
   ])];
   for (const value of urls) {
     verifiedOfficialUrl(value, domains);
@@ -300,7 +333,7 @@ export function createNewsSummarizer({ generate } = {}) {
           throw error;
         }
         const draft = validateDraft(parsed);
-        validateSourceBounds(draft, candidate, verifiedDomains);
+        validateSourceBounds(draft, candidate, verifiedDomains, parsed);
         return {
           ok: true,
           reviewRequired: true,

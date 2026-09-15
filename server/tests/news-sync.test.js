@@ -4,6 +4,7 @@ import { describe, expect, test, vi } from "vitest";
 
 import { classifyCandidate } from "../src/news/classifier.js";
 import { defaultNewsSources } from "../src/news/default-sources.js";
+import { createSnapshotStore } from "../src/news/snapshots.js";
 import { createNewsSync } from "../src/news/sync-news.js";
 import { createDemoStore } from "../src/store.js";
 
@@ -33,6 +34,23 @@ function officialCandidate(overrides = {}) {
     excerpt: "The official rule reduces the F-1 grace period to 30 days.",
     normalizedText: "The official rule reduces the F-1 grace period to 30 days.",
     ...overrides,
+  };
+}
+
+function atomicSnapshotStore({ save, discard = async () => {} }) {
+  return {
+    isPrivate: true,
+    supportsFencing: true,
+    commitProtocol: "atomic-fenced-snapshot-v1",
+    discard,
+    async save(sourceId, hash, content, options) {
+      const result = await save(sourceId, hash, content, options);
+      return result && {
+        committed: true,
+        commitId: `test-commit-${hash}`,
+        ...result,
+      };
+    },
   };
 }
 
@@ -79,15 +97,13 @@ function fixtureSync({
   const store = createDemoStore();
   const leaseEvents = createLeaseStore(store, { acquire: leaseAcquire });
   const snapshotWrites = [];
-  const snapshots = snapshotStore || {
-    isPrivate: true,
-    supportsFencing: true,
+  const snapshots = snapshotStore || atomicSnapshotStore({
     async save(sourceId, contentHash, content, { fence } = {}) {
       await fence.assertOwned();
       snapshotWrites.push({ sourceId, contentHash, content });
       return { path: `news-source-snapshots/${sourceId}/${contentHash}.txt` };
     },
-  };
+  });
   const fetched = { status: 200, text: "fixture body", etag: '"v1"', lastModified: null, notModified: false };
   const sync = createNewsSync({
     store,
@@ -157,8 +173,13 @@ describe("news source synchronization", () => {
     });
     expect(JSON.stringify(item)).not.toContain(generatedSummary);
     expect(item).not.toHaveProperty("snapshotPath");
+    expect(item).not.toHaveProperty("snapshotCommitId");
     expect(item).not.toHaveProperty("classifierConfidence");
     expect(item).not.toHaveProperty("classifierMatchedTerms");
+    expect((await store.news.listInternal())[0]).toMatchObject({
+      snapshotPath: expect.stringMatching(/^news-source-snapshots\//u),
+      snapshotCommitId: expect.stringMatching(/^test-commit-/u),
+    });
     expect(review).toMatchObject({
       newsItemId: item.id,
       editorialState: "review-required",
@@ -597,14 +618,12 @@ describe("news source synchronization", () => {
         notModified: false,
       });
     const store = createDemoStore();
-    const snapshots = {
-      isPrivate: true,
-      supportsFencing: true,
+    const snapshots = atomicSnapshotStore({
       async save(_id, hash, _content, { fence }) {
         await fence.assertOwned();
         return { path: `news-source-snapshots/federal-register/${hash}.txt` };
       },
-    };
+    });
     const sync = createNewsSync({ store, fetchSource: fetch, snapshotStore: snapshots, sources: [defaultNewsSources[0]], clock: fixedClock });
 
     const result = await sync.syncSource("federal-register");
@@ -783,21 +802,37 @@ describe("news source synchronization", () => {
     expect(await store.news.listInternal()).toEqual([]);
   });
 
+  test("rejects a nominally fenced snapshot store without the atomic commit protocol", async () => {
+    let fetched = false;
+    const { sync, store } = fixtureSync({
+      snapshotStore: {
+        isPrivate: true,
+        supportsFencing: true,
+        async save() { throw new Error("must not save"); },
+      },
+      fetch: async () => { fetched = true; return { status: 200, text: "fixture body", notModified: false }; },
+    });
+
+    const result = await sync.syncSource("federal-register");
+
+    expect(fetched).toBe(false);
+    expect(result.errors).toEqual([expect.objectContaining({ stage: "snapshot", message: expect.stringMatching(/atomic|commit protocol/i) })]);
+    expect(await store.news.listInternal()).toEqual([]);
+  });
+
   test("blocks only the affected candidate when a private snapshot write fails", async () => {
     const { sync, store } = fixtureSync({
       candidates: [
         officialCandidate({ externalId: "bad-snapshot", normalizedText: "F-1 bad snapshot filing fee update." }),
         officialCandidate({ externalId: "good-snapshot" }),
       ],
-      snapshotStore: {
-        isPrivate: true,
-        supportsFencing: true,
+      snapshotStore: atomicSnapshotStore({
         async save(_sourceId, hash, content, { fence }) {
           await fence.assertOwned();
           if (content.includes("bad snapshot")) throw new Error("private store unavailable");
           return { path: `news-source-snapshots/federal-register/${hash}.txt` };
         },
-      },
+      }),
     });
 
     const result = await sync.syncSource("federal-register");
@@ -872,14 +907,12 @@ describe("news source synchronization", () => {
       store,
       adapters: { fixture: { async collect(sourceInput) { return current.sourceId === sourceInput.id ? current.candidates : []; } } },
       fetchSource: async () => ({ status: 200, text: "fixture body", notModified: false }),
-      snapshotStore: {
-        isPrivate: true,
-        supportsFencing: true,
+      snapshotStore: atomicSnapshotStore({
         async save(sourceId, hash, _content, { fence }) {
           await fence.assertOwned();
           return { path: `news-source-snapshots/${sourceId}/${hash}.txt` };
         },
-      },
+      }),
       sources: [
         { ...source, id: "source-a" },
         { ...source, id: "source-b" },
@@ -913,14 +946,12 @@ describe("news source synchronization", () => {
       store,
       adapters: { fixture: { async collect(sourceInput) { return candidatesBySource.get(sourceInput.id); } } },
       fetchSource: async () => ({ status: 200, text: "fixture body", notModified: false }),
-      snapshotStore: {
-        isPrivate: true,
-        supportsFencing: true,
+      snapshotStore: atomicSnapshotStore({
         async save(sourceId, hash, _content, { fence }) {
           await fence.assertOwned();
           return { path: `news-source-snapshots/${sourceId}/${hash}.txt` };
         },
-      },
+      }),
       sources: [{ ...source, id: "source-a" }, { ...source, id: "source-b" }],
       clock: fixedClock,
     });
@@ -930,6 +961,72 @@ describe("news source synchronization", () => {
 
     expect((await store.news.getBySourceKey("source-a:a")).relatedIds).toEqual([]);
     expect((await store.news.getBySourceKey("source-b:b")).relatedIds).toEqual([]);
+  });
+
+  test("removes stale old-component edges when an existing item changes its strong identity", async () => {
+    let candidates = [];
+    const { sync, store } = fixtureSync({ collect: async () => candidates });
+    const ingest = async (candidate) => {
+      candidates = [officialCandidate({ regulationIdNumber: "", relatedExternalId: "", ...candidate })];
+      const result = await sync.syncSource("federal-register");
+      expect(result.errors).toEqual([]);
+    };
+
+    await ingest({ externalId: "old-proposal", docketNumber: "D-1", sourceDocumentType: "Proposed Rule", effectiveAt: null });
+    await ingest({ externalId: "mover", docketNumber: "D-1", sourceDocumentType: "Final Rule" });
+    await ingest({ externalId: "old-correction", docketNumber: "D-1", sourceDocumentType: "Correction" });
+    await ingest({ externalId: "new-proposal", docketNumber: "D-2", sourceDocumentType: "Proposed Rule", effectiveAt: null });
+    await ingest({ externalId: "new-correction", docketNumber: "D-2", sourceDocumentType: "Correction" });
+
+    const approvedOldNeighbor = await store.news.getBySourceKey("federal-register:old-proposal");
+    const review = await store.reviewQueue.create({ newsItemId: approvedOldNeighbor.id });
+    await store.news.approve(approvedOldNeighbor.id, {
+      reviewerUid: "private-editor",
+      reviewedAt: "2026-09-14T13:00:00.000Z",
+      reviewId: review.id,
+      summary: "Approved summary that must be redacted after relation changes.",
+      approvalEvidence: { privateTicket: "relation-review" },
+    });
+
+    await ingest({
+      externalId: "mover",
+      docketNumber: "D-2",
+      sourceDocumentType: "Final Rule",
+      normalizedText: "The official D-2 rule reduces the F-1 grace period to 30 days.",
+    });
+
+    const items = await store.news.listInternal();
+    const externalById = new Map(items.map((item) => [item.id, item.externalId]));
+    const relations = Object.fromEntries(items.map((item) => [
+      item.externalId,
+      item.relatedIds.map((id) => externalById.get(id)).sort(),
+    ]));
+    expect(relations["old-proposal"]).toEqual(["old-correction"]);
+    expect(relations["old-correction"]).toEqual(["old-proposal"]);
+    expect(relations.mover).toEqual(["new-correction", "new-proposal"]);
+    expect(relations["new-proposal"]).toEqual(["mover", "new-correction"]);
+    expect(relations["new-correction"]).toEqual(["mover", "new-proposal"]);
+
+    const redactedOldNeighbor = await store.news.get(approvedOldNeighbor.id);
+    expect(redactedOldNeighbor).toMatchObject({
+      editorialState: "published-source-only",
+      plainLanguageSummary: "",
+      actions: [],
+      summaryProvenance: null,
+    });
+    expect(redactedOldNeighbor).not.toHaveProperty("reviewerUid");
+    expect(redactedOldNeighbor).not.toHaveProperty("approvalEvidence");
+    expect(await store.news.revisions(approvedOldNeighbor.id)).toContainEqual(expect.objectContaining({
+      editorialState: "approved",
+      reviewerUid: "private-editor",
+      approvalEvidence: { privateTicket: "relation-review" },
+    }));
+
+    const moved = await store.news.getBySourceKey("federal-register:mover");
+    expect(await store.news.revisions(moved.id)).toContainEqual(expect.objectContaining({
+      docketNumber: "D-1",
+      relatedIds: expect.arrayContaining([approvedOldNeighbor.id]),
+    }));
   });
 
   test("recomputes a complete relation group identically for every insertion order", async () => {
@@ -1099,14 +1196,12 @@ describe("news source synchronization", () => {
         if (signal?.aborted) throw signal.reason;
         return { status: 200, text: "fixture body", notModified: false };
       },
-      snapshotStore: {
-        isPrivate: true,
-        supportsFencing: true,
+      snapshotStore: atomicSnapshotStore({
         async save(_id, hash, _content, { fence }) {
           await fence.assertOwned();
           return { path: `news-source-snapshots/federal-register/${hash}.txt` };
         },
-      },
+      }),
       sources: [source],
       leaseDurationMs: 20,
       leaseHeartbeatMs: 5,
@@ -1134,14 +1229,12 @@ describe("news source synchronization", () => {
       store,
       adapters: { fixture: { async collect() { return [officialCandidate()]; } } },
       fetchSource: async () => ({ status: 200, text: "fixture body", notModified: false }),
-      snapshotStore: {
-        isPrivate: true,
-        supportsFencing: true,
+      snapshotStore: atomicSnapshotStore({
         async save(_id, hash, _content, { fence }) {
           await fence.assertOwned();
           return { path: `news-source-snapshots/federal-register/${hash}.txt` };
         },
-      },
+      }),
       sources: [source],
       leaseDurationMs: 20,
       leaseHeartbeatMs: 5,
@@ -1168,16 +1261,14 @@ describe("news source synchronization", () => {
       store,
       adapters: { fixture: { async collect() { return [officialCandidate()]; } } },
       fetchSource: async () => ({ status: 200, text: "fixture body", notModified: false }),
-      snapshotStore: {
-        isPrivate: true,
-        supportsFencing: true,
+      snapshotStore: atomicSnapshotStore({
         async save(sourceId, hash, _content, { fence }) {
           await new Promise((resolve) => setTimeout(resolve, 30));
           await fence.assertOwned();
           snapshotWrites.push(hash);
           return { path: `news-source-snapshots/${sourceId}/${hash}.txt` };
         },
-      },
+      }),
       sources: [source],
       leaseDurationMs: 20,
       leaseHeartbeatMs: 5,
@@ -1196,6 +1287,78 @@ describe("news source synchronization", () => {
       .resolves.toBe(true);
   });
 
+  test("passes cancellation into the production staged snapshot save and leaves no canonical object after lease loss", async () => {
+    const store = createDemoStore();
+    const files = new Map();
+    const promotions = [];
+    let saveSignal = null;
+    const bucket = {
+      file(name) {
+        if (!files.has(name)) {
+          files.set(name, {
+            name,
+            content: null,
+            metadata: {},
+            async save(content, options) {
+              saveSignal = options.signal;
+              await new Promise((resolve) => setTimeout(resolve, 30));
+              this.content = content;
+              this.metadata = options.metadata;
+            },
+            async delete() {
+              files.delete(name);
+            },
+            async getMetadata() { return [this.metadata]; },
+            async download() { return [Buffer.from(this.content || "")]; },
+          });
+        }
+        return files.get(name);
+      },
+      async getFiles() { return [[...files.values()]]; },
+    };
+    bucket.snapshotCommitAdapter = {
+      capability: "atomic-fenced-snapshot-v1",
+      async promote(input) {
+        await input.fence.assertOwned();
+        input.signal?.throwIfAborted();
+        promotions.push(input);
+        const canonical = bucket.file(input.canonicalPath);
+        canonical.content = bucket.file(input.pendingPath).content;
+        canonical.metadata = input.metadata;
+        return { commitId: input.commitId };
+      },
+      async rollback({ canonicalPath, commitId }) {
+        const canonical = files.get(canonicalPath);
+        if (canonical?.metadata?.metadata?.commitId === commitId) files.delete(canonicalPath);
+      },
+    };
+    store.leases.renew = vi.fn(async (key, owner) => {
+      await store.leases.release(key, owner);
+      return false;
+    });
+    const sync = createNewsSync({
+      store,
+      adapters: { fixture: { async collect() { return [officialCandidate()]; } } },
+      fetchSource: async () => ({ status: 200, text: "fixture body", notModified: false }),
+      snapshotStore: createSnapshotStore({ bucket, clock: fixedClock }),
+      sources: [source],
+      leaseDurationMs: 20,
+      leaseHeartbeatMs: 5,
+    });
+
+    const result = await sync.syncSource("federal-register");
+
+    expect(saveSignal).toBeInstanceOf(AbortSignal);
+    expect(saveSignal.aborted).toBe(true);
+    expect(result).toMatchObject({ status: "failed", errors: [expect.objectContaining({ stage: "lease" })] });
+    expect(promotions).toEqual([]);
+    expect([...files.keys()].filter((name) => name.startsWith("news-source-snapshots/"))).toEqual([]);
+    expect(await store.news.listInternal()).toEqual([]);
+    expect(await store.reviewQueue.listGlobal()).toEqual([]);
+    expect(await store.newsSources.listGlobal()).toEqual([]);
+    expect(await store.newsRuns.listGlobal()).toEqual([]);
+  });
+
   test("keeps a second worker out after the nominal TTL while the first heartbeat is active", async () => {
     const store = createDemoStore();
     let fetches = 0;
@@ -1207,14 +1370,12 @@ describe("news source synchronization", () => {
         await new Promise((resolve) => setTimeout(resolve, 55));
         return { status: 200, text: "fixture body", notModified: false };
       },
-      snapshotStore: {
-        isPrivate: true,
-        supportsFencing: true,
+      snapshotStore: atomicSnapshotStore({
         async save(_id, hash, _content, { fence }) {
           await fence.assertOwned();
           return { path: `news-source-snapshots/federal-register/${hash}.txt` };
         },
-      },
+      }),
       sources: [source],
       leaseDurationMs: 20,
       leaseHeartbeatMs: 5,
