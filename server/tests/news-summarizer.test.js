@@ -75,7 +75,7 @@ describe("source-bound generated news summaries", () => {
     expect(result.error).toMatch(/verified official URL/i);
   });
 
-  test.each(["javascript:alert(1)", "data:text/html,owned", "file:///etc/passwd", "vbscript:msgbox(1)", "javascript&#58;alert(1)"])(
+  test.each(["javascript:alert(1)", "data:text/html,owned", "file:///etc/passwd", "vbscript:msgbox(1)", "webcal://attacker.example", "javascript&#58;alert(1)"])(
     "rejects dangerous URI scheme %s anywhere in generated text",
     async (uri) => {
       const result = await summarize(generated({
@@ -94,6 +94,9 @@ describe("source-bound generated news summaries", () => {
     "file\u0000:///etc/passwd",
     "gopher\v:\f//attacker.example",
     "http\n:\t//attacker.example",
+    "javascript\u007f:alert(1)",
+    "http\u007f ://attacker.example",
+    "javascript&#9;:alert(1)",
   ])("rejects a control-folded dangerous URI %s", async (uri) => {
     const result = await summarize(generated({
       plainLanguageSummary: `Use [official instructions](${uri}) for this update.`,
@@ -143,6 +146,30 @@ describe("source-bound generated news summaries", () => {
       .resolves.toMatchObject({ ok: true, reviewRequired: true, publishable: false });
   });
 
+  test("normalizes a month-the-ordinal official date", async () => {
+    const ordinalCandidate = {
+      ...candidate,
+      excerpt: "The edition takes effect on 2026-09-16.",
+      normalizedText: "The edition takes effect on 2026-09-16.",
+      effectiveAt: "2026-09-16",
+    };
+    const summarizer = createNewsSummarizer({ generate: async () => generated({
+      plainLanguageSummary: "The edition takes effect on September the 16th, 2026.",
+    }) });
+
+    await expect(summarizer.summarize(ordinalCandidate, { verifiedDomains: ["www.uscis.gov"] }))
+      .resolves.toMatchObject({ ok: true, reviewRequired: true, publishable: false });
+  });
+
+  test("rejects an unsupported month-the-ordinal substitution", async () => {
+    const result = await summarize(generated({
+      plainLanguageSummary: "The edition takes effect on October the 2nd, 2026.",
+    }));
+
+    expect(result).toMatchObject({ ok: false, reviewRequired: true, publishable: false });
+    expect(result.error).toMatch(/date.*source/i);
+  });
+
   test("rejects an unsupported ordinal-of-month substitution", async () => {
     const result = await summarize(generated({
       plainLanguageSummary: "The edition takes effect on the 16th of September, 2026.",
@@ -152,7 +179,16 @@ describe("source-bound generated news summaries", () => {
     expect(result.error).toMatch(/date.*source/i);
   });
 
-  test.each(["today", "tomorrow", "next week"])(
+  test.each([
+    "today",
+    "tomorrow",
+    "next week",
+    "two days from now",
+    "the following day",
+    "next day",
+    "previous week",
+    "the following month",
+  ])(
     "fails closed on relative temporal claim %s",
     async (relative) => {
       const result = await summarize(generated({
@@ -163,6 +199,20 @@ describe("source-bound generated news summaries", () => {
       expect(result.error).toMatch(/relative|temporal/i);
     },
   );
+
+  test("accepts an exact source-bound relative temporal phrase", async () => {
+    const relativeCandidate = {
+      ...candidate,
+      excerpt: "USCIS says the filing window opens two days from now.",
+      normalizedText: "USCIS says the filing window opens two days from now.",
+    };
+    const summarizer = createNewsSummarizer({ generate: async () => generated({
+      plainLanguageSummary: "USCIS says the filing window opens two days from now.",
+    }) });
+
+    await expect(summarizer.summarize(relativeCandidate, { verifiedDomains: ["www.uscis.gov"] }))
+      .resolves.toMatchObject({ ok: true, reviewRequired: true, publishable: false });
+  });
 
   test("rejects a substituted natural-language date", async () => {
     const result = await summarize(generated({

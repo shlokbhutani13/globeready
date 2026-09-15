@@ -86,6 +86,7 @@ export function publicNewsItem(item) {
     reviewedAt,
     reviewId,
     approvalEvidence,
+    baseLegalState,
     ...safe
   } = item;
   return safe;

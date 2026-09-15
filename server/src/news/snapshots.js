@@ -43,10 +43,15 @@ export function createSnapshotStore({ bucket, clock = () => new Date(), retentio
 
   return {
     isPrivate: true,
-    async save(sourceId, contentHash, content) {
+    supportsFencing: true,
+    async save(sourceId, contentHash, content, { fence } = {}) {
       const now = nowFrom(clock);
       const path = snapshotPath(sourceId, contentHash);
       const expiresAt = new Date(now.valueOf() + retentionDays * dayMilliseconds).toISOString();
+      if (!fence || typeof fence.assertOwned !== "function") {
+        throw new Error("Snapshot save requires an ownership fence.");
+      }
+      await fence.assertOwned();
       await bucket.file(path).save(normalizedContent(content), {
         predefinedAcl: "private",
         resumable: false,

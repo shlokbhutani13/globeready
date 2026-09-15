@@ -81,7 +81,9 @@ function fixtureSync({
   const snapshotWrites = [];
   const snapshots = snapshotStore || {
     isPrivate: true,
-    async save(sourceId, contentHash, content) {
+    supportsFencing: true,
+    async save(sourceId, contentHash, content, { fence } = {}) {
+      await fence.assertOwned();
       snapshotWrites.push({ sourceId, contentHash, content });
       return { path: `news-source-snapshots/${sourceId}/${contentHash}.txt` };
     },
@@ -331,6 +333,54 @@ describe("news source synchronization", () => {
     expect(await store.newsRuns.listGlobal()).toHaveLength(runCount);
   });
 
+  test("dry run applies generated-summary review policy without invoking the summarizer", async () => {
+    const travelCandidate = officialCandidate({
+      sourceDocumentType: "Notice",
+      title: "F-1 student travel guidance",
+      excerpt: "F-1 students may travel through a port of entry.",
+      normalizedText: "F-1 students may travel through a port of entry.",
+      effectiveAt: null,
+    });
+    const summarizer = {
+      summarize: vi.fn().mockResolvedValue({
+        ok: true,
+        reviewRequired: true,
+        publishable: false,
+        draft: { plainLanguageSummary: "Source-bound draft." },
+      }),
+    };
+    const { sync, store, snapshotWrites } = fixtureSync({ candidates: [travelCandidate], summarizer });
+
+    const prospective = await sync.syncSource("federal-register", { dryRun: true });
+
+    expect(prospective).toMatchObject({
+      created: 1,
+      changed: 0,
+      unchanged: 0,
+      reviewRequired: 1,
+      estimatedWrites: 5,
+      errors: [],
+    });
+    expect(summarizer.summarize).not.toHaveBeenCalled();
+    expect(snapshotWrites).toEqual([]);
+    expect(await store.news.listInternal()).toEqual([]);
+    expect(await store.reviewQueue.listGlobal()).toEqual([]);
+
+    const live = await sync.syncSource("federal-register");
+    const [review] = await store.reviewQueue.listGlobal();
+    expect(live).toMatchObject({ created: 1, reviewRequired: 1, estimatedWrites: 5, errors: [] });
+    expect(review.reason).toBe("generated-summary");
+    expect(summarizer.summarize).toHaveBeenCalledTimes(1);
+    await store.reviewQueue.remove(review.id);
+    summarizer.summarize.mockClear();
+
+    const recovery = await sync.syncSource("federal-register", { dryRun: true });
+
+    expect(recovery).toMatchObject({ unchanged: 1, reviewRequired: 1, estimatedWrites: 5, errors: [] });
+    expect(summarizer.summarize).not.toHaveBeenCalled();
+    expect(await store.reviewQueue.listGlobal()).toEqual([]);
+  });
+
   test("keeps repeated source runs idempotent", async () => {
     const { sync, store } = fixtureSync();
 
@@ -493,6 +543,38 @@ describe("news source synchronization", () => {
     expect(await store.newsSources.get("federal-register")).toMatchObject({ etag: null, lastModified: null });
   });
 
+  test("clears stale validators from a fresh 200 even when downstream classification fails", async () => {
+    const requests = [];
+    const responses = [
+      { status: 200, text: "fixture body", etag: '"v1"', lastModified: "Mon, 14 Sep 2026 10:00:00 GMT", notModified: false },
+      { status: 200, text: "changed body", etag: null, lastModified: null, notModified: false },
+      { status: 304, text: "", etag: null, lastModified: null, notModified: true },
+    ];
+    let classificationFails = false;
+    const { sync, store } = fixtureSync({
+      collect: async () => [officialCandidate()],
+      classifier: (candidate, options) => {
+        if (classificationFails) throw new Error("classifier unavailable");
+        return classifyCandidate(candidate, options);
+      },
+      fetch: async (input) => {
+        requests.push(input);
+        return responses.shift();
+      },
+    });
+    await sync.syncSource("federal-register");
+    classificationFails = true;
+
+    const failed = await sync.syncSource("federal-register");
+    const stateAfterFailure = await store.newsSources.get("federal-register");
+    classificationFails = false;
+    await sync.syncSource("federal-register");
+
+    expect(failed.errors).toEqual([expect.objectContaining({ stage: "classify" })]);
+    expect(stateAfterFailure).toMatchObject({ etag: null, lastModified: null, lastRunStatus: "failed" });
+    expect(requests[2]).toMatchObject({ etag: null, lastModified: null });
+  });
+
   test("routes paginated Federal Register JSON through secure source fetching with truthful metadata", async () => {
     const fixture = JSON.parse(await readFile(new URL("./fixtures/federal-register-results.json", import.meta.url), "utf8"));
     const fetch = vi.fn()
@@ -515,7 +597,14 @@ describe("news source synchronization", () => {
         notModified: false,
       });
     const store = createDemoStore();
-    const snapshots = { isPrivate: true, async save(_id, hash) { return { path: `news-source-snapshots/federal-register/${hash}.txt` }; } };
+    const snapshots = {
+      isPrivate: true,
+      supportsFencing: true,
+      async save(_id, hash, _content, { fence }) {
+        await fence.assertOwned();
+        return { path: `news-source-snapshots/federal-register/${hash}.txt` };
+      },
+    };
     const sync = createNewsSync({ store, fetchSource: fetch, snapshotStore: snapshots, sources: [defaultNewsSources[0]], clock: fixedClock });
 
     const result = await sync.syncSource("federal-register");
@@ -680,6 +769,20 @@ describe("news source synchronization", () => {
     expect(await store.news.listPublished({})).toEqual([]);
   });
 
+  test("rejects a private snapshot store that does not support lease fencing", async () => {
+    let fetched = false;
+    const { sync, store } = fixtureSync({
+      snapshotStore: { isPrivate: true, async save() { throw new Error("must not save"); } },
+      fetch: async () => { fetched = true; return { status: 200, text: "fixture body", notModified: false }; },
+    });
+
+    const result = await sync.syncSource("federal-register");
+
+    expect(fetched).toBe(false);
+    expect(result.errors).toEqual([expect.objectContaining({ stage: "snapshot", message: expect.stringMatching(/fenc/i) })]);
+    expect(await store.news.listInternal()).toEqual([]);
+  });
+
   test("blocks only the affected candidate when a private snapshot write fails", async () => {
     const { sync, store } = fixtureSync({
       candidates: [
@@ -688,7 +791,9 @@ describe("news source synchronization", () => {
       ],
       snapshotStore: {
         isPrivate: true,
-        async save(_sourceId, hash, content) {
+        supportsFencing: true,
+        async save(_sourceId, hash, content, { fence }) {
+          await fence.assertOwned();
           if (content.includes("bad snapshot")) throw new Error("private store unavailable");
           return { path: `news-source-snapshots/federal-register/${hash}.txt` };
         },
@@ -769,7 +874,11 @@ describe("news source synchronization", () => {
       fetchSource: async () => ({ status: 200, text: "fixture body", notModified: false }),
       snapshotStore: {
         isPrivate: true,
-        async save(sourceId, hash) { return { path: `news-source-snapshots/${sourceId}/${hash}.txt` }; },
+        supportsFencing: true,
+        async save(sourceId, hash, _content, { fence }) {
+          await fence.assertOwned();
+          return { path: `news-source-snapshots/${sourceId}/${hash}.txt` };
+        },
       },
       sources: [
         { ...source, id: "source-a" },
@@ -792,6 +901,98 @@ describe("news source synchronization", () => {
     const correction = await store.news.getBySourceKey("source-b:correction");
     expect(original.relatedIds).toEqual([]);
     expect(correction.relatedIds).toEqual([]);
+  });
+
+  test("does not link matching docket or RIN identifiers across different sources", async () => {
+    const store = createDemoStore();
+    const candidatesBySource = new Map([
+      ["source-a", [officialCandidate({ externalId: "a" })]],
+      ["source-b", [officialCandidate({ externalId: "b", sourceDocumentType: "Correction" })]],
+    ]);
+    const sync = createNewsSync({
+      store,
+      adapters: { fixture: { async collect(sourceInput) { return candidatesBySource.get(sourceInput.id); } } },
+      fetchSource: async () => ({ status: 200, text: "fixture body", notModified: false }),
+      snapshotStore: {
+        isPrivate: true,
+        supportsFencing: true,
+        async save(sourceId, hash, _content, { fence }) {
+          await fence.assertOwned();
+          return { path: `news-source-snapshots/${sourceId}/${hash}.txt` };
+        },
+      },
+      sources: [{ ...source, id: "source-a" }, { ...source, id: "source-b" }],
+      clock: fixedClock,
+    });
+
+    await sync.syncSource("source-a");
+    await sync.syncSource("source-b");
+
+    expect((await store.news.getBySourceKey("source-a:a")).relatedIds).toEqual([]);
+    expect((await store.news.getBySourceKey("source-b:b")).relatedIds).toEqual([]);
+  });
+
+  test("recomputes a complete relation group identically for every insertion order", async () => {
+    const records = {
+      proposal: officialCandidate({
+        externalId: "proposal",
+        sourceDocumentType: "Proposed Rule",
+        effectiveAt: null,
+        publishedAt: "2026-09-01",
+      }),
+      final: officialCandidate({
+        externalId: "final",
+        sourceDocumentType: "Notice",
+        sourceLegalState: "final",
+        effectiveAt: null,
+        publishedAt: "2026-09-02",
+      }),
+      correction: officialCandidate({
+        externalId: "correction",
+        sourceDocumentType: "Correction",
+        effectiveAt: null,
+        publishedAt: "2026-09-03",
+      }),
+      delay: officialCandidate({
+        externalId: "delay",
+        sourceDocumentType: "Notice",
+        sourceLegalState: "delayed",
+        effectiveAt: null,
+        publishedAt: "2026-09-04",
+      }),
+      withdrawal: officialCandidate({
+        externalId: "withdrawal",
+        sourceDocumentType: "Notice",
+        sourceLegalState: "withdrawn",
+        effectiveAt: null,
+        publishedAt: "2026-09-05",
+      }),
+    };
+    const ingest = async (order) => {
+      let candidates = [];
+      const { sync, store } = fixtureSync({ collect: async () => candidates });
+      for (const key of order) {
+        candidates = [records[key]];
+        await sync.syncSource("federal-register");
+      }
+      const items = await store.news.listInternal();
+      const externalById = new Map(items.map((item) => [item.id, item.externalId]));
+      return Object.fromEntries(items.map((item) => [item.externalId, {
+        legalState: item.legalState,
+        related: item.relatedIds.map((id) => externalById.get(id)),
+        supersedes: item.supersedesIds.map((id) => externalById.get(id)),
+        supersededBy: item.supersededByIds.map((id) => externalById.get(id)),
+      }]).sort(([left], [right]) => left.localeCompare(right)));
+    };
+
+    const forward = await ingest(["proposal", "final", "correction", "delay", "withdrawal"]);
+    const reverse = await ingest(["withdrawal", "delay", "correction", "final", "proposal"]);
+    const mixed = await ingest(["correction", "proposal", "withdrawal", "final", "delay"]);
+
+    expect(reverse).toEqual(forward);
+    expect(mixed).toEqual(forward);
+    expect(forward.withdrawal.supersedes).toEqual(["proposal", "final", "correction", "delay"]);
+    expect(forward.final).toMatchObject({ legalState: "withdrawn", supersededBy: ["correction", "delay", "withdrawal"] });
   });
 
   test("orders proposal and final transitions deterministically when the final arrives first", async () => {
@@ -875,6 +1076,7 @@ describe("news source synchronization", () => {
     const [publicProposal] = (await store.news.listPublished({})).filter((item) => item.id === proposal.id);
     expect(publicProposal).not.toHaveProperty("reviewerUid");
     expect(publicProposal).not.toHaveProperty("approvalEvidence");
+    expect(publicProposal).not.toHaveProperty("baseLegalState");
   });
 
   test("renews the persistent lease and aborts safely if ownership is lost", async () => {
@@ -897,7 +1099,14 @@ describe("news source synchronization", () => {
         if (signal?.aborted) throw signal.reason;
         return { status: 200, text: "fixture body", notModified: false };
       },
-      snapshotStore: { isPrivate: true, async save(_id, hash) { return { path: `news-source-snapshots/federal-register/${hash}.txt` }; } },
+      snapshotStore: {
+        isPrivate: true,
+        supportsFencing: true,
+        async save(_id, hash, _content, { fence }) {
+          await fence.assertOwned();
+          return { path: `news-source-snapshots/federal-register/${hash}.txt` };
+        },
+      },
       sources: [source],
       leaseDurationMs: 20,
       leaseHeartbeatMs: 5,
@@ -925,7 +1134,14 @@ describe("news source synchronization", () => {
       store,
       adapters: { fixture: { async collect() { return [officialCandidate()]; } } },
       fetchSource: async () => ({ status: 200, text: "fixture body", notModified: false }),
-      snapshotStore: { isPrivate: true, async save(_id, hash) { return { path: `news-source-snapshots/federal-register/${hash}.txt` }; } },
+      snapshotStore: {
+        isPrivate: true,
+        supportsFencing: true,
+        async save(_id, hash, _content, { fence }) {
+          await fence.assertOwned();
+          return { path: `news-source-snapshots/federal-register/${hash}.txt` };
+        },
+      },
       sources: [source],
       leaseDurationMs: 20,
       leaseHeartbeatMs: 5,
@@ -941,6 +1157,45 @@ describe("news source synchronization", () => {
     expect(await store.newsRuns.listGlobal()).toEqual([]);
   });
 
+  test("lets a compliant slow snapshot store fence its commit after lease loss", async () => {
+    const store = createDemoStore();
+    const snapshotWrites = [];
+    store.leases.renew = vi.fn(async (key, owner) => {
+      await store.leases.release(key, owner);
+      return false;
+    });
+    const sync = createNewsSync({
+      store,
+      adapters: { fixture: { async collect() { return [officialCandidate()]; } } },
+      fetchSource: async () => ({ status: 200, text: "fixture body", notModified: false }),
+      snapshotStore: {
+        isPrivate: true,
+        supportsFencing: true,
+        async save(sourceId, hash, _content, { fence }) {
+          await new Promise((resolve) => setTimeout(resolve, 30));
+          await fence.assertOwned();
+          snapshotWrites.push(hash);
+          return { path: `news-source-snapshots/${sourceId}/${hash}.txt` };
+        },
+      },
+      sources: [source],
+      leaseDurationMs: 20,
+      leaseHeartbeatMs: 5,
+    });
+
+    const result = await sync.syncSource("federal-register");
+
+    expect(result.status).toBe("failed");
+    expect(result.errors).toEqual([expect.objectContaining({ stage: "lease" })]);
+    expect(snapshotWrites).toEqual([]);
+    expect(await store.news.listInternal()).toEqual([]);
+    expect(await store.reviewQueue.listGlobal()).toEqual([]);
+    expect(await store.newsSources.listGlobal()).toEqual([]);
+    expect(await store.newsRuns.listGlobal()).toEqual([]);
+    await expect(store.leases.acquire("news-source:federal-register", "replacement", new Date(Date.now() + 1_000).toISOString()))
+      .resolves.toBe(true);
+  });
+
   test("keeps a second worker out after the nominal TTL while the first heartbeat is active", async () => {
     const store = createDemoStore();
     let fetches = 0;
@@ -952,7 +1207,14 @@ describe("news source synchronization", () => {
         await new Promise((resolve) => setTimeout(resolve, 55));
         return { status: 200, text: "fixture body", notModified: false };
       },
-      snapshotStore: { isPrivate: true, async save(_id, hash) { return { path: `news-source-snapshots/federal-register/${hash}.txt` }; } },
+      snapshotStore: {
+        isPrivate: true,
+        supportsFencing: true,
+        async save(_id, hash, _content, { fence }) {
+          await fence.assertOwned();
+          return { path: `news-source-snapshots/federal-register/${hash}.txt` };
+        },
+      },
       sources: [source],
       leaseDurationMs: 20,
       leaseHeartbeatMs: 5,
@@ -1014,7 +1276,7 @@ describe("news source synchronization", () => {
     const sync = createNewsSync({
       store,
       fetchSource: vi.fn(),
-      snapshotStore: { isPrivate: true, async save() { throw new Error("unused"); } },
+      snapshotStore: { isPrivate: true, supportsFencing: true, async save() { throw new Error("unused"); } },
       sources: [pending],
     });
 

@@ -4,7 +4,7 @@ import { createSnapshotStore } from "../src/news/snapshots.js";
 
 const fixedClock = () => new Date("2026-09-14T12:00:00.000Z");
 
-function fakeFile(name, metadata = {}) {
+function fakeFile(name, metadata = {}, events = null) {
   const calls = { delete: 0, save: [] };
   return {
     name,
@@ -17,6 +17,7 @@ function fakeFile(name, metadata = {}) {
       return [metadata];
     },
     async save(content, options) {
+      events?.push("save");
       calls.save.push({ content, options });
     },
   };
@@ -37,15 +38,19 @@ function fakeBucket(existing = []) {
 
 describe("private source snapshots", () => {
   test("writes normalized content to a deterministic private no-store object", async () => {
-    const bucket = fakeBucket();
+    const events = [];
+    const file = fakeFile(`news-source-snapshots/federal-register/${"a".repeat(64)}.txt`, {}, events);
+    const bucket = fakeBucket([file]);
     const store = createSnapshotStore({ bucket, clock: fixedClock });
     const contentHash = "a".repeat(64);
+    const fence = { assertOwned: async () => { events.push("fence"); } };
 
     expect(store.isPrivate).toBe(true);
-    const result = await store.save("federal-register", contentHash, "  Official\r\n  source   text  ");
-    const file = bucket.file(`news-source-snapshots/federal-register/${contentHash}.txt`);
+    expect(store.supportsFencing).toBe(true);
+    const result = await store.save("federal-register", contentHash, "  Official\r\n  source   text  ", { fence });
 
     expect(result.path).toBe(`news-source-snapshots/federal-register/${contentHash}.txt`);
+    expect(events).toEqual(["fence", "save"]);
     expect(file.calls.save).toEqual([{
       content: "Official source text",
       options: expect.objectContaining({
@@ -114,7 +119,16 @@ describe("private source snapshots", () => {
   test("rejects unsafe source identifiers before constructing an object path", async () => {
     const store = createSnapshotStore({ bucket: fakeBucket(), clock: fixedClock });
 
-    await expect(store.save("../other-bucket", "a".repeat(64), "source"))
+    await expect(store.save("../other-bucket", "a".repeat(64), "source", {
+      fence: { assertOwned: async () => {} },
+    }))
       .rejects.toThrow(/source id/i);
+  });
+
+  test("requires an ownership fence for every snapshot commit", async () => {
+    const store = createSnapshotStore({ bucket: fakeBucket(), clock: fixedClock });
+
+    await expect(store.save("federal-register", "a".repeat(64), "source"))
+      .rejects.toThrow(/fence/i);
   });
 });

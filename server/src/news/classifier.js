@@ -138,21 +138,27 @@ function matchingTerms(text, terms) {
   return terms.filter((term) => includesTerm(text, term));
 }
 
+function claimClauses(text) {
+  return text.split(/(?:[.!?;:\n]+|,\s*(?:and|but|however|yet)\b|\b(?:but|however|yet)\b)/iu)
+    .map((clause) => clause.trim())
+    .filter(Boolean);
+}
+
 function includesAffirmedTerm(text, term) {
   const escaped = term.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&").replace(/\s+/gu, "\\s+");
   const matcher = new RegExp(`(?:^|[^a-z0-9])(${escaped})(?=$|[^a-z0-9])`, "giu");
-  for (const match of text.matchAll(matcher)) {
-    const rawPrefix = text.slice(Math.max(0, match.index - 160), match.index);
-    const boundary = Math.max(
-      rawPrefix.search(/[^.!?;:\n]*$/u),
-      ...[...rawPrefix.matchAll(/\b(?:but|however|although|yet)\b/giu)].map((entry) => entry.index + entry[0].length),
-    );
-    const prefix = rawPrefix.slice(Math.max(0, boundary));
-    const negated = /\bno\b/iu.test(prefix)
-      || /\bwithout\b/iu.test(prefix)
-      || /\b(?:do|does|did|has|have|had|is|are|was|were|will|would|can|could)\s+not\b/iu.test(prefix)
-      || /\b(?:doesn't|didn't|hasn't|haven't|isn't|aren't|wasn't|weren't|won't|wouldn't|can't|couldn't)\b/iu.test(prefix);
-    if (!negated) return true;
+  for (const clause of claimClauses(text)) {
+    for (const match of clause.matchAll(matcher)) {
+      const termOffset = match.index + match[0].indexOf(match[1]);
+      const prefix = clause.slice(0, termOffset);
+      const suffix = clause.slice(termOffset + match[1].length);
+      const negatedBefore = /\b(?:no|without)\b/iu.test(prefix)
+        || /\b(?:do|does|did|has|have|had|is|are|was|were|will|would|can|could)\s+not\b/iu.test(prefix)
+        || /\b(?:doesn't|didn't|hasn't|haven't|isn't|aren't|wasn't|weren't|won't|wouldn't|can't|couldn't)\b/iu.test(prefix);
+      const negatedAfter = /^\s+(?:[a-z-]+\s+){0,3}(?:(?:remains?|is|are|was|were|will\s+remain)\s+(?:unchanged|unaffected|the\s+same)\b|(?:does|do|did)\s+not\s+change\b)/iu
+        .test(suffix);
+      if (!negatedBefore && !negatedAfter) return true;
+    }
   }
   return false;
 }

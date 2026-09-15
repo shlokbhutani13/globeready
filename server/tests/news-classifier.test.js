@@ -119,6 +119,40 @@ describe("deterministic news classification", () => {
       .toMatchObject({ highImpact: false, urgency: "low", relevance: "borderline" });
   });
 
+  test("treats a post-term unchanged predicate as a non-change claim", () => {
+    expect(classifyCandidate({
+      sourceDocumentType: "Notice",
+      title: "F-1 program update",
+      excerpt: "OPT eligibility remains unchanged for F-1 students.",
+    }, { clock: fixedClock })).toMatchObject({
+      highImpact: false,
+      urgency: "low",
+      relevance: "borderline",
+    });
+  });
+
+  test.each([
+    "No filing fee increase, and OPT eligibility expands for F-1 students.",
+    "No injunction was issued. OPT eligibility expands for F-1 students.",
+    "OPT eligibility remains unchanged; the filing fee increases for F-1 students.",
+  ])("does not carry negation across an independent positive clause: %s", (excerpt) => {
+    expect(classifyCandidate({ sourceDocumentType: "Notice", title: "F-1 update", excerpt }, { clock: fixedClock }))
+      .toMatchObject({ highImpact: true, relevance: "relevant" });
+  });
+
+  test("preserves a positive injunction control", () => {
+    expect(classifyCandidate({
+      sourceDocumentType: "Notice",
+      title: "F-1 court update",
+      excerpt: "The court issued an injunction affecting F-1 students.",
+    }, { clock: fixedClock })).toMatchObject({
+      legalState: "enjoined",
+      highImpact: true,
+      urgency: "urgent",
+      relevance: "relevant",
+    });
+  });
+
   test("prefers explicit source document metadata over conflicting title words", () => {
     expect(classifyCandidate({
       sourceDocumentType: "Notice",

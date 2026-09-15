@@ -237,34 +237,51 @@ function sourceNeedsRobots(source) {
 }
 
 function relationMatches(left, right) {
+  if (!left.sourceId || left.sourceId !== right.sourceId) return false;
   const sameDocket = left.docketNumber && right.docketNumber && left.docketNumber === right.docketNumber;
   const sameRin = left.regulationIdNumber && right.regulationIdNumber
     && left.regulationIdNumber === right.regulationIdNumber;
-  const sameSource = left.sourceId && left.sourceId === right.sourceId;
-  const explicit = sameSource && (left.relatedExternalId && left.relatedExternalId === right.externalId
+  const explicit = (left.relatedExternalId && left.relatedExternalId === right.externalId
     || right.relatedExternalId && right.relatedExternalId === left.externalId);
   return Boolean(sameDocket || sameRin || explicit);
 }
 
 function transitionRank(item) {
-  if (item.legalState === "withdrawn") return 5;
-  if (item.legalState === "delayed") return 4;
+  const legalState = item.baseLegalState || item.sourceLegalState;
+  if (legalState === "withdrawn") return 5;
+  if (legalState === "delayed") return 4;
   if (item.documentType === "correction") return 3;
+  if (["final", "scheduled", "effective"].includes(legalState)) return 2;
   if (item.documentType === "final-rule") return 2;
+  if (legalState === "proposed") return 1;
   if (item.documentType === "proposed-rule") return 1;
   return 0;
 }
 
-function transitionPair(left, right) {
-  const leftRank = transitionRank(left);
-  const rightRank = transitionRank(right);
-  if (!leftRank || !rightRank || leftRank === rightRank) return null;
-  const successor = leftRank > rightRank ? left : right;
-  const prior = successor === left ? right : left;
-  const legalState = successor.legalState === "withdrawn"
+function baseLegalState(item) {
+  if (legalStates.has(item.baseLegalState)) return item.baseLegalState;
+  if (legalStates.has(item.sourceLegalState)) return item.sourceLegalState;
+  if (item.documentType === "proposed-rule") return "proposed";
+  if (item.documentType === "final-rule") return "final";
+  return "informational";
+}
+
+function relationDate(item) {
+  return item.updatedAt || item.publishedAt || item.effectiveAt || "";
+}
+
+function compareRelationOrder(left, right) {
+  return transitionRank(left) - transitionRank(right)
+    || relationDate(left).localeCompare(relationDate(right))
+    || String(left.documentType || "").localeCompare(String(right.documentType || ""))
+    || String(left.externalId || left.sourceKey).localeCompare(String(right.externalId || right.sourceKey));
+}
+
+function transitionedLegalState(successor) {
+  const successorState = baseLegalState(successor);
+  return successorState === "withdrawn"
     ? "withdrawn"
-    : successor.legalState === "delayed" ? "delayed" : "superseded";
-  return { successor, prior, legalState };
+    : successorState === "delayed" ? "delayed" : "superseded";
 }
 
 function emptyResult() {
@@ -341,47 +358,43 @@ export function createNewsSync({
   async function linkRelations(item, { external = (operation) => operation(), fence } = {}) {
     if (typeof store.news.listInternal !== "function" || typeof store.news.updateInternal !== "function"
       || typeof store.news.reviseInternal !== "function") return;
-    const related = (await external(() => store.news.listInternal()))
-      .filter((other) => other.id !== item.id && relationMatches(item, other));
-    if (related.length === 0) return;
-    let currentPatch = {
-      relatedIds: [...new Set([...(item.relatedIds || []), ...related.map(({ id }) => id)])],
-      supersedesIds: [...(item.supersedesIds || [])],
-      supersededByIds: [...(item.supersededByIds || [])],
-      legalState: item.legalState,
-    };
-    for (const other of related) {
-      const transition = transitionPair(item, other);
-      const currentIsSuccessor = transition?.successor.id === item.id;
-      const currentIsPrior = transition?.prior.id === item.id;
-      if (currentIsSuccessor) currentPatch.supersedesIds.push(other.id);
-      if (currentIsPrior) {
-        currentPatch.supersededByIds.push(other.id);
-        currentPatch.legalState = transition.legalState;
+    const allItems = await external(() => store.news.listInternal());
+    const group = [item];
+    for (let index = 0; index < group.length; index += 1) {
+      for (const candidate of allItems) {
+        if (!group.some(({ id }) => id === candidate.id) && relationMatches(group[index], candidate)) {
+          group.push(candidate);
+        }
       }
-      const otherPatch = {
-        relatedIds: [...new Set([...(other.relatedIds || []), item.id])],
-        supersedesIds: transition?.successor.id === other.id
-          ? [...new Set([...(other.supersedesIds || []), item.id])]
-          : other.supersedesIds || [],
-        supersededByIds: transition?.prior.id === other.id
-          ? [...new Set([...(other.supersededByIds || []), item.id])]
-          : other.supersededByIds || [],
-        legalState: transition?.prior.id === other.id ? transition.legalState : other.legalState,
-      };
-      await external(() => store.news.reviseInternal(other.id, otherPatch, { fence }));
     }
-    currentPatch = {
-      ...currentPatch,
-      relatedIds: [...new Set(currentPatch.relatedIds)],
-      supersedesIds: [...new Set(currentPatch.supersedesIds)],
-      supersededByIds: [...new Set(currentPatch.supersededByIds)],
-    };
-    await external(() => store.news.updateInternal(item.id, currentPatch, { fence }));
+    if (group.length === 1) return;
+    const ordered = [...group].sort(compareRelationOrder);
+    for (const member of ordered) {
+      const memberRank = transitionRank(member);
+      const lower = memberRank
+        ? ordered.filter((candidate) => transitionRank(candidate) > 0 && transitionRank(candidate) < memberRank)
+        : [];
+      const higher = memberRank
+        ? ordered.filter((candidate) => transitionRank(candidate) > memberRank)
+        : [];
+      const patch = {
+        relatedIds: ordered.filter(({ id }) => id !== member.id).map(({ id }) => id),
+        supersedesIds: lower.map(({ id }) => id),
+        supersededByIds: higher.map(({ id }) => id),
+        legalState: higher.length > 0
+          ? transitionedLegalState(higher.at(-1))
+          : baseLegalState(member),
+      };
+      const update = member.id === item.id ? store.news.updateInternal : store.news.reviseInternal;
+      await external(() => update.call(store.news, member.id, patch, { fence }));
+    }
   }
 
   async function generateSummary(candidate, sourceInput, dryRun, external = (operation) => operation()) {
-    if (!summarizer || dryRun) return null;
+    if (!summarizer) return null;
+    if (dryRun) {
+      return { ok: true, reviewRequired: true, publishable: false, draft: null, prospective: true };
+    }
     try {
       return await external(() => summarizer.summarize(candidate, { verifiedDomains: sourceInput.allowedHosts || [] }));
     } catch (error) {
@@ -486,15 +499,15 @@ export function createNewsSync({
     }
 
     let snapshot = null;
-    if (!snapshotStore || snapshotStore.isPrivate !== true) {
-      result.errors.push(safeError("snapshot", new Error("News publication requires a private snapshot store."), {
+    if (!snapshotStore || snapshotStore.isPrivate !== true || snapshotStore.supportsFencing !== true) {
+      result.errors.push(safeError("snapshot", new Error("News publication requires a private fenced snapshot store."), {
         sourceKey: normalized.sourceKey,
       }));
       return;
     }
     if (snapshotStore) {
       try {
-        snapshot = await external(() => snapshotStore.save(sourceInput.id, hash, snapshotText(normalized)));
+        snapshot = await external(() => snapshotStore.save(sourceInput.id, hash, snapshotText(normalized), { fence }));
         const expectedPath = `news-source-snapshots/${sourceInput.id}/${hash}.txt`;
         if (snapshot?.path !== expectedPath) throw new Error("Snapshot store returned invalid private provenance.");
       } catch (error) {
@@ -508,6 +521,7 @@ export function createNewsSync({
         ...normalized,
         documentType: classification.documentType,
         legalState: classification.legalState,
+        baseLegalState: classification.legalState,
         editorialState: sourceOnly ? "published-source-only" : "review-required",
         urgency: classification.urgency,
         relevance: classification.relevance,
@@ -636,6 +650,7 @@ export function createNewsSync({
         await assertLease();
         return value;
       };
+      fence.assertOwned = assertLease;
 
       try {
         previousState = dryRun
@@ -646,8 +661,8 @@ export function createNewsSync({
           etag: previousState.etag ?? null,
           lastModified: previousState.lastModified ?? null,
         };
-        if (!dryRun && (!snapshotStore || snapshotStore.isPrivate !== true)) {
-          result.errors.push(safeError("snapshot", new Error("News publication requires a private snapshot store.")));
+        if (!dryRun && (!snapshotStore || snapshotStore.isPrivate !== true || snapshotStore.supportsFencing !== true)) {
+          result.errors.push(safeError("snapshot", new Error("News publication requires a private fenced snapshot store.")));
         }
         if (sourceNeedsRobots(sourceInput)) {
           if (!robotsPolicy || typeof robotsPolicy.isAllowed !== "function") {
@@ -738,11 +753,10 @@ export function createNewsSync({
             responses,
             previousFailures: Number(previousState.consecutiveFailures) || 0,
           });
-          const validators = run.status !== "success"
+          const freshResponse = Number.isInteger(fetched?.status) && fetched.status >= 200 && fetched.status < 300;
+          const validators = fetched?.notModified === true || !freshResponse
             ? { etag: previousState.etag ?? null, lastModified: previousState.lastModified ?? null }
-            : fetched?.notModified === true
-              ? { etag: previousState.etag ?? null, lastModified: previousState.lastModified ?? null }
-              : { etag: fetched?.etag ?? null, lastModified: fetched?.lastModified ?? null };
+            : { etag: fetched?.etag ?? null, lastModified: fetched?.lastModified ?? null };
           await external(() => store.newsSources.upsert(sourceInput.id, {
             sourceId: sourceInput.id,
             ...validators,

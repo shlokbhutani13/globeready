@@ -26,11 +26,9 @@ const schemePattern = /\b[a-z][a-z0-9+.-]*:(?:\/\/)?[^\s<>"']+/giu;
 const ambiguousDatePattern = /\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b/u;
 const monthDatePattern = /\b(?:(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember|t)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\.?\s+(\d{1,2})(?:st|nd|rd|th)?[,]?\s+(\d{4})|(\d{1,2})(?:st|nd|rd|th)?\s+(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember|t)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\.?[,]?\s+(\d{4}))\b/giu;
 const ordinalDatePattern = /\b(?:the\s+)?(\d{1,2})(?:st|nd|rd|th)\s+of\s+(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember|t)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)[,]?\s+(\d{4})\b/giu;
-const relativeTimePattern = /\b(?:today|tomorrow|yesterday|(?:next|this|last)\s+(?:week|month|year)|in\s+\d+\s+days?)\b/iu;
-const dangerousSchemes = [
-  "javascript", "data", "file", "vbscript", "blob", "http", "https", "ftp", "gopher",
-  "ws", "wss", "mailto", "tel", "sms", "ssh", "intent", "about", "chrome", "resource",
-];
+const monthTheOrdinalPattern = /\b(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember|t)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\.?\s+the\s+(\d{1,2})(?:st|nd|rd|th)[,]?\s+(\d{4})\b/giu;
+const relativeTimePattern = /\b(?:today|tomorrow|yesterday|(?:(?:one|two|three|four|five|six|seven|eight|nine|ten|\d+)\s+days?\s+from\s+now)|(?:(?:the\s+)?following|next|previous|this|last)\s+(?:day|week|month|year)|in\s+(?:one|two|three|four|five|six|seven|eight|nine|ten|\d+)\s+days?)\b/giu;
+const schemeControlPattern = /[\u0000-\u0020\u007f-\u009f]/u;
 const months = new Map([
   ["jan", 1], ["january", 1], ["feb", 2], ["february", 2], ["mar", 3], ["march", 3],
   ["apr", 4], ["april", 4], ["may", 5], ["jun", 6], ["june", 6], ["jul", 7],
@@ -163,16 +161,22 @@ function trimUrlPunctuation(value) {
 }
 
 function uriScanText(value) {
-  return value.replace(/(?:&#0*58;|&#x0*3a;|&colon;)/giu, ":");
+  const named = new Map([["colon", ":"], ["tab", "\t"], ["newline", "\n"]]);
+  return value
+    .replace(/&#(?:x([0-9a-f]+)|(\d+));/giu, (entity, hexadecimal, decimal) => {
+      const point = Number.parseInt(hexadecimal || decimal, hexadecimal ? 16 : 10);
+      return Number.isInteger(point) && point >= 0 && point <= 0x10ffff
+        && !(point >= 0xd800 && point <= 0xdfff)
+        ? String.fromCodePoint(point)
+        : "\uFFFD";
+    })
+    .replace(/&(colon|tab|newline);/giu, (_entity, name) => named.get(name.toLowerCase()));
 }
 
 function hasFoldedDangerousScheme(value) {
   const decoded = uriScanText(value);
-  return dangerousSchemes.some((scheme) => {
-    const folded = [...scheme].join("[\\u0000-\\u0020]*");
-    const match = new RegExp(`(?:^|[^a-z0-9+.-])(${folded}[\\u0000-\\u0020]*:)`, "iu").exec(decoded);
-    return Boolean(match && /[\u0000-\u0020]/u.test(match[1]));
-  });
+  const foldedScheme = /(?:^|[^a-z0-9+.-])([a-z](?:[\u0000-\u0020\u007f-\u009f]*[a-z0-9+.-])*[\u0000-\u0020\u007f-\u009f]*:)/giu;
+  return [...decoded.matchAll(foldedScheme)].some((match) => schemeControlPattern.test(match[1]));
 }
 
 function normalizedDate(yearValue, monthValue, dayValue) {
@@ -196,7 +200,14 @@ function datesIn(value) {
   for (const match of value.matchAll(ordinalDatePattern)) {
     dates.push(normalizedDate(match[3], match[2], match[1]));
   }
+  for (const match of value.matchAll(monthTheOrdinalPattern)) {
+    dates.push(normalizedDate(match[3], match[1], match[2]));
+  }
   return dates;
+}
+
+function relativeClaimsIn(value) {
+  return [...value.matchAll(relativeTimePattern)].map((match) => match[0].toLowerCase().replace(/\s+/gu, " "));
 }
 
 function verifiedOfficialUrl(value, domains) {
@@ -216,8 +227,10 @@ function verifiedOfficialUrl(value, domains) {
 function validateSourceBounds(draft, candidate, verifiedDomains) {
   const material = sourceMaterial(candidate);
   const strings = allStrings(draft);
-  if (strings.some((value) => relativeTimePattern.test(value))) {
-    throw new Error("Generated summary contains a relative temporal claim.");
+  const sourceRelativeClaims = new Set(relativeClaimsIn(material));
+  const generatedRelativeClaims = [...new Set(strings.flatMap(relativeClaimsIn))];
+  if (generatedRelativeClaims.some((claim) => !sourceRelativeClaims.has(claim))) {
+    throw new Error("Generated summary contains a relative temporal claim absent from source material.");
   }
   if (strings.some((value) => ambiguousDatePattern.test(value))) {
     throw new Error("Generated summary contains an ambiguous date.");
