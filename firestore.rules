@@ -1,12 +1,68 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    match /newsItems/{newsItemId} {
+      allow read: if resource.data.editorialState in ['published-source-only', 'approved'];
+      allow write: if false;
+
+      match /{document=**} {
+        allow read, write: if false;
+      }
+    }
+
+    match /newsItemState/{document=**} {
+      allow read, write: if false;
+    }
+    match /reviewQueue/{document=**} {
+      allow read, write: if false;
+    }
+    match /newsSources/{document=**} {
+      allow read, write: if false;
+    }
+    match /newsRuns/{document=**} {
+      allow read, write: if false;
+    }
+    match /newsLeases/{document=**} {
+      allow read, write: if false;
+    }
+
     match /users/{uid} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
-      match /{collection}/{document=**} {
-        allow read, write: if request.auth != null
-          && request.auth.uid == uid
-          && collection != 'ragChunks';
+      allow read, write: if isOwner(uid);
+
+      match /tasks/{document=**} {
+        allow read, write: if isOwner(uid);
+      }
+      match /documents/{document=**} {
+        allow read, write: if isOwner(uid);
+      }
+      match /savedResources/{document=**} {
+        allow read, write: if isOwner(uid);
+      }
+      match /newsPreferences/{document=**} {
+        allow read, write: if isOwner(uid);
+      }
+      match /savedNews/{document=**} {
+        allow read, write: if isOwner(uid);
+      }
+      match /notifications/{document=**} {
+        allow read, write: if isOwner(uid);
+      }
+      match /conversations/{conversationId} {
+        allow read, write: if isOwner(uid);
+
+        match /messages/{messageId} {
+          allow read, write: if isOwner(uid);
+        }
+      }
+      match /pushSubscriptions/{document=**} {
+        allow read, write: if isOwner(uid);
+      }
+      match /ragChunks/{document=**} {
+        allow read, write: if false;
       }
     }
   }
