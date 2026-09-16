@@ -75,7 +75,23 @@ describe("source-bound generated news summaries", () => {
     expect(result.error).toMatch(/verified official URL/i);
   });
 
-  test.each(["javascript:alert(1)", "data:text/html,owned", "file:///etc/passwd", "vbscript:msgbox(1)", "webcal://attacker.example", "javascript&#58;alert(1)", "javascript&#58alert(1)"])(
+  test.each([
+    "javascript:alert(1)",
+    "javascript: alert(1)",
+    "javascript&#58; alert(1)",
+    "javascript&#58 alert(1)",
+    "data:text/html,owned",
+    "data: text/html,owned",
+    "file:///etc/passwd",
+    "file: ///etc/passwd",
+    "vbscript:msgbox(1)",
+    "vbscript: msgbox(1)",
+    "mailto:attacker@example.com",
+    "mailto: attacker@example.com",
+    "http://attacker.example",
+    "http: //attacker.example",
+    "webcal://attacker.example",
+  ])(
     "rejects dangerous URI scheme %s anywhere in generated text",
     async (uri) => {
       const result = await summarize(generated({
@@ -91,12 +107,28 @@ describe("source-bound generated news summaries", () => {
     "For details:",
     "USCIS says:",
     "Read more: https://www.uscis.gov/newsroom/alerts/form-i-765-update",
+    "Deadline:2026-10-01",
   ])("does not mistake safe prose punctuation for a URI scheme: %s", async (text) => {
     const result = await summarize(generated({
       plainLanguageSummary: `${text} The new edition takes effect on 2026-10-01.`,
     }));
 
     expect(result).toMatchObject({ ok: true, reviewRequired: true, publishable: false });
+  });
+
+  test("accepts a compact prose date label when the date is source-bound", async () => {
+    const deadlineCandidate = {
+      ...candidate,
+      excerpt: "Deadline:2026-11-01.",
+      normalizedText: "USCIS lists Deadline:2026-11-01.",
+      effectiveAt: "2026-11-01",
+    };
+    const summarizer = createNewsSummarizer({ generate: async () => generated({
+      plainLanguageSummary: "Deadline:2026-11-01.",
+    }) });
+
+    await expect(summarizer.summarize(deadlineCandidate, { verifiedDomains: ["www.uscis.gov"] }))
+      .resolves.toMatchObject({ ok: true, reviewRequired: true, publishable: false });
   });
 
   test.each([
@@ -194,6 +226,8 @@ describe("source-bound generated news summaries", () => {
   test.each([
     "November first, 2026",
     "the first of November 2026",
+    "first November 2026",
+    "the first November 2026",
   ])("normalizes a source-bound word ordinal date: %s", async (date) => {
     const ordinalCandidate = {
       ...candidate,
@@ -212,6 +246,8 @@ describe("source-bound generated news summaries", () => {
   test.each([
     "November second, 2026",
     "the second of November 2026",
+    "second November 2026",
+    "the second November 2026",
   ])("rejects an unsupported word ordinal date: %s", async (date) => {
     const result = await summarize(generated({
       plainLanguageSummary: `The edition takes effect on ${date}.`,
@@ -232,6 +268,12 @@ describe("source-bound generated news summaries", () => {
     "the following month",
     "two weeks from now",
     "in two weeks",
+    "in a week",
+    "in one week",
+    "in 1 week",
+    "a week from now",
+    "one week from now",
+    "1 week from now",
     "in 2 months",
     "3 years from now",
   ])(
@@ -260,7 +302,18 @@ describe("source-bound generated news summaries", () => {
       .resolves.toMatchObject({ ok: true, reviewRequired: true, publishable: false });
   });
 
-  test.each(["two weeks from now", "in two weeks", "in 2 months", "3 years from now"])(
+  test.each([
+    "two weeks from now",
+    "in two weeks",
+    "in a week",
+    "in one week",
+    "in 1 week",
+    "a week from now",
+    "one week from now",
+    "1 week from now",
+    "in 2 months",
+    "3 years from now",
+  ])(
     "accepts an exact broader source-bound relative temporal phrase: %s",
     async (relative) => {
       const relativeCandidate = {

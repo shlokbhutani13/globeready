@@ -242,7 +242,8 @@ function hasSnapshotCommitProtocol(snapshotStore) {
     && snapshotStore.supportsFencing === true
     && snapshotStore.commitProtocol === SNAPSHOT_COMMIT_PROTOCOL
     && typeof snapshotStore.save === "function"
-    && typeof snapshotStore.discard === "function";
+    && typeof snapshotStore.discard === "function"
+    && typeof snapshotStore.readCommitted === "function";
 }
 
 function relationMatches(left, right) {
@@ -389,7 +390,7 @@ export function createNewsSync({
   }
 
   async function cleanupSnapshot(snapshot, originalError) {
-    if (!snapshot) return originalError;
+    if (!snapshot || snapshot.reused === true) return originalError;
     try {
       await snapshotStore.discard(snapshot);
       return originalError;
@@ -559,9 +560,31 @@ export function createNewsSync({
     if (snapshotStore) {
       try {
         await fence.assertOwned();
-        snapshot = await snapshotStore.save(sourceInput.id, hash, snapshotText(normalized), { fence, signal });
-        await fence.assertOwned();
         const expectedPath = `news-source-snapshots/${sourceInput.id}/${hash}.txt`;
+        const expectedContent = snapshotText(normalized).toWellFormed().replace(/\s+/gu, " ").trim();
+        if (current?.contentHash === hash && current.snapshotPath === expectedPath
+          && typeof current.snapshotCommitId === "string" && current.snapshotCommitId) {
+          try {
+            const committedContent = await external(() => snapshotStore.readCommitted({
+              path: current.snapshotPath,
+              commitId: current.snapshotCommitId,
+              signal,
+            }));
+            if (committedContent !== expectedContent) {
+              throw new Error("Committed snapshot content does not match the unchanged source candidate.");
+            }
+            snapshot = {
+              path: current.snapshotPath,
+              commitId: current.snapshotCommitId,
+              committed: true,
+              reused: true,
+            };
+          } catch (error) {
+            if (error?.code === "LEASE_LOST") throw error;
+          }
+        }
+        snapshot ||= await snapshotStore.save(sourceInput.id, hash, expectedContent, { fence, signal });
+        await fence.assertOwned();
         if (snapshot?.path !== expectedPath || snapshot?.committed !== true
           || typeof snapshot.commitId !== "string" || !snapshot.commitId) {
           throw new Error("Snapshot store returned invalid committed private provenance.");
@@ -595,6 +618,10 @@ export function createNewsSync({
         summaryProvenance: null,
         actions: [],
       }, { fence }));
+      if (upserted.item?.snapshotPath !== snapshot?.path
+        || upserted.item?.snapshotCommitId !== snapshot?.commitId) {
+        throw new Error("News store did not bind the committed snapshot marker.");
+      }
     } catch (error) {
       const stopped = await cleanupSnapshot(snapshot, error);
       result.errors.push(safeError(stopped?.code === "LEASE_LOST" ? "lease" : "upsert", stopped, {

@@ -19,7 +19,7 @@ function fakeFile(name, metadata = {}, events = null) {
       return [Buffer.from(this.content || "")];
     },
     async getMetadata() {
-      return [metadata];
+      return [this.metadata];
     },
     async save(content, options) {
       events?.push("save");
@@ -184,6 +184,33 @@ describe("private source snapshots", () => {
     expect(committed.calls.download).toBe(1);
   });
 
+  test("reuses matching committed content without staging or promoting another generation", async () => {
+    const hash = "f".repeat(64);
+    const path = `news-source-snapshots/source/${hash}.txt`;
+    const committed = fakeFile(path, {
+      metadata: {
+        sourceId: "source",
+        contentHash: hash,
+        snapshotState: "committed",
+        commitId: "existing-commit",
+        expiresAt: "2026-12-13T12:00:00.000Z",
+      },
+    });
+    committed.content = "Existing committed source text";
+    const bucket = fakeBucket([committed]);
+    const store = createSnapshotStore({ bucket, clock: fixedClock });
+    const fence = {
+      key: "news-source:source",
+      owner: "owner-one",
+      assertOwned: async () => {},
+    };
+
+    await expect(store.save("source", hash, " Existing   committed source text ", { fence }))
+      .resolves.toMatchObject({ path, commitId: "existing-commit", committed: true, reused: true });
+    expect(bucket.promotions).toEqual([]);
+    expect([...bucket.files.keys()].filter((name) => name.startsWith("news-source-snapshot-pending/"))).toEqual([]);
+  });
+
   test("rejects unsafe source identifiers before constructing an object path", async () => {
     const store = createSnapshotStore({ bucket: fakeBucket(), clock: fixedClock });
 
@@ -251,7 +278,8 @@ describe("private source snapshots", () => {
 
     await expect(saving).rejects.toMatchObject({ code: "LEASE_LOST" });
     expect(bucket.promotions).toEqual([]);
-    expect(bucket.files.has(`news-source-snapshots/federal-register/${contentHash}.txt`)).toBe(false);
+    const canonical = bucket.files.get(`news-source-snapshots/federal-register/${contentHash}.txt`);
+    expect(canonical?.content || canonical?.metadata?.metadata?.snapshotState).toBeFalsy();
     const pending = [...bucket.files.values()].find((file) => file.name.startsWith("news-source-snapshot-pending/"));
     expect(pending.calls.delete).toBe(1);
   });

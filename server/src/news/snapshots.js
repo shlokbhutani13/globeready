@@ -46,6 +46,10 @@ function abortReason(signal) {
   return signal.reason instanceof Error ? signal.reason : new Error("Snapshot save was aborted.");
 }
 
+function isNotFound(error) {
+  return error?.code === 404 || error?.code === "404";
+}
+
 /*
  * A generic object-store bucket cannot serialize a lease-store ownership check with object promotion.
  * The required adapter owns that cross-service boundary. Its promote operation must check the supplied
@@ -89,6 +93,35 @@ export function createSnapshotStore({
         || typeof fence.key !== "string" || !fence.key || typeof fence.owner !== "string" || !fence.owner) {
         throw new Error("Snapshot save requires an ownership fence.");
       }
+      const assertActive = async () => {
+        await fence.assertOwned();
+        const aborted = abortReason(signal);
+        if (aborted) throw aborted;
+      };
+      const normalized = normalizedContent(content);
+
+      await assertActive();
+      const canonicalFile = bucket.file(path);
+      try {
+        const [metadata] = await canonicalFile.getMetadata();
+        const identity = metadataHash(canonicalFile, metadata);
+        if (identity.valid) {
+          const [stored] = await canonicalFile.download({ signal });
+          await assertActive();
+          if (Buffer.from(stored).toString("utf8") === normalized) {
+            return {
+              path,
+              expiresAt: metadata?.metadata?.expiresAt || expiresAt,
+              committed: true,
+              commitId: identity.commitId,
+              reused: true,
+            };
+          }
+        }
+      } catch (error) {
+        if (!isNotFound(error)) throw error;
+      }
+
       const commitId = randomUUID();
       const pendingPath = `${pendingSnapshotPrefix}${sourceId}/${contentHash}/${commitId}.txt`;
       const pendingFile = bucket.file(pendingPath);
@@ -104,15 +137,10 @@ export function createSnapshotStore({
           fenceOwner: fence.owner,
         },
       };
-      const assertActive = async () => {
-        await fence.assertOwned();
-        const aborted = abortReason(signal);
-        if (aborted) throw aborted;
-      };
 
       try {
         await assertActive();
-        await pendingFile.save(normalizedContent(content), {
+        await pendingFile.save(normalized, {
           predefinedAcl: "private",
           resumable: false,
           validation: "crc32c",

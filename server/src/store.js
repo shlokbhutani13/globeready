@@ -186,7 +186,13 @@ function createNewsStore({ reviewQueue, leases }) {
       }
 
       if (current.contentHash === input.contentHash) {
-        const item = { ...current, lastSeenAt: now, recordUpdatedAt: now };
+        const item = {
+          ...current,
+          ...(Object.hasOwn(input, "snapshotPath") ? { snapshotPath: input.snapshotPath } : {}),
+          ...(Object.hasOwn(input, "snapshotCommitId") ? { snapshotCommitId: input.snapshotCommitId } : {}),
+          lastSeenAt: now,
+          recordUpdatedAt: now,
+        };
         itemsBySourceKey.set(sourceKey, item);
         return { item, created: false, changed: false };
       }

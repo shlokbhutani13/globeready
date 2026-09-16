@@ -139,7 +139,8 @@ function matchingTerms(text, terms) {
 }
 
 const changePredicatePattern = /\b(?:change[ds]?|changing|expand(?:s|ed|ing)?|increas(?:e|es|ed|ing)|decreas(?:e|es|ed|ing)|reduc(?:e|es|ed|ing|tion)|extend(?:s|ed|ing)?|shorten(?:s|ed|ing)?|open(?:s|ed|ing)?|clos(?:e|es|ed|ing)|begin(?:s|ning)?|end(?:s|ed|ing)?|remain(?:s|ed|ing)?|stay(?:s|ed|ing)?|unchanged|unaffected|the\s+same)\b/iu;
-const rightClausePredicatePattern = /^\s+(?:the\s+|a\s+|an\s+)?(?:[a-z0-9]+(?:-[a-z0-9]+)?\s+){0,8}(?:change[ds]?|expand(?:s|ed|ing)?|increas(?:e|es|ed|ing)|decreas(?:e|es|ed|ing)|reduc(?:e|es|ed|ing)|extend(?:s|ed|ing)?|shorten(?:s|ed|ing)?|open(?:s|ed|ing)?|clos(?:e|es|ed|ing)|begin(?:s|ning)?|end(?:s|ed|ing)?|remain(?:s|ed|ing)?|stay(?:s|ed|ing)?|does?\s+not\s+change|do\s+not\s+change|will\s+(?:change|expand|increase|decrease|reduce|extend|shorten|open|close|begin|end|remain|stay))\b/iu;
+const negativeNominalClaimPattern = /^\s*(?:there\s+(?:is|are|was|were)\s+)?(?:no|without)\b/iu;
+const rightClausePredicatePattern = /^\s*[,()]?\s*(?:the\s+|a\s+|an\s+)?(?:[a-z0-9]+(?:-[a-z0-9]+)?(?:\s+|,\s*)){0,12}(?:change[ds]?|expand(?:s|ed|ing)?|increas(?:e|es|ed|ing)|decreas(?:e|es|ed|ing)|reduc(?:e|es|ed|ing)|extend(?:s|ed|ing)?|shorten(?:s|ed|ing)?|open(?:s|ed|ing)?|clos(?:e|es|ed|ing)|begin(?:s|ning)?|end(?:s|ed|ing)?|remain(?:s|ed|ing)?|stay(?:s|ed|ing)?|does?\s+not\s+change|do\s+not\s+change|will\s+(?:change|expand|increase|decrease|reduce|extend|shorten|open|close|begin|end|remain|stay))\b/iu;
 
 function splitCoordinatingClaims(clause) {
   const parts = [];
@@ -148,7 +149,8 @@ function splitCoordinatingClaims(clause) {
   for (const match of clause.matchAll(separator)) {
     const left = clause.slice(start, match.index);
     const right = clause.slice(match.index + match[0].length);
-    if (changePredicatePattern.test(left) && rightClausePredicatePattern.test(right)) {
+    if ((changePredicatePattern.test(left) || negativeNominalClaimPattern.test(left))
+      && rightClausePredicatePattern.test(right)) {
       if (left.trim()) parts.push(left.trim());
       start = match.index + match[0].length;
     }
@@ -165,7 +167,7 @@ function claimClauses(text) {
 }
 
 function hasPostTermNoChange(suffix) {
-  const unchanged = /\b(?:(?:remains?|stays?|is|are|was|were|will\s+remain)\s+(?:unchanged|unaffected|the\s+same)|(?:does|do|did)\s+not\s+change)\b/iu.exec(suffix);
+  const unchanged = /\b(?:(?:remains?|stays?|is|are|was|were|will\s+remain)\s+(?:unchanged|unaffected|the\s+same)|(?:does|do|did|has|have|had|will|would|can|could)\s+not(?:\s+[a-z-]+){0,2}\s+chang(?:e|ed)|(?:doesn't|didn't|hasn't|haven't|hadn't|won't|wouldn't|can't|couldn't)(?:\s+[a-z-]+){0,2}\s+chang(?:e|ed))\b/iu.exec(suffix);
   if (!unchanged) return false;
   const changed = /\b(?:change[ds]?|expand(?:s|ed|ing)?|increas(?:e|es|ed|ing)|decreas(?:e|es|ed|ing)|reduc(?:e|es|ed|ing)|extend(?:s|ed|ing)?|shorten(?:s|ed|ing)?|open(?:s|ed|ing)?|clos(?:e|es|ed|ing)|begin(?:s|ning)?|end(?:s|ed|ing)?)\b/iu.exec(suffix);
   return !changed || unchanged.index <= changed.index;

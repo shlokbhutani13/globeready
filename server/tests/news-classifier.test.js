@@ -132,24 +132,39 @@ describe("deterministic news classification", () => {
   });
 
   test.each([
-    "No filing fee increase, and OPT eligibility expands for F-1 students.",
-    "No filing fee increase and OPT eligibility expands for F-1 students.",
-    "OPT eligibility does not change and the filing fee increases for F-1 students.",
-    "Filing fees stay the same and STEM OPT employment authorization expands for F-1 students.",
-    "No injunction was issued. OPT eligibility expands for F-1 students.",
-    "OPT eligibility remains unchanged; the filing fee increases for F-1 students.",
-  ])("does not carry negation across an independent positive clause: %s", (excerpt) => {
+    ["comma-delimited fee clause", "No filing fee increase, and OPT eligibility expands for F-1 students."],
+    ["bare coordinating conjunction", "No filing fee increase and OPT eligibility expands for F-1 students."],
+    ["negative nominal injunction clause", "No injunction and OPT eligibility expands for F-1 students."],
+    ["punctuated effective-date adverb", "No filing fee increase and, effective October 1, OPT eligibility expands for F-1 students."],
+    ["unpunctuated effective-date adverb", "No filing fee increase and effective October 1 OPT eligibility expands for F-1 students."],
+    ["post-term non-change predicate", "OPT eligibility does not change and the filing fee increases for F-1 students."],
+    ["same-state predicate", "Filing fees stay the same and STEM OPT employment authorization expands for F-1 students."],
+    ["sentence boundary", "No injunction was issued. OPT eligibility expands for F-1 students."],
+    ["semicolon boundary", "OPT eligibility remains unchanged; the filing fee increases for F-1 students."],
+  ])("does not carry negation across an independent positive clause (%s)", (_variant, excerpt) => {
     expect(classifyCandidate({ sourceDocumentType: "Notice", title: "F-1 update", excerpt }, { clock: fixedClock }))
       .toMatchObject({ highImpact: true, relevance: "relevant" });
   });
 
   test.each([
-    "OPT eligibility for F-1 students enrolled at accredited universities remains unchanged.",
-    "Filing fee requirements for F-1 and J-1 students remain the same.",
-    "There is no change to OPT eligibility for F-1 and J-1 students.",
-  ])("keeps coordinated audiences and longer non-change predicates negated: %s", (excerpt) => {
+    ["remains unchanged", "OPT eligibility for F-1 students enrolled at accredited universities remains unchanged."],
+    ["will not change", "OPT eligibility for F-1 students will not change."],
+    ["has not changed", "OPT eligibility for F-1 students has not changed."],
+    ["has not materially changed", "OPT eligibility for F-1 students has not materially changed."],
+    ["coordinated audience remains the same", "Filing fee requirements for F-1 and J-1 students remain the same."],
+    ["pre-term no-change predicate", "There is no change to OPT eligibility for F-1 and J-1 students."],
+    ["coordinated policy terms", "There is no change to CPT and OPT eligibility for F-1 and J-1 students."],
+  ])("keeps proposition-local non-change claim suppressed (%s)", (_variant, excerpt) => {
     expect(classifyCandidate({ sourceDocumentType: "Notice", title: "Student program update", excerpt }, { clock: fixedClock }))
       .toMatchObject({ highImpact: false, urgency: "low", relevance: "borderline" });
+  });
+
+  test.each([
+    ["audience conjunction", "OPT eligibility expands for F-1 and J-1 students."],
+    ["policy conjunction", "CPT and OPT eligibility expands for F-1 students."],
+  ])("preserves a positive conjunction (%s)", (_variant, excerpt) => {
+    expect(classifyCandidate({ sourceDocumentType: "Notice", title: "Student program update", excerpt }, { clock: fixedClock }))
+      .toMatchObject({ highImpact: true, urgency: "high", relevance: "relevant" });
   });
 
   test("keeps F-1 and J-1 as one coordinated audience phrase", () => {

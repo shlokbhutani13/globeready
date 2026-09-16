@@ -22,7 +22,8 @@ const rootFields = new Set([
 const actionFields = new Set(["label", "sourceUrl"]);
 const isoDatePattern = /\b\d{4}-\d{2}-\d{2}\b/gu;
 const urlPattern = /https?:\/\/[^\s<>"']+/giu;
-const schemePattern = /\b[a-z][a-z0-9+.-]*:(?:\/\/)?[^\s<>"']+/giu;
+const hierarchicalSchemePattern = /\b[a-z][a-z0-9+.-]*\s*:\s*\/\/[^\s<>"']+/giu;
+const dangerousOpaqueSchemePattern = /(?:^|[^a-z0-9+.-])(?:javascript|data|vbscript|file|mailto|http)\s*:\s*(?=\S)/iu;
 const ambiguousDatePattern = /\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b/u;
 const monthDatePattern = /\b(?:(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember|t)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\.?\s+(\d{1,2})(?:st|nd|rd|th)?[,]?\s+(\d{4})|(\d{1,2})(?:st|nd|rd|th)?\s+(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember|t)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\.?[,]?\s+(\d{4}))\b/giu;
 const ordinalDatePattern = /\b(?:the\s+)?(\d{1,2})(?:st|nd|rd|th)\s+of\s+(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember|t)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)[,]?\s+(\d{4})\b/giu;
@@ -31,8 +32,12 @@ const monthNameSource = "(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May
 const ordinalWordSource = "(?:first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|eleventh|twelfth|thirteenth|fourteenth|fifteenth|sixteenth|seventeenth|eighteenth|nineteenth|twentieth|twenty[- ]first|twenty[- ]second|twenty[- ]third|twenty[- ]fourth|twenty[- ]fifth|twenty[- ]sixth|twenty[- ]seventh|twenty[- ]eighth|twenty[- ]ninth|thirtieth|thirty[- ]first)";
 const monthWordOrdinalPattern = new RegExp(`\\b(${monthNameSource})\\.?\\s+(?:the\\s+)?(${ordinalWordSource})[,]?\\s+(\\d{4})\\b`, "giu");
 const wordOrdinalDatePattern = new RegExp(`\\b(?:the\\s+)?(${ordinalWordSource})\\s+of\\s+(${monthNameSource})[,]?\\s+(\\d{4})\\b`, "giu");
+const wordOrdinalMonthPattern = new RegExp(`\\b(?:the\\s+)?(${ordinalWordSource})\\s+(${monthNameSource})[,]?\\s+(\\d{4})\\b`, "giu");
 const numberWordSource = "(?:zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety)(?:[- ](?:one|two|three|four|five|six|seven|eight|nine))?";
-const relativeTimePattern = new RegExp(`\\b(?:today|tomorrow|yesterday|(?:(?:${numberWordSource}|\\d+)\\s+(?:seconds?|minutes?|hours?|days?|weeks?|months?|years?)\\s+from\\s+now)|(?:(?:the\\s+)?following|next|previous|this|last)\\s+(?:day|week|month|year)|in\\s+(?:${numberWordSource}|\\d+)\\s+(?:seconds?|minutes?|hours?|days?|weeks?|months?|years?))\\b`, "giu");
+const relativeUnitSource = "(?:seconds?|minutes?|hours?|days?|weeks?|months?|years?)";
+const singularRelativeUnitSource = "(?:second|minute|hour|day|week|month|year)";
+const relativeCountSource = `(?:(?:${numberWordSource}|\\d+)\\s+${relativeUnitSource}|a\\s+${singularRelativeUnitSource})`;
+const relativeTimePattern = new RegExp(`\\b(?:today|tomorrow|yesterday|(?:${relativeCountSource}\\s+from\\s+now)|(?:(?:the\\s+)?following|next|previous|this|last)\\s+(?:day|week|month|year)|in\\s+${relativeCountSource})\\b`, "giu");
 const schemeControlPattern = /[\u0000-\u001f\u007f-\u009f]/gu;
 const months = new Map([
   ["jan", 1], ["january", 1], ["feb", 2], ["february", 2], ["mar", 3], ["march", 3],
@@ -192,8 +197,12 @@ function foldedUriText(value) {
   return uriScanText(value).replace(schemeControlPattern, "");
 }
 
-function explicitSchemesIn(value) {
-  return foldedUriText(value).match(schemePattern) || [];
+function hierarchicalSchemesIn(value) {
+  return foldedUriText(value).match(hierarchicalSchemePattern) || [];
+}
+
+function hasDangerousOpaqueScheme(value) {
+  return dangerousOpaqueSchemePattern.test(foldedUriText(value));
 }
 
 function hasControlObfuscatedHierarchicalScheme(value) {
@@ -231,6 +240,9 @@ function datesIn(value) {
     dates.push(normalizedDate(match[3], match[1], match[2]));
   }
   for (const match of value.matchAll(wordOrdinalDatePattern)) {
+    dates.push(normalizedDate(match[3], match[2], match[1]));
+  }
+  for (const match of value.matchAll(wordOrdinalMonthPattern)) {
     dates.push(normalizedDate(match[3], match[2], match[1]));
   }
   return dates;
@@ -280,8 +292,11 @@ function validateSourceBounds(draft, candidate, verifiedDomains, rawDraft = draf
   if (uriStrings.some(hasControlObfuscatedHierarchicalScheme)) {
     throw new Error("Generated summary contains a dangerous unverified official URL scheme.");
   }
-  const explicitSchemes = uriStrings.flatMap(explicitSchemesIn);
-  for (const value of explicitSchemes) {
+  if (uriStrings.some(hasDangerousOpaqueScheme)) {
+    throw new Error("Generated summary contains a dangerous unverified official URL scheme.");
+  }
+  const hierarchicalSchemes = uriStrings.flatMap(hierarchicalSchemesIn);
+  for (const value of hierarchicalSchemes) {
     const url = trimUrlPunctuation(value);
     if (!url.toLowerCase().startsWith("https://")) {
       throw new Error(`Generated summary contains a dangerous unverified official URL scheme: ${url}.`);
@@ -290,7 +305,7 @@ function validateSourceBounds(draft, candidate, verifiedDomains, rawDraft = draf
   const urls = [...new Set([
     ...draft.actions.map((action) => action.sourceUrl),
     ...strings.flatMap((value) => (value.match(urlPattern) || []).map(trimUrlPunctuation)),
-    ...explicitSchemes.filter((value) => value.toLowerCase().startsWith("https://")).map(trimUrlPunctuation),
+    ...hierarchicalSchemes.filter((value) => value.toLowerCase().startsWith("https://")).map(trimUrlPunctuation),
   ])];
   for (const value of urls) {
     verifiedOfficialUrl(value, domains);

@@ -37,19 +37,31 @@ function officialCandidate(overrides = {}) {
   };
 }
 
-function atomicSnapshotStore({ save, discard = async () => {} }) {
+function atomicSnapshotStore({ save, discard = async () => {}, readCommitted } = {}) {
+  const committed = new Map();
   return {
     isPrivate: true,
     supportsFencing: true,
     commitProtocol: "atomic-fenced-snapshot-v1",
-    discard,
+    async discard(snapshot) {
+      committed.delete(`${snapshot.path}\0${snapshot.commitId}`);
+      return discard(snapshot);
+    },
     async save(sourceId, hash, content, options) {
       const result = await save(sourceId, hash, content, options);
-      return result && {
+      const snapshot = result && {
         committed: true,
         commitId: `test-commit-${hash}`,
         ...result,
       };
+      if (snapshot) committed.set(`${snapshot.path}\0${snapshot.commitId}`, content.replace(/\s+/gu, " ").trim());
+      return snapshot;
+    },
+    async readCommitted(snapshot) {
+      if (readCommitted) return readCommitted(snapshot);
+      const content = committed.get(`${snapshot.path}\0${snapshot.commitId}`);
+      if (content === undefined) throw new Error("A matching committed snapshot marker is required.");
+      return content;
     },
   };
 }
@@ -124,7 +136,7 @@ function fixtureSync({
     sources: [{ ...source, ...sourceOverride }],
     clock: fixedClock,
   });
-  return { sync, store, leaseEvents, snapshotWrites, fetched };
+  return { sync, store, leaseEvents, snapshotWrites, snapshotStore: snapshots, fetched };
 }
 
 describe("news source synchronization", () => {
@@ -402,22 +414,33 @@ describe("news source synchronization", () => {
     expect(await store.reviewQueue.listGlobal()).toEqual([]);
   });
 
-  test("keeps repeated source runs idempotent", async () => {
-    const { sync, store } = fixtureSync();
+  test("reuses one committed snapshot across repeated unchanged source runs", async () => {
+    const { sync, store, leaseEvents, snapshotWrites, snapshotStore } = fixtureSync();
 
     const first = await sync.syncSource("federal-register");
     const second = await sync.syncSource("federal-register");
+    const third = await sync.syncSource("federal-register");
     const [item] = await store.news.listPublished({});
+    const internal = await store.news.getBySourceKey("federal-register:2026-10001");
 
     expect(first).toMatchObject({ created: 1, changed: 0, unchanged: 0, reviewRequired: 1 });
     expect(second).toMatchObject({ created: 0, changed: 0, unchanged: 1, reviewRequired: 0 });
+    expect(third).toMatchObject({ created: 0, changed: 0, unchanged: 1, reviewRequired: 0 });
     expect(await store.news.listPublished({})).toHaveLength(1);
     expect(await store.news.revisions(item.id)).toEqual([]);
     expect(await store.reviewQueue.listGlobal()).toHaveLength(1);
+    expect(snapshotWrites).toHaveLength(1);
+    await expect(snapshotStore.readCommitted({
+      path: internal.snapshotPath,
+      commitId: internal.snapshotCommitId,
+    })).resolves.toBe(officialCandidate().normalizedText);
+    expect(leaseEvents.map(({ type }) => type)).toEqual([
+      "acquire", "release", "acquire", "release", "acquire", "release",
+    ]);
   });
 
   test("recovers a missing deterministic review after a post-upsert review failure", async () => {
-    const { sync, store } = fixtureSync();
+    const { sync, store, leaseEvents, snapshotWrites, snapshotStore } = fixtureSync();
     const realUpsert = store.reviewQueue.upsert.bind(store.reviewQueue);
     let fail = true;
     store.reviewQueue.upsert = async (...args) => {
@@ -429,13 +452,75 @@ describe("news source synchronization", () => {
     };
 
     const first = await sync.syncSource("federal-register");
+    const firstItem = await store.news.getBySourceKey("federal-register:2026-10001");
     const second = await sync.syncSource("federal-register");
     const third = await sync.syncSource("federal-register");
+    const recoveredItem = await store.news.getBySourceKey("federal-register:2026-10001");
 
     expect(first.errors).toEqual([expect.objectContaining({ stage: "review" })]);
     expect(second).toMatchObject({ unchanged: 1, reviewRequired: 1, errors: [] });
     expect(third).toMatchObject({ unchanged: 1, reviewRequired: 0, errors: [] });
     expect(await store.reviewQueue.listGlobal()).toHaveLength(1);
+    expect(recoveredItem.snapshotCommitId).toBe(firstItem.snapshotCommitId);
+    expect(snapshotWrites).toHaveLength(1);
+    await expect(snapshotStore.readCommitted({
+      path: recoveredItem.snapshotPath,
+      commitId: recoveredItem.snapshotCommitId,
+    })).resolves.toBe(officialCandidate().normalizedText);
+    expect(leaseEvents.map(({ type }) => type)).toEqual([
+      "acquire", "release", "acquire", "release", "acquire", "release",
+    ]);
+  });
+
+  test("reconciles an old news marker to an already committed unchanged canonical snapshot", async () => {
+    const store = createDemoStore();
+    let canonical = null;
+    let promotions = 0;
+    const snapshots = atomicSnapshotStore({
+      async save(sourceId, hash, content, { fence }) {
+        await fence.assertOwned();
+        if (canonical?.content === content) {
+          return { path: canonical.path, commitId: canonical.commitId, reused: true };
+        }
+        promotions += 1;
+        canonical = {
+          path: `news-source-snapshots/${sourceId}/${hash}.txt`,
+          commitId: `canonical-${promotions}`,
+          content,
+        };
+        return { path: canonical.path, commitId: canonical.commitId };
+      },
+      async readCommitted({ path, commitId }) {
+        if (path !== canonical?.path || commitId !== canonical?.commitId) {
+          throw new Error("A matching committed snapshot marker is required.");
+        }
+        return canonical.content;
+      },
+    });
+    const sync = createNewsSync({
+      store,
+      adapters: { fixture: { async collect() { return [officialCandidate()]; } } },
+      fetchSource: async () => ({ status: 200, text: "fixture body", notModified: false }),
+      snapshotStore: snapshots,
+      sources: [source],
+      clock: fixedClock,
+    });
+
+    await sync.syncSource("federal-register");
+    const stale = await store.news.getBySourceKey("federal-register:2026-10001");
+    canonical.commitId = "canonical-from-old-unbound-replay";
+
+    const replay = await sync.syncSource("federal-register");
+    const reconciled = await store.news.getBySourceKey("federal-register:2026-10001");
+
+    expect(replay).toMatchObject({ unchanged: 1, errors: [] });
+    expect(stale.snapshotCommitId).not.toBe(canonical.commitId);
+    expect(reconciled.snapshotCommitId).toBe(canonical.commitId);
+    expect(promotions).toBe(1);
+    await expect(snapshots.readCommitted({
+      path: reconciled.snapshotPath,
+      commitId: reconciled.snapshotCommitId,
+    })).resolves.toBe(officialCandidate().normalizedText);
   });
 
   test("does not duplicate deterministic reviews for repeated classification failures", async () => {
@@ -1352,7 +1437,8 @@ describe("news source synchronization", () => {
     expect(saveSignal.aborted).toBe(true);
     expect(result).toMatchObject({ status: "failed", errors: [expect.objectContaining({ stage: "lease" })] });
     expect(promotions).toEqual([]);
-    expect([...files.keys()].filter((name) => name.startsWith("news-source-snapshots/"))).toEqual([]);
+    expect([...files.values()].filter((file) => file.name.startsWith("news-source-snapshots/")
+      && (file.content || file.metadata?.metadata?.snapshotState === "committed"))).toEqual([]);
     expect(await store.news.listInternal()).toEqual([]);
     expect(await store.reviewQueue.listGlobal()).toEqual([]);
     expect(await store.newsSources.listGlobal()).toEqual([]);
