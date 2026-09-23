@@ -16,7 +16,7 @@ function parseJson(text) {
 
 function responseEmbedding(response) {
   const vector = response.embeddings?.[0]?.values;
-  if (!Array.isArray(vector) || !vector.length || !vector.every(Number.isFinite)) {
+  if (!Array.isArray(vector) || vector.length !== 2048 || !vector.every(Number.isFinite)) {
     throw new Error("Gemini did not return a usable embedding.");
   }
   return vector;
@@ -37,7 +37,7 @@ export function createGeminiAssistant({ apiKey, bucket, store, fallback }) {
   const embed = async (text, taskType) => responseEmbedding(await ai.models.embedContent({
     model: process.env.GEMINI_EMBEDDING_MODEL || "gemini-embedding-001",
     contents: [text],
-    config: { taskType },
+    config: { taskType, outputDimensionality: 2048 },
   }));
   const documentIndexer = createDocumentIndexer({ store, bucket, embed });
   const documentAssistant = createDocumentAssistant({

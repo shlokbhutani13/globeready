@@ -139,6 +139,27 @@ function fixtureSync({
   return { sync, store, leaseEvents, snapshotWrites, snapshotStore: snapshots, fetched };
 }
 
+async function createValidatedReview(store, newsItemId, summary = "Reviewed summary") {
+  const item = await store.news.get(newsItemId);
+  const evidence = {
+    contentHash: item.contentHash,
+    revisionId: item.currentRevisionId,
+    sourceVerified: true,
+    snapshotCommitId: item.snapshotCommitId ?? null,
+    validatedAt: "2026-09-14T13:00:00.000Z",
+  };
+  return store.reviewQueue.create({
+    newsItemId,
+    contentHash: item.contentHash,
+    revisionId: item.currentRevisionId,
+    editorialState: "review-required",
+    status: "validated",
+    reason: "editorial-review",
+    draft: { plainLanguageSummary: summary, actions: [] },
+    validationEvidence: evidence,
+  });
+}
+
 describe("news source synchronization", () => {
   test("publishes verified high-impact source data and withholds the generated summary", async () => {
     const generatedSummary = "Generated explanation that must stay private until review.";
@@ -736,7 +757,7 @@ describe("news source synchronization", () => {
     });
     await sync.syncSource("federal-register");
     const [published] = await store.news.listPublished({});
-    const review = await store.reviewQueue.create({ newsItemId: published.id });
+    const review = await createValidatedReview(store, published.id);
     await store.news.approve(published.id, {
       reviewerUid: "editor-1",
       reviewedAt: "2026-09-14T13:00:00.000Z",
@@ -772,7 +793,7 @@ describe("news source synchronization", () => {
     const { sync, store } = fixtureSync({ collect: async () => [currentCandidate] });
     await sync.syncSource("federal-register");
     const [published] = await store.news.listPublished({});
-    const review = await store.reviewQueue.create({ newsItemId: published.id });
+    const review = await createValidatedReview(store, published.id);
     await store.news.approve(published.id, {
       reviewerUid: "editor-1",
       reviewedAt: "2026-09-14T13:00:00.000Z",
@@ -1064,7 +1085,7 @@ describe("news source synchronization", () => {
     await ingest({ externalId: "new-correction", docketNumber: "D-2", sourceDocumentType: "Correction" });
 
     const approvedOldNeighbor = await store.news.getBySourceKey("federal-register:old-proposal");
-    const review = await store.reviewQueue.create({ newsItemId: approvedOldNeighbor.id });
+    const review = await createValidatedReview(store, approvedOldNeighbor.id);
     await store.news.approve(approvedOldNeighbor.id, {
       reviewerUid: "private-editor",
       reviewedAt: "2026-09-14T13:00:00.000Z",
@@ -1104,7 +1125,7 @@ describe("news source synchronization", () => {
     expect(await store.news.revisions(approvedOldNeighbor.id)).toContainEqual(expect.objectContaining({
       editorialState: "approved",
       reviewerUid: "private-editor",
-      approvalEvidence: { privateTicket: "relation-review" },
+      approvalEvidence: expect.objectContaining({ contentHash: approvedOldNeighbor.contentHash }),
     }));
 
     const moved = await store.news.getBySourceKey("federal-register:mover");
@@ -1224,7 +1245,7 @@ describe("news source synchronization", () => {
       actions: [{ label: "Stale action", sourceUrl: proposal.canonicalUrl }],
       summaryProvenance: { model: "private-model" },
     });
-    const review = await store.reviewQueue.create({ newsItemId: proposal.id });
+    const review = await createValidatedReview(store, proposal.id);
     await store.news.approve(proposal.id, {
       reviewerUid: "private-editor",
       reviewedAt: "2026-09-14T13:00:00.000Z",
@@ -1251,7 +1272,7 @@ describe("news source synchronization", () => {
     expect(await store.news.revisions(proposal.id)).toEqual([
       expect.objectContaining({
         editorialState: "approved",
-        plainLanguageSummary: "Stale approved summary",
+        plainLanguageSummary: "Reviewed summary",
         reviewerUid: "private-editor",
       }),
     ]);

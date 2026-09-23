@@ -344,6 +344,7 @@ export function createNewsSync({
   fetchSource,
   classifier = classifyCandidate,
   clock = () => new Date(),
+  leaseClock = () => new Date(),
   sources = defaultNewsSources,
   summarizer = null,
   snapshotStore = store?.snapshots || null,
@@ -355,6 +356,7 @@ export function createNewsSync({
     || !store?.reviewQueue || typeof store.reviewQueue.upsert !== "function"
     || !store?.newsRuns || typeof store.newsRuns.create !== "function"
     || !store?.newsSources || typeof store.newsSources.upsert !== "function"
+    || !store?.newsSyncState || typeof store.newsSyncState.commit !== "function"
     || !store?.leases || typeof store.leases.acquire !== "function"
     || typeof store.leases.renew !== "function" || typeof store.leases.release !== "function"
     || typeof store.leases.owns !== "function") {
@@ -492,6 +494,7 @@ export function createNewsSync({
             sourceKey: normalized?.sourceKey || null,
             contentHash: failedHash,
             editorialState: "review-required",
+            status: "pending",
             reason: "classification-failed",
             highImpact: null,
             classificationError: error instanceof Error ? error.message : "News classification failed.",
@@ -648,7 +651,9 @@ export function createNewsSync({
         sourceId: sourceInput.id,
         sourceKey: normalized.sourceKey,
         contentHash: hash,
+        revisionId: upserted.item.currentRevisionId || null,
         editorialState: "review-required",
+        status: "pending",
         reason,
         highImpact: classification.highImpact,
         classification: {
@@ -693,7 +698,7 @@ export function createNewsSync({
 
       if (dryRun) result.estimatedWrites = 2;
       if (!dryRun) {
-        const expiresAt = new Date(Date.now() + leaseDurationMs).toISOString();
+        const expiresAt = new Date(dateFrom(leaseClock).valueOf() + leaseDurationMs).toISOString();
         acquired = Boolean(await store.leases.acquire(leaseKey, owner, expiresAt));
         if (!acquired) {
           result.status = "skipped";
@@ -706,7 +711,7 @@ export function createNewsSync({
           renewal = Promise.resolve(store.leases.renew(
             leaseKey,
             owner,
-            new Date(Date.now() + leaseDurationMs).toISOString(),
+            new Date(dateFrom(leaseClock).valueOf() + leaseDurationMs).toISOString(),
           )).then((renewed) => {
             if (!renewed) {
               leaseLost = true;
@@ -844,15 +849,14 @@ export function createNewsSync({
           const validators = fetched?.notModified === true || !freshResponse
             ? { etag: previousState.etag ?? null, lastModified: previousState.lastModified ?? null }
             : { etag: fetched?.etag ?? null, lastModified: fetched?.lastModified ?? null };
-          await external(() => store.newsSources.upsert(sourceInput.id, {
+          await external(() => store.newsSyncState.commit(sourceInput.id, {
             sourceId: sourceInput.id,
             ...validators,
             consecutiveFailures: run.consecutiveFailures,
             lastRunStatus: run.status,
             lastCheckedAt: endedAt.toISOString(),
             nextRetry: run.nextRetry,
-          }, { fence }));
-          await external(() => store.newsRuns.create(run, { fence }));
+          }, run, { fence }));
         }
         if (leaseLost) result.status = statusFor(result);
         return result;

@@ -106,11 +106,26 @@ describe("demo news store", () => {
       reviewId: "missing-review",
     })).rejects.toThrow("matching review record");
 
-    const review = await store.reviewQueue.create({ newsItemId: item.id });
+    const evidence = {
+      contentHash: item.contentHash,
+      revisionId: item.currentRevisionId,
+      sourceVerified: true,
+      snapshotCommitId: null,
+      validatedAt: "2026-09-12T00:00:00.000Z",
+    };
+    const review = await store.reviewQueue.create({
+      newsItemId: item.id,
+      contentHash: item.contentHash,
+      revisionId: item.currentRevisionId,
+      editorialState: "review-required",
+      status: "validated",
+      reason: "editorial-review",
+      draft: { plainLanguageSummary: " Reviewed summary ", actions: [] },
+      validationEvidence: evidence,
+    });
     const approved = await store.news.approve(item.id, {
       reviewerUid: "editor-1",
       reviewedAt: "2026-09-12T00:00:00.000Z",
-      summary: " Reviewed summary ",
       reviewId: review.id,
     });
 
@@ -135,6 +150,85 @@ describe("demo news store", () => {
     expect(await store.savedNews.list("student-b")).toEqual([]);
     expect(await store.notifications.list("student-b")).toEqual([]);
     expect(await store.conversationMessages.list("student-b", "conversation-1")).toEqual([]);
+  });
+
+  test("rejects a stale review and derives revision state from merged values", async () => {
+    const store = createDemoStore();
+    const { item } = await store.news.upsert("agency:stale-review", {
+      title: "Current notice",
+      contentHash: "current-hash",
+      sourceVerified: true,
+      relevance: "relevant",
+      editorialState: "review-required",
+    });
+    const review = await store.reviewQueue.create({
+      newsItemId: item.id,
+      contentHash: "stale-hash",
+      revisionId: item.currentRevisionId,
+      editorialState: "review-required",
+      status: "validated",
+      reason: "editorial-review",
+      draft: { plainLanguageSummary: "Attacker supplied", actions: [] },
+      validationEvidence: {
+        contentHash: "stale-hash",
+        revisionId: item.currentRevisionId,
+        sourceVerified: true,
+        snapshotCommitId: null,
+      },
+    });
+
+    await expect(store.news.approve(item.id, {
+      reviewerUid: "editor-1",
+      reviewedAt: "2026-09-12T00:00:00.000Z",
+      reviewId: review.id,
+      summary: "Caller supplied",
+    })).rejects.toThrow("current content revision");
+
+    const revised = await store.news.reviseInternal(item.id, { sourceVerified: false });
+    expect(revised).toMatchObject({ sourceVerified: false, editorialState: "review-required" });
+  });
+
+  test("demotes approved content when an internal update changes reviewed fields", async () => {
+    const store = createDemoStore();
+    const { item } = await store.news.upsert("agency:approved-update", {
+      title: "Reviewed notice",
+      contentHash: "hash-a",
+      sourceVerified: true,
+      relevance: "relevant",
+      editorialState: "review-required",
+    });
+    const evidence = {
+      contentHash: item.contentHash,
+      revisionId: item.currentRevisionId,
+      sourceVerified: true,
+      snapshotCommitId: null,
+    };
+    const review = await store.reviewQueue.create({
+      newsItemId: item.id,
+      contentHash: item.contentHash,
+      revisionId: item.currentRevisionId,
+      editorialState: "review-required",
+      status: "validated",
+      reason: "editorial-review",
+      draft: { plainLanguageSummary: "Reviewed summary", actions: [] },
+      validationEvidence: evidence,
+    });
+    await store.news.approve(item.id, {
+      reviewerUid: "editor-1",
+      reviewedAt: "2026-09-12T00:00:00.000Z",
+      reviewId: review.id,
+    });
+
+    const updated = await store.news.updateInternal(item.id, {
+      plainLanguageSummary: "Unreviewed replacement",
+    });
+    expect(updated).toMatchObject({
+      editorialState: "review-required",
+      plainLanguageSummary: "",
+      actions: [],
+    });
+    expect(updated).not.toHaveProperty("reviewerUid");
+    expect(await store.news.listPublished({})).toEqual([]);
   });
 
   test("never lets an expired lease owner release a replacement owner's lease", async () => {

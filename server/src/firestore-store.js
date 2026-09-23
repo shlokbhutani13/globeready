@@ -17,8 +17,10 @@ const publicNewsFields = new Set([
   "sourceExcerpt", "plainLanguageSummary", "actions", "urgency",
   "relevance", "highImpact", "topics", "visaTypes", "nationalities", "universityIds",
   "journeyStages", "relatedIds", "supersedesIds", "supersededByIds", "firstSeenAt",
-  "lastSeenAt", "createdAt", "recordUpdatedAt",
+  "lastSeenAt", "createdAt", "recordUpdatedAt", "urgencyRank", "audienceKeys",
 ]);
+const publishedStates = ["published-source-only", "approved"];
+const newsOrder = "urgencyRank:desc,publishedAt:desc,id:asc";
 
 function isPlainObject(value) {
   if (!value || typeof value !== "object") return false;
@@ -55,6 +57,13 @@ function stableId(value) {
   return createHash("sha256").update(value).digest("hex");
 }
 
+function currentDate(clock) {
+  const value = clock();
+  const date = value instanceof Date ? new Date(value.valueOf()) : new Date(value);
+  if (Number.isNaN(date.valueOf())) throw new Error("Store clock returned an invalid date.");
+  return date;
+}
+
 function leaseLostError() {
   const error = new Error("News synchronization lease ownership was lost.");
   error.code = "LEASE_LOST";
@@ -71,20 +80,20 @@ function leaseExpiry(value) {
   return Date.parse(value);
 }
 
-async function assertFence(transaction, firestore, fence) {
+async function assertFence(transaction, firestore, fence, clock) {
   if (!fence) return;
   if (typeof fence.key !== "string" || !fence.key || typeof fence.owner !== "string" || !fence.owner) {
     throw leaseLostError();
   }
   const snapshot = await transaction.get(leaseReference(firestore, fence.key));
   const lease = snapshot.exists ? snapshot.data() : null;
-  if (!lease || lease.key !== fence.key || lease.owner !== fence.owner || leaseExpiry(lease.expiresAt) <= Date.now()) {
+  if (!lease || lease.key !== fence.key || lease.owner !== fence.owner
+    || leaseExpiry(lease.expiresAt) <= currentDate(clock).valueOf()) {
     throw leaseLostError();
   }
 }
 
-function timestampedInput(input, current = null) {
-  const now = new Date();
+function timestampedInput(input, current = null, now = new Date()) {
   return {
     ...(current || {}),
     ...withoutUndefined(input || {}),
@@ -93,7 +102,7 @@ function timestampedInput(input, current = null) {
   };
 }
 
-function globalCollectionStore(firestore, name) {
+function globalCollectionStore(firestore, name, clock) {
   const collection = firestore.collection(name);
   return {
     async listGlobal() {
@@ -110,8 +119,8 @@ function globalCollectionStore(firestore, name) {
       const id = randomUUID();
       const reference = collection.doc(id);
       const item = await firestore.runTransaction(async (transaction) => {
-        await assertFence(transaction, firestore, fence);
-        const next = timestampedInput(input);
+        await assertFence(transaction, firestore, fence, clock);
+        const next = timestampedInput(input, null, currentDate(clock));
         transaction.set(reference, next);
         return next;
       });
@@ -122,12 +131,12 @@ function globalCollectionStore(firestore, name) {
       const reference = collection.doc(id);
       const result = await firestore.runTransaction(async (transaction) => {
         const snapshot = await transaction.get(reference);
-        await assertFence(transaction, firestore, fence);
+        await assertFence(transaction, firestore, fence, clock);
         const current = snapshot.exists ? snapshot.data() : null;
         const cleanInput = withoutUndefined(input || {});
         const changed = !current || Object.entries(cleanInput)
           .some(([key, value]) => JSON.stringify(atApiBoundary(current[key])) !== JSON.stringify(atApiBoundary(value)));
-        const item = timestampedInput(cleanInput, current);
+        const item = timestampedInput(cleanInput, current, currentDate(clock));
         transaction.set(reference, item);
         return { item, created: !current, changed };
       });
@@ -139,8 +148,8 @@ function globalCollectionStore(firestore, name) {
       const result = await firestore.runTransaction(async (transaction) => {
         const snapshot = await transaction.get(reference);
         if (!snapshot.exists) return null;
-        await assertFence(transaction, firestore, fence);
-        const item = timestampedInput(input, snapshot.data());
+        await assertFence(transaction, firestore, fence, clock);
+        const item = timestampedInput(input, snapshot.data(), currentDate(clock));
         transaction.set(reference, item);
         return item;
       });
@@ -157,7 +166,7 @@ function globalCollectionStore(firestore, name) {
   };
 }
 
-function userCollectionStore(firestore, name, { defaults = {} } = {}) {
+function userCollectionStore(firestore, name, clock, { defaults = {} } = {}) {
   const reference = (uid) => firestore.collection("users").doc(uid).collection(name);
   return {
     async list(uid) {
@@ -166,18 +175,25 @@ function userCollectionStore(firestore, name, { defaults = {} } = {}) {
     },
     async create(uid, input) {
       const id = randomUUID();
-      const now = new Date();
+      const now = currentDate(clock);
       const item = withoutUndefined({ ...defaults, ...(input || {}), createdAt: now, updatedAt: now });
       await reference(uid).doc(id).set(item);
       return atApiBoundary({ id, ...item });
     },
     async update(uid, id, input) {
       const document = reference(uid).doc(id);
-      const existing = await document.get();
-      if (!existing.exists) return null;
-      const item = withoutUndefined({ ...existing.data(), ...(input || {}), updatedAt: new Date() });
-      await document.set(item);
-      return atApiBoundary({ id, ...item });
+      const item = await firestore.runTransaction(async (transaction) => {
+        const existing = await transaction.get(document);
+        if (!existing.exists) return null;
+        const next = withoutUndefined({
+          ...existing.data(),
+          ...(input || {}),
+          updatedAt: currentDate(clock),
+        });
+        transaction.set(document, next);
+        return next;
+      });
+      return item ? atApiBoundary({ id, ...item }) : null;
     },
     async remove(uid, id) {
       const document = reference(uid).doc(id);
@@ -189,7 +205,7 @@ function userCollectionStore(firestore, name, { defaults = {} } = {}) {
   };
 }
 
-function newsPreferencesStore(firestore) {
+function newsPreferencesStore(firestore, clock) {
   const reference = (uid) => firestore.collection("users").doc(uid).collection("newsPreferences").doc("profile");
   return {
     async get(uid) {
@@ -198,19 +214,22 @@ function newsPreferencesStore(firestore) {
     },
     async set(uid, input) {
       const document = reference(uid);
-      const current = await document.get();
-      const item = withoutUndefined({
-        ...(current.exists ? current.data() : {}),
-        ...(input || {}),
-        updatedAt: new Date(),
+      const item = await firestore.runTransaction(async (transaction) => {
+        const current = await transaction.get(document);
+        const next = withoutUndefined({
+          ...(current.exists ? current.data() : {}),
+          ...(input || {}),
+          updatedAt: currentDate(clock),
+        });
+        transaction.set(document, next);
+        return next;
       });
-      await document.set(item);
       return atApiBoundary({ uid, ...item });
     },
   };
 }
 
-function conversationMessageStore(firestore) {
+function conversationMessageStore(firestore, clock) {
   const reference = (uid, conversationId) => firestore.collection("users").doc(uid)
     .collection("conversations").doc(conversationId).collection("messages");
   return {
@@ -220,7 +239,7 @@ function conversationMessageStore(firestore) {
     },
     async create(uid, conversationId, input) {
       const id = randomUUID();
-      const now = new Date();
+      const now = currentDate(clock);
       const item = withoutUndefined({ ...(input || {}), conversationId, createdAt: now, updatedAt: now });
       await reference(uid, conversationId).doc(id).set(item);
       return atApiBoundary({ id, ...item });
@@ -235,7 +254,7 @@ function conversationMessageStore(firestore) {
   };
 }
 
-function ragChunkStore(firestore) {
+function ragChunkStore(firestore, clock) {
   const reference = (uid) => firestore.collection("users").doc(uid).collection("ragChunks");
   return {
     async list(uid, { documentId } = {}) {
@@ -248,7 +267,7 @@ function ragChunkStore(firestore) {
       const existing = await reference(uid).where("documentId", "==", documentId).get();
       const batch = firestore.batch();
       for (const document of existing.docs) batch.delete(document.ref);
-      const now = new Date();
+      const now = currentDate(clock);
       const stored = chunks.map((chunk) => {
         const id = randomUUID();
         const item = withoutUndefined({ ...chunk, uid, documentId, createdAt: now, updatedAt: now });
@@ -272,6 +291,8 @@ function publicNewsDocument(item) {
   for (const field of publicNewsFields) {
     if (Object.hasOwn(item, field) && item[field] !== undefined) publicItem[field] = item[field];
   }
+  publicItem.urgencyRank = urgencyRanks.get(item.urgency) ?? -1;
+  publicItem.audienceKeys = audienceKeysFor(item);
   if (item.editorialState !== "approved") {
     publicItem.plainLanguageSummary = "";
     publicItem.actions = [];
@@ -311,19 +332,13 @@ function newsItemFromSnapshot(snapshot) {
   return snapshot?.exists ? atApiBoundary({ id: snapshot.id, ...snapshot.data() }) : null;
 }
 
+function revisionIdFor(sourceKey, contentHash) {
+  return stableId(`${sourceKey}\u0000${contentHash || "missing-content-hash"}`);
+}
+
 function changedFields(current, input) {
   return Object.entries(input).some(([key, value]) =>
     JSON.stringify(atApiBoundary(current[key])) !== JSON.stringify(atApiBoundary(value)));
-}
-
-function urgencyRank(item) {
-  return urgencyRanks.get(item.urgency) ?? -1;
-}
-
-function compareNews(left, right) {
-  return urgencyRank(right) - urgencyRank(left)
-    || String(right.publishedAt || "").localeCompare(String(left.publishedAt || ""))
-    || String(left.id).localeCompare(String(right.id));
 }
 
 function filterSignature(filters) {
@@ -335,13 +350,62 @@ function filterSignature(filters) {
   });
 }
 
-function encodeCursor(item, filters) {
-  return Buffer.from(JSON.stringify({
-    urgency: item.urgency || null,
-    publishedAt: item.publishedAt || null,
-    id: item.id,
+function audienceKey(filters) {
+  return [
+    filters.topic ? `topic=${filters.topic}` : null,
+    filters.visaType ? `visa=${filters.visaType}` : null,
+    filters.universityId ? `university=${filters.universityId}` : null,
+  ].filter(Boolean).join("|");
+}
+
+function audienceKeysFor(item) {
+  const topics = Array.isArray(item.topics) ? [...new Set(item.topics)] : [];
+  const visaTypes = Array.isArray(item.visaTypes) ? [...new Set(item.visaTypes)] : [];
+  const universityIds = Array.isArray(item.universityIds) ? [...new Set(item.universityIds)] : [];
+  const keys = new Set();
+  for (const topic of topics) keys.add(audienceKey({ topic }));
+  for (const visaType of visaTypes) keys.add(audienceKey({ visaType }));
+  for (const universityId of universityIds) keys.add(audienceKey({ universityId }));
+  for (const topic of topics) for (const visaType of visaTypes) {
+    keys.add(audienceKey({ topic, visaType }));
+  }
+  for (const topic of topics) for (const universityId of universityIds) {
+    keys.add(audienceKey({ topic, universityId }));
+  }
+  for (const visaType of visaTypes) for (const universityId of universityIds) {
+    keys.add(audienceKey({ visaType, universityId }));
+  }
+  for (const topic of topics) for (const visaType of visaTypes) for (const universityId of universityIds) {
+    keys.add(audienceKey({ topic, visaType, universityId }));
+  }
+  return [...keys].sort();
+}
+
+function cursorPayload(item, filters) {
+  return {
+    version: 1,
     filters: filterSignature(filters),
-  })).toString("base64url");
+    order: newsOrder,
+    position: {
+      urgency: item.urgency,
+      urgencyRank: item.urgencyRank,
+      publishedAt: item.publishedAt ?? null,
+      id: item.id,
+    },
+  };
+}
+
+function encodeCursor(item, filters) {
+  const payload = cursorPayload(item, filters);
+  return Buffer.from(JSON.stringify({ ...payload, checksum: stableId(JSON.stringify(payload)) })).toString("base64url");
+}
+
+function validDate(value) {
+  if (value === null) return true;
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/u.test(value)) return false;
+  const [year, month, day] = value.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
 }
 
 function decodeCursor(value, filters) {
@@ -349,7 +413,19 @@ function decodeCursor(value, filters) {
   if (typeof value !== "string" || value.length > 4_096) throw new Error("News cursor is invalid.");
   try {
     const cursor = JSON.parse(Buffer.from(value, "base64url").toString("utf8"));
-    if (!cursor || typeof cursor.id !== "string" || cursor.filters !== filterSignature(filters)) throw new Error();
+    const position = cursor?.position;
+    const payload = cursor && {
+      version: cursor.version,
+      filters: cursor.filters,
+      order: cursor.order,
+      position,
+    };
+    if (!cursor || cursor.version !== 1 || cursor.filters !== filterSignature(filters)
+      || cursor.order !== newsOrder || cursor.checksum !== stableId(JSON.stringify(payload))
+      || !position || !urgencyRanks.has(position.urgency)
+      || position.urgencyRank !== urgencyRanks.get(position.urgency)
+      || !validDate(position.publishedAt)
+      || typeof position.id !== "string" || !/^[0-9a-f]{64}$/u.test(position.id)) throw new Error();
     return cursor;
   } catch {
     throw new Error("News cursor is invalid.");
@@ -364,14 +440,7 @@ function pageResult(items, cursor) {
   return items;
 }
 
-function matchesNewsFilters(item, filters) {
-  if (filters.topic && !item.topics?.includes(filters.topic)) return false;
-  if (filters.visaType && !item.visaTypes?.includes(filters.visaType)) return false;
-  if (filters.universityId && !item.universityIds?.includes(filters.universityId)) return false;
-  return !filters.legalState || item.legalState === filters.legalState;
-}
-
-function newsItemStore(firestore) {
+function newsItemStore(firestore, clock) {
   const privateCollection = firestore.collection("newsItemState");
   return {
     async get(id) {
@@ -392,7 +461,7 @@ function newsItemStore(firestore) {
       const result = await firestore.runTransaction(async (transaction) => {
         const snapshot = await transaction.get(references.privateReference);
         if (!snapshot.exists) return null;
-        await assertFence(transaction, firestore, fence);
+        await assertFence(transaction, firestore, fence, clock);
         const current = snapshot.data();
         const cleanInput = withoutUndefined(input || {});
         if (cleanInput.editorialState === "approved") cleanInput.editorialState = "review-required";
@@ -403,7 +472,7 @@ function newsItemStore(firestore) {
           ...cleanInput,
           id,
           sourceKey: current.sourceKey,
-          recordUpdatedAt: new Date(),
+          recordUpdatedAt: currentDate(clock),
         };
         if (current.editorialState === "approved" && changesReviewContent) {
           item = clearApprovalMetadata({ ...item, editorialState: "review-required" });
@@ -416,53 +485,29 @@ function newsItemStore(firestore) {
     },
     async reviseInternal(id, input, { fence } = {}) {
       const references = newsReferences(firestore, id);
-      if (!fence) {
-        const snapshot = await references.privateReference.get();
-        if (!snapshot.exists) return null;
-        const current = snapshot.data();
-        const cleanInput = withoutUndefined(input || {});
-        if (!changedFields(current, cleanInput)) return atApiBoundary({ id, ...current });
-        const now = new Date();
-        const revisionId = randomUUID();
-        const revision = { ...current, id: revisionId, newsItemId: id, revisedAt: now };
-        const item = withoutApproval({
-          ...current,
-          ...cleanInput,
-          id,
-          sourceKey: current.sourceKey,
-          editorialState: current.sourceVerified && current.relevance === "relevant"
-            ? "published-source-only"
-            : "review-required",
-          recordUpdatedAt: now,
-        });
-        const batch = firestore.batch();
-        batch.set(references.revisions.doc(revisionId), withoutUndefined(revision));
-        batch.set(references.privateReference, withoutUndefined(item));
-        batch.set(references.publicReference, publicNewsDocument(item));
-        await batch.commit();
-        return atApiBoundary(item);
-      }
       const result = await firestore.runTransaction(async (transaction) => {
         const snapshot = await transaction.get(references.privateReference);
         if (!snapshot.exists) return null;
         const current = snapshot.data();
         const cleanInput = withoutUndefined(input || {});
         if (!changedFields(current, cleanInput)) return { item: current, changed: false };
-        await assertFence(transaction, firestore, fence);
-        const now = new Date();
-        const revisionId = randomUUID();
-        const revision = { ...current, id: revisionId, newsItemId: id, revisedAt: now };
+        await assertFence(transaction, firestore, fence, clock);
+        const now = currentDate(clock);
+        const priorRevisionId = current.currentRevisionId || randomUUID();
+        const currentRevisionId = randomUUID();
+        const revision = { ...current, id: priorRevisionId, newsItemId: id, revisedAt: now };
+        const merged = { ...current, ...cleanInput };
         const item = withoutApproval({
-          ...current,
-          ...cleanInput,
+          ...merged,
           id,
           sourceKey: current.sourceKey,
-          editorialState: current.sourceVerified && current.relevance === "relevant"
+          currentRevisionId,
+          editorialState: merged.sourceVerified && merged.relevance === "relevant"
             ? "published-source-only"
             : "review-required",
           recordUpdatedAt: now,
         });
-        transaction.set(references.revisions.doc(revisionId), withoutUndefined(revision));
+        transaction.set(references.revisions.doc(priorRevisionId), withoutUndefined(revision));
         transaction.set(references.privateReference, withoutUndefined(item));
         transaction.set(references.publicReference, publicNewsDocument(item));
         return { item, changed: true };
@@ -475,16 +520,18 @@ function newsItemStore(firestore) {
       const references = newsReferences(firestore, id);
       const result = await firestore.runTransaction(async (transaction) => {
         const snapshot = await transaction.get(references.privateReference);
-        await assertFence(transaction, firestore, fence);
+        await assertFence(transaction, firestore, fence, clock);
         const current = snapshot.exists ? snapshot.data() : null;
         const cleanInput = withoutUndefined(input || {});
-        const now = new Date();
+        const now = currentDate(clock);
         if (!current) {
+          const currentRevisionId = revisionIdFor(sourceKey, cleanInput.contentHash);
           const item = withoutApproval({
             id,
             ...cleanInput,
             editorialState: ingestionEditorialState(null, cleanInput),
             sourceKey,
+            currentRevisionId,
             firstSeenAt: now,
             lastSeenAt: now,
             createdAt: now,
@@ -499,8 +546,11 @@ function newsItemStore(firestore) {
         }
         if (current.sourceKey !== sourceKey) throw new Error("News source key hash collision detected.");
         if (current.contentHash === cleanInput.contentHash) {
+          const currentRevisionId = current.currentRevisionId
+            || revisionIdFor(sourceKey, current.contentHash);
           const item = {
             ...current,
+            currentRevisionId,
             ...(Object.hasOwn(cleanInput, "snapshotPath") ? { snapshotPath: cleanInput.snapshotPath } : {}),
             ...(Object.hasOwn(cleanInput, "snapshotCommitId") ? { snapshotCommitId: cleanInput.snapshotCommitId } : {}),
             lastSeenAt: now,
@@ -510,29 +560,29 @@ function newsItemStore(firestore) {
           transaction.set(references.publicReference, publicNewsDocument(item));
           return { item, created: false, changed: false };
         }
-        const revisionId = randomUUID();
-        const revision = { ...current, id: revisionId, newsItemId: id, revisedAt: now };
+        const priorRevisionId = current.currentRevisionId || revisionIdFor(sourceKey, current.contentHash);
+        const currentRevisionId = revisionIdFor(sourceKey, cleanInput.contentHash);
+        const revision = { ...current, id: priorRevisionId, newsItemId: id, revisedAt: now };
         const item = withoutApproval({
           ...current,
           ...cleanInput,
           id,
           editorialState: ingestionEditorialState(current, cleanInput),
           sourceKey,
+          currentRevisionId,
           firstSeenAt: current.firstSeenAt,
           lastSeenAt: now,
           createdAt: current.createdAt,
           recordUpdatedAt: now,
         });
-        transaction.set(references.revisions.doc(revisionId), withoutUndefined(revision));
+        transaction.set(references.revisions.doc(priorRevisionId), withoutUndefined(revision));
         transaction.set(references.privateReference, withoutUndefined(item));
         transaction.set(references.publicReference, publicNewsDocument(item));
         return { item, created: false, changed: true };
       });
       return { ...result, item: atApiBoundary(result.item) };
     },
-    async approve(id, {
-      reviewerUid, reviewedAt, summary, reviewId, approvalEvidence, actions = [], summaryProvenance = null,
-    } = {}) {
+    async approve(id, { reviewerUid, reviewedAt, reviewId } = {}) {
       if (typeof reviewerUid !== "string" || !reviewerUid.trim()
         || typeof reviewedAt !== "string" || !reviewedAt
         || typeof reviewId !== "string" || !reviewId) {
@@ -546,21 +596,54 @@ function newsItemStore(firestore) {
         if (!currentSnapshot.exists || !reviewSnapshot.exists || reviewSnapshot.data().newsItemId !== id) {
           throw new Error("News approval requires a matching review record.");
         }
+        const current = currentSnapshot.data();
+        const review = reviewSnapshot.data();
+        if (review.status === "consumed") {
+          if (current.editorialState === "approved" && current.reviewId === reviewId
+            && review.consumedBy === reviewerUid.trim() && review.consumedAt === reviewedAt) return current;
+          throw new Error("News approval cannot reuse a consumed review.");
+        }
+        if (review.status !== "validated" || review.editorialState !== "review-required"
+          || typeof review.reason !== "string" || !review.reason.trim()) {
+          throw new Error("News approval requires a validated review with a reason.");
+        }
+        if (review.contentHash !== current.contentHash || review.revisionId !== current.currentRevisionId) {
+          throw new Error("News approval review does not match the current content revision.");
+        }
+        const evidence = review.validationEvidence;
+        if (!evidence || evidence.contentHash !== current.contentHash
+          || evidence.revisionId !== current.currentRevisionId || evidence.sourceVerified !== true
+          || typeof evidence.validatedAt !== "string" || !evidence.validatedAt
+          || evidence.snapshotCommitId !== (current.snapshotCommitId ?? null)) {
+          throw new Error("News approval requires validation evidence for the current content revision.");
+        }
+        const draft = review.draft;
+        if (!draft || typeof draft.plainLanguageSummary !== "string" || !Array.isArray(draft.actions)) {
+          throw new Error("News approval requires a stored reviewed draft.");
+        }
         const next = withoutUndefined({
-          ...currentSnapshot.data(),
+          ...current,
           id,
           editorialState: "approved",
-          plainLanguageSummary: typeof summary === "string" ? summary.trim() : "",
-          summaryProvenance,
-          actions: Array.isArray(actions) ? actions : [],
+          plainLanguageSummary: draft.plainLanguageSummary.trim(),
+          summaryProvenance: evidence,
+          actions: draft.actions,
           reviewerUid: reviewerUid.trim(),
           reviewedAt,
           reviewId,
-          approvalEvidence: approvalEvidence || null,
-          recordUpdatedAt: new Date(),
+          approvalEvidence: evidence,
+          recordUpdatedAt: currentDate(clock),
         });
         transaction.set(references.privateReference, next);
         transaction.set(references.publicReference, publicNewsDocument(next));
+        transaction.set(reviewReference, withoutUndefined({
+          ...review,
+          status: "consumed",
+          consumedBy: reviewerUid.trim(),
+          consumedAt: reviewedAt,
+          approvalNewsItemId: id,
+          updatedAt: currentDate(clock),
+        }));
         return next;
       });
       return atApiBoundary(item);
@@ -576,56 +659,104 @@ function newsItemStore(firestore) {
         throw new Error("News page limit must be between 1 and 50.");
       }
       const cursor = decodeCursor(filters.cursor, filters);
-      const snapshot = await firestore.collection("newsItems").get();
-      const sorted = snapshot.docs.map(documentValue)
-        .filter(isPublished)
-        .filter((item) => matchesNewsFilters(item, filters))
-        .sort(compareNews)
-        .filter((item) => !cursor || compareNews(item, cursor) > 0);
-      const page = sorted.slice(0, limit);
-      const nextCursor = sorted.length > limit ? encodeCursor(page.at(-1), filters) : null;
+      let query = firestore.collection("newsItems").where("editorialState", "in", publishedStates);
+      if (filters.legalState) query = query.where("legalState", "==", filters.legalState);
+      const audienceFilters = [filters.topic, filters.visaType, filters.universityId].filter(Boolean);
+      if (audienceFilters.length > 1) {
+        query = query.where("audienceKeys", "array-contains", audienceKey(filters));
+      } else if (filters.topic) {
+        query = query.where("topics", "array-contains", filters.topic);
+      } else if (filters.visaType) {
+        query = query.where("visaTypes", "array-contains", filters.visaType);
+      } else if (filters.universityId) {
+        query = query.where("universityIds", "array-contains", filters.universityId);
+      }
+      query = query.orderBy("urgencyRank", "desc").orderBy("publishedAt", "desc").orderBy("id", "asc");
+      if (cursor) {
+        query = query.startAfter(
+          cursor.position.urgencyRank,
+          cursor.position.publishedAt,
+          cursor.position.id,
+        );
+      }
+      const snapshot = await query.limit(limit + 1).get();
+      const results = snapshot.docs.map(documentValue).filter(isPublished);
+      const page = results.slice(0, limit);
+      const nextCursor = results.length > limit ? encodeCursor(page.at(-1), filters) : null;
       return pageResult(page, nextCursor);
     },
   };
 }
 
-function leaseStore(firestore) {
+function newsSyncStateStore(firestore, clock) {
+  return {
+    async commit(sourceId, sourceInput, runInput, { fence } = {}) {
+      if (typeof sourceId !== "string" || !sourceId) throw new Error("News source ID is required.");
+      const sourceReference = firestore.collection("newsSources").doc(sourceId);
+      const runId = randomUUID();
+      const runReference = firestore.collection("newsRuns").doc(runId);
+      const result = await firestore.runTransaction(async (transaction) => {
+        const sourceSnapshot = await transaction.get(sourceReference);
+        await assertFence(transaction, firestore, fence, clock);
+        const now = currentDate(clock);
+        const source = timestampedInput(
+          sourceInput,
+          sourceSnapshot.exists ? sourceSnapshot.data() : null,
+          now,
+        );
+        const run = timestampedInput(runInput, null, now);
+        transaction.set(sourceReference, source);
+        transaction.set(runReference, run);
+        return { source, run };
+      });
+      return {
+        source: atApiBoundary({ id: sourceId, ...result.source }),
+        run: atApiBoundary({ id: runId, ...result.run }),
+      };
+    },
+  };
+}
+
+function leaseStore(firestore, clock) {
   return {
     async acquire(key, owner, expiresAt) {
       if (typeof key !== "string" || !key || typeof owner !== "string" || !owner) {
         throw new Error("Lease key and owner are required.");
       }
       const expiry = new Date(expiresAt);
-      if (Number.isNaN(expiry.valueOf()) || expiry.valueOf() <= Date.now()) {
+      if (Number.isNaN(expiry.valueOf()) || expiry.valueOf() <= currentDate(clock).valueOf()) {
         throw new Error("Lease expiry must be a future date.");
       }
       const reference = leaseReference(firestore, key);
       return firestore.runTransaction(async (transaction) => {
         const snapshot = await transaction.get(reference);
         const current = snapshot.exists ? snapshot.data() : null;
-        if (current && leaseExpiry(current.expiresAt) > Date.now()) return false;
-        transaction.set(reference, { key, owner, expiresAt: expiry, updatedAt: new Date() });
+        const now = currentDate(clock);
+        if (current && leaseExpiry(current.expiresAt) > now.valueOf()) return false;
+        transaction.set(reference, { key, owner, expiresAt: expiry, updatedAt: now });
         return true;
       });
     },
     async renew(key, owner, expiresAt) {
       const expiry = new Date(expiresAt);
-      if (Number.isNaN(expiry.valueOf()) || expiry.valueOf() <= Date.now()) return false;
+      if (Number.isNaN(expiry.valueOf()) || expiry.valueOf() <= currentDate(clock).valueOf()) return false;
       const reference = leaseReference(firestore, key);
       return firestore.runTransaction(async (transaction) => {
         const snapshot = await transaction.get(reference);
         const current = snapshot.exists ? snapshot.data() : null;
-        if (!current || current.key !== key || current.owner !== owner || leaseExpiry(current.expiresAt) <= Date.now()) {
+        const now = currentDate(clock);
+        if (!current || current.key !== key || current.owner !== owner || leaseExpiry(current.expiresAt) <= now.valueOf()) {
           return false;
         }
-        transaction.set(reference, { ...current, expiresAt: expiry, updatedAt: new Date() });
+        transaction.set(reference, { ...current, expiresAt: expiry, updatedAt: now });
         return true;
       });
     },
     async owns(key, owner) {
       const snapshot = await leaseReference(firestore, key).get();
       const current = snapshot.exists ? snapshot.data() : null;
-      return Boolean(current && current.key === key && current.owner === owner && leaseExpiry(current.expiresAt) > Date.now());
+      return Boolean(current && current.key === key && current.owner === owner
+        && leaseExpiry(current.expiresAt) > currentDate(clock).valueOf());
     },
     async release(key, owner) {
       const reference = leaseReference(firestore, key);
@@ -640,12 +771,17 @@ function leaseStore(firestore) {
   };
 }
 
-export function createFirestoreStore(firestore) {
+export function createFirestoreStore(firestore, { clock = () => new Date() } = {}) {
   if (!firestore || typeof firestore.collection !== "function"
     || typeof firestore.runTransaction !== "function" || typeof firestore.batch !== "function") {
     throw new Error("A Firestore adapter with transactions and batches is required.");
   }
-  const leases = leaseStore(firestore);
+  if (typeof clock !== "function") throw new Error("Firestore store clock must be a function.");
+  // Lease decisions use one injected process clock. Production hosts must keep it synchronized;
+  // Firestore server timestamps cannot be resolved inside the transaction that must compare expiry.
+  const leases = leaseStore(firestore, clock);
+  const newsSources = globalCollectionStore(firestore, "newsSources", clock);
+  const newsRuns = globalCollectionStore(firestore, "newsRuns", clock);
   return {
     profiles: {
       async get(uid) {
@@ -654,29 +790,33 @@ export function createFirestoreStore(firestore) {
       },
       async set(uid, input) {
         const reference = firestore.collection("users").doc(uid);
-        const current = await reference.get();
-        const data = withoutUndefined({
-          ...(current.exists ? current.data() : {}),
-          ...(input || {}),
-          updatedAt: new Date(),
+        const data = await firestore.runTransaction(async (transaction) => {
+          const current = await transaction.get(reference);
+          const next = withoutUndefined({
+            ...(current.exists ? current.data() : {}),
+            ...(input || {}),
+            updatedAt: currentDate(clock),
+          });
+          transaction.set(reference, next);
+          return next;
         });
-        await reference.set(data);
         return atApiBoundary({ uid, ...data });
       },
     },
-    tasks: userCollectionStore(firestore, "tasks"),
-    documents: userCollectionStore(firestore, "documents"),
-    resources: userCollectionStore(firestore, "savedResources"),
-    conversations: userCollectionStore(firestore, "conversations"),
-    ragChunks: ragChunkStore(firestore),
-    news: newsItemStore(firestore),
-    newsSources: globalCollectionStore(firestore, "newsSources"),
-    newsRuns: globalCollectionStore(firestore, "newsRuns"),
-    reviewQueue: globalCollectionStore(firestore, "reviewQueue"),
+    tasks: userCollectionStore(firestore, "tasks", clock),
+    documents: userCollectionStore(firestore, "documents", clock),
+    resources: userCollectionStore(firestore, "savedResources", clock),
+    conversations: userCollectionStore(firestore, "conversations", clock),
+    ragChunks: ragChunkStore(firestore, clock),
+    news: newsItemStore(firestore, clock),
+    newsSources,
+    newsRuns,
+    newsSyncState: newsSyncStateStore(firestore, clock),
+    reviewQueue: globalCollectionStore(firestore, "reviewQueue", clock),
     leases,
-    newsPreferences: newsPreferencesStore(firestore),
-    savedNews: userCollectionStore(firestore, "savedNews"),
-    notifications: userCollectionStore(firestore, "notifications", { defaults: { read: false } }),
-    conversationMessages: conversationMessageStore(firestore),
+    newsPreferences: newsPreferencesStore(firestore, clock),
+    savedNews: userCollectionStore(firestore, "savedNews", clock),
+    notifications: userCollectionStore(firestore, "notifications", clock, { defaults: { read: false } }),
+    conversationMessages: conversationMessageStore(firestore, clock),
   };
 }

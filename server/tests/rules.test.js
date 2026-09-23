@@ -69,25 +69,64 @@ describe("Firebase ownership rules", () => {
       expect.objectContaining({
         collectionGroup: "newsItems",
         fields: [
+          { fieldPath: "editorialState", order: "ASCENDING" },
           { fieldPath: "topics", arrayConfig: "CONTAINS" },
+          { fieldPath: "urgencyRank", order: "DESCENDING" },
           { fieldPath: "publishedAt", order: "DESCENDING" },
+          { fieldPath: "id", order: "ASCENDING" },
         ],
       }),
       expect.objectContaining({
         collectionGroup: "newsItems",
         fields: [
+          { fieldPath: "editorialState", order: "ASCENDING" },
           { fieldPath: "universityIds", arrayConfig: "CONTAINS" },
+          { fieldPath: "urgencyRank", order: "DESCENDING" },
           { fieldPath: "publishedAt", order: "DESCENDING" },
+          { fieldPath: "id", order: "ASCENDING" },
+        ],
+      }),
+      expect.objectContaining({
+        collectionGroup: "newsItems",
+        fields: [
+          { fieldPath: "editorialState", order: "ASCENDING" },
+          { fieldPath: "visaTypes", arrayConfig: "CONTAINS" },
+          { fieldPath: "urgencyRank", order: "DESCENDING" },
+          { fieldPath: "publishedAt", order: "DESCENDING" },
+          { fieldPath: "id", order: "ASCENDING" },
+        ],
+      }),
+      expect.objectContaining({
+        collectionGroup: "newsItems",
+        fields: [
+          { fieldPath: "editorialState", order: "ASCENDING" },
+          { fieldPath: "audienceKeys", arrayConfig: "CONTAINS" },
+          { fieldPath: "urgencyRank", order: "DESCENDING" },
+          { fieldPath: "publishedAt", order: "DESCENDING" },
+          { fieldPath: "id", order: "ASCENDING" },
         ],
       }),
       expect.objectContaining({
         collectionGroup: "ragChunks",
-        fields: expect.arrayContaining([
+        fields: [
+          { fieldPath: "uid", order: "ASCENDING" },
+          { fieldPath: "embedding", vectorConfig: { dimension: 2048, flat: {} } },
+        ],
+      }),
+      expect.objectContaining({
+        collectionGroup: "ragChunks",
+        fields: [
+          { fieldPath: "uid", order: "ASCENDING" },
           { fieldPath: "documentId", order: "ASCENDING" },
-          { fieldPath: "embedding", vectorConfig: { dimension: 3072, flat: {} } },
-        ]),
+          { fieldPath: "embedding", vectorConfig: { dimension: 2048, flat: {} } },
+        ],
       }),
     ]));
+  });
+
+  test("requests embeddings with the same dimension as the vector indexes", async () => {
+    const source = await readFile(resolve(root, "server/src/gemini.js"), "utf8");
+    expect(source).toContain("outputDimensionality: 2048");
   });
 
   test("Firebase config loads the Firestore index manifest", async () => {

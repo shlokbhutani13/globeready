@@ -46,8 +46,7 @@ async function assertFence(leases, fence) {
   }
 }
 
-export function createGlobalCollection({ leases } = {}) {
-  const items = new Map();
+export function createGlobalCollection({ leases, items = new Map() } = {}) {
 
   return {
     async listGlobal() {
@@ -128,7 +127,27 @@ function createNewsStore({ reviewQueue, leases }) {
       const current = [...itemsBySourceKey.values()].find((item) => item.id === id);
       if (!current) return null;
       await assertFence(leases, fence);
-      const item = { ...current, ...input, id, sourceKey: current.sourceKey, recordUpdatedAt: new Date().toISOString() };
+      const cleanInput = { ...(input || {}) };
+      if (cleanInput.editorialState === "approved") cleanInput.editorialState = "review-required";
+      const changesReviewContent = ["plainLanguageSummary", "summaryProvenance", "actions"]
+        .some((field) => Object.hasOwn(cleanInput, field));
+      const item = {
+        ...current,
+        ...cleanInput,
+        id,
+        sourceKey: current.sourceKey,
+        recordUpdatedAt: new Date().toISOString(),
+      };
+      if (current.editorialState === "approved" && changesReviewContent) {
+        item.editorialState = "review-required";
+        item.plainLanguageSummary = "";
+        item.summaryProvenance = null;
+        item.actions = [];
+        delete item.reviewerUid;
+        delete item.reviewedAt;
+        delete item.reviewId;
+        delete item.approvalEvidence;
+      }
       itemsBySourceKey.set(current.sourceKey, item);
       return item;
     },
@@ -142,12 +161,13 @@ function createNewsStore({ reviewQueue, leases }) {
       const revision = { ...current, id: randomUUID(), newsItemId: current.id, revisedAt: now };
       if (!revisionsByItemId.has(current.id)) revisionsByItemId.set(current.id, []);
       revisionsByItemId.get(current.id).push(revision);
+      const merged = { ...current, ...input };
       const item = {
-        ...current,
-        ...input,
+        ...merged,
         id: current.id,
         sourceKey: current.sourceKey,
-        editorialState: current.sourceVerified && current.relevance === "relevant"
+        currentRevisionId: randomUUID(),
+        editorialState: merged.sourceVerified && merged.relevance === "relevant"
           ? "published-source-only"
           : "review-required",
         plainLanguageSummary: "",
@@ -173,6 +193,7 @@ function createNewsStore({ reviewQueue, leases }) {
           ...input,
           editorialState,
           sourceKey,
+          currentRevisionId: randomUUID(),
           firstSeenAt: now,
           lastSeenAt: now,
           createdAt: now,
@@ -212,6 +233,7 @@ function createNewsStore({ reviewQueue, leases }) {
         editorialState,
         id: current.id,
         sourceKey,
+        currentRevisionId: randomUUID(),
         firstSeenAt: current.firstSeenAt,
         lastSeenAt: now,
         createdAt: current.createdAt,
@@ -224,7 +246,7 @@ function createNewsStore({ reviewQueue, leases }) {
       itemsBySourceKey.set(sourceKey, item);
       return { item, created: false, changed: true };
     },
-    async approve(id, { reviewerUid, reviewedAt, summary, reviewId, approvalEvidence } = {}) {
+    async approve(id, { reviewerUid, reviewedAt, reviewId } = {}) {
       const current = [...itemsBySourceKey.values()].find((item) => item.id === id);
       const review = await reviewQueue.get(reviewId);
       if (!current || !review || review.newsItemId !== id) {
@@ -233,18 +255,47 @@ function createNewsStore({ reviewQueue, leases }) {
       if (typeof reviewerUid !== "string" || !reviewerUid.trim() || typeof reviewedAt !== "string" || !reviewedAt) {
         throw new Error("News approval requires reviewer metadata.");
       }
+      if (review.status === "consumed") {
+        if (current.editorialState === "approved" && current.reviewId === reviewId
+          && review.consumedBy === reviewerUid.trim() && review.consumedAt === reviewedAt) return current;
+        throw new Error("News approval cannot reuse a consumed review.");
+      }
+      if (review.status !== "validated" || review.editorialState !== "review-required"
+        || typeof review.reason !== "string" || !review.reason.trim()
+        || review.contentHash !== current.contentHash
+        || review.revisionId !== current.currentRevisionId) {
+        throw new Error("News approval requires a validated review for the current content revision.");
+      }
+      const evidence = review.validationEvidence;
+      if (!evidence || evidence.contentHash !== current.contentHash
+        || evidence.revisionId !== current.currentRevisionId || evidence.sourceVerified !== true
+        || evidence.snapshotCommitId !== (current.snapshotCommitId ?? null)) {
+        throw new Error("News approval requires validation evidence for the current content revision.");
+      }
+      if (!review.draft || typeof review.draft.plainLanguageSummary !== "string"
+        || !Array.isArray(review.draft.actions)) {
+        throw new Error("News approval requires a stored reviewed draft.");
+      }
 
       const item = {
         ...current,
         editorialState: "approved",
-        plainLanguageSummary: typeof summary === "string" ? summary.trim() : "",
+        plainLanguageSummary: review.draft.plainLanguageSummary.trim(),
+        actions: review.draft.actions,
+        summaryProvenance: evidence,
         reviewerUid: reviewerUid.trim(),
         reviewedAt,
         reviewId,
-        approvalEvidence: approvalEvidence || null,
+        approvalEvidence: evidence,
         recordUpdatedAt: new Date().toISOString(),
       };
       itemsBySourceKey.set(item.sourceKey, item);
+      await reviewQueue.update(reviewId, {
+        status: "consumed",
+        consumedBy: reviewerUid.trim(),
+        consumedAt: reviewedAt,
+        approvalNewsItemId: id,
+      });
       return item;
     },
     async revisions(id) {
@@ -379,7 +430,11 @@ function createRagChunkCollection() {
 export function createDemoStore() {
   const profiles = new Map();
   const leases = createLeaseStore();
+  const sourceItems = new Map();
+  const runItems = new Map();
   const reviewQueue = createGlobalCollection({ leases });
+  const newsSources = createGlobalCollection({ leases, items: sourceItems });
+  const newsRuns = createGlobalCollection({ leases, items: runItems });
   return {
     profiles: {
       async get(uid) {
@@ -402,8 +457,22 @@ export function createDemoStore() {
     conversations: createCollection(),
     ragChunks: createRagChunkCollection(),
     news: createNewsStore({ reviewQueue, leases }),
-    newsSources: createGlobalCollection({ leases }),
-    newsRuns: createGlobalCollection({ leases }),
+    newsSources,
+    newsRuns,
+    newsSyncState: {
+      async commit(sourceId, sourceInput, runInput, { fence } = {}) {
+        await assertFence(leases, fence);
+        const now = new Date().toISOString();
+        const current = sourceItems.get(sourceId);
+        const source = current
+          ? { ...current, ...sourceInput, id: sourceId, updatedAt: now }
+          : { id: sourceId, ...sourceInput, createdAt: now, updatedAt: now };
+        const run = { id: randomUUID(), ...runInput, createdAt: now, updatedAt: now };
+        sourceItems.set(sourceId, source);
+        runItems.set(run.id, run);
+        return { source, run };
+      },
+    },
     reviewQueue,
     leases,
     newsPreferences: createNewsPreferencesStore(),

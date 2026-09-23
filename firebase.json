@@ -3,6 +3,14 @@
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
   },
+  "emulators": {
+    "firestore": {
+      "port": 8089
+    },
+    "ui": {
+      "enabled": false
+    }
+  },
   "storage": {
     "rules": "storage.rules"
   },
