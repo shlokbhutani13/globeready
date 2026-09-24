@@ -381,8 +381,17 @@ export function createNewsSync({
   async function resolveSource(sourceId) {
     const registered = sourceRegistry.get(sourceId);
     if (registered) {
-      if (registered.enabled === false) throw new Error(`News source is disabled pending verification: ${registered.pendingReason || registered.id}.`);
-      return registered;
+      const stored = typeof store.newsSources?.get === "function"
+        ? await store.newsSources.get(sourceId)
+        : null;
+      const resolved = {
+        ...(stored || {}),
+        ...registered,
+        ...(stored && Object.hasOwn(stored, "enabled") ? { enabled: stored.enabled } : {}),
+        ...(stored && Object.hasOwn(stored, "cadenceHours") ? { cadenceHours: stored.cadenceHours } : {}),
+      };
+      if (resolved.enabled === false) throw new Error(`News source is disabled pending verification: ${resolved.pendingReason || resolved.id}.`);
+      return resolved;
     }
     if (typeof store.newsSources?.get === "function") {
       const stored = await store.newsSources.get(sourceId);

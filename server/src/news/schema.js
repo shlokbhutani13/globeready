@@ -78,11 +78,13 @@ export function publicNewsItem(item) {
   const {
     normalizedText,
     contentHash,
+    currentRevisionId,
     snapshotPath,
     snapshotCommitId,
     classifierConfidence,
     classifierMatchedTerms,
     classifierExplanation,
+    summaryProvenance,
     reviewerUid,
     reviewedAt,
     reviewId,

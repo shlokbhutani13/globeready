@@ -21,7 +21,15 @@ export function createAuthMiddleware(adminAuth) {
 
       const token = authorization.slice("Bearer ".length);
       const decoded = await adminAuth.verifyIdToken(token);
-      request.user = { uid: decoded.uid, email: decoded.email, demo: false };
+      if (typeof decoded?.uid !== "string" || !decoded.uid || decoded.uid.length > 128) {
+        throw new Error("Verified token is missing a valid UID.");
+      }
+      request.user = {
+        uid: decoded.uid,
+        email: decoded.email,
+        admin: decoded.admin === true,
+        demo: false,
+      };
       return next();
     } catch {
       return response.status(401).json({

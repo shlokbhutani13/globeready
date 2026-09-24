@@ -50,6 +50,28 @@ function isNotFound(error) {
   return error?.code === 404 || error?.code === "404";
 }
 
+export function createSnapshotReader({ bucket } = {}) {
+  if (!bucket || typeof bucket.file !== "function") {
+    throw new Error("Snapshot reader requires a private bucket.");
+  }
+  return {
+    async readCommitted({ path, commitId } = {}) {
+      if (typeof path !== "string" || !path.startsWith(snapshotPrefix)
+        || typeof commitId !== "string" || !commitId) {
+        throw new Error("A matching committed snapshot marker is required.");
+      }
+      const file = bucket.file(path);
+      const [metadata] = await file.getMetadata();
+      const identity = metadataHash(file, metadata);
+      if (!identity.valid || identity.commitId !== commitId) {
+        throw new Error("A matching committed snapshot marker is required.");
+      }
+      const [content] = await file.download();
+      return Buffer.from(content).toString("utf8");
+    },
+  };
+}
+
 /*
  * A generic object-store bucket cannot serialize a lease-store ownership check with object promotion.
  * The required adapter owns that cross-service boundary. Its promote operation must check the supplied
@@ -80,6 +102,7 @@ export function createSnapshotStore({
     return true;
   }
 
+  const reader = createSnapshotReader({ bucket });
   return {
     isPrivate: true,
     supportsFencing: true,
@@ -197,19 +220,7 @@ export function createSnapshotStore({
       }
     },
 
-    async readCommitted({ path, commitId } = {}) {
-      if (typeof path !== "string" || typeof commitId !== "string" || !commitId) {
-        throw new Error("A matching committed snapshot marker is required.");
-      }
-      const file = bucket.file(path);
-      const [metadata] = await file.getMetadata();
-      const identity = metadataHash(file, metadata);
-      if (!identity.valid || identity.commitId !== commitId) {
-        throw new Error("A matching committed snapshot marker is required.");
-      }
-      const [content] = await file.download();
-      return Buffer.from(content).toString("utf8");
-    },
+    readCommitted: reader.readCommitted,
 
     async removeExpired({ retainHashes = new Set() } = {}) {
       const retainedHashes = retainHashes instanceof Set
