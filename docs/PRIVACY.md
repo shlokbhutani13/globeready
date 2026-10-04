@@ -28,6 +28,14 @@ In production and local-user modes, the API keeps no student data in memory betw
 is the rate-limit counters, which hold a UID and a count and reset with their window. Demo mode keeps its sample data in
 memory by design, and clears it on restart.
 
+## Privacy choices
+
+Before a document is read, the student records a choice in the app, at the current wording version. Document reading
+and AI-written answers are separate choices, and the AI choice is available only after document reading is on. Each is
+changeable at any time. The record is kept in the profile, is included in the export, and each change is audited
+without its content. The Firestore rules refuse document records without document reading consent, and the server refuses
+to read, index, or send document text without it. Full detail: `docs/DATA_POLICY.md`.
+
 ## Third-party processing
 
 - **Firebase** (Authentication, Firestore, Storage) processes account and document data under your Firebase project's

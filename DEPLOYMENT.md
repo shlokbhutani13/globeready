@@ -58,8 +58,7 @@ After deploy, confirm with a synthetic account:
 - `storage.rules` allows reads and deletes only for the owner of `users/{uid}/documents/{docId}/{fileName}`, and creates
   or updates only for PDF, PNG, or JPEG up to 10 MB.
 
-`firestore.indexes.json` declares vector indexes on `ragChunks.embedding`. Nothing writes embeddings, so they are inert,
-but Firestore creates them on deploy. Removing them is a follow-up that also updates the tests that assert them.
+`firestore.indexes.json` declares only the news indexes. No vector index is declared, because nothing queries embeddings.
 
 ## 2. Service account (provisioning required)
 
@@ -136,7 +135,16 @@ The build refuses `VITE_DEMO_MODE` and `VITE_LOCAL_USER_MODE`, and it removes th
 `client/dist` with `firebase.json` hosting (`firebase deploy --only hosting`) or any static host that rewrites unknown
 paths to `index.html`. `client/vercel.json` provides that rewrite for Vercel.
 
-Set `VITE_DOCUMENT_UPLOADS_ENABLED=true` only in a later release, after section 1's rules are deployed and the
+Browser uploads go straight to the bucket, so the bucket must allow the client's origin. Generate the policy from the
+final client origin and apply it to the document bucket. The script prints the policy and the command; it changes
+nothing:
+
+```bash
+node scripts/release/storage-cors.mjs --origin https://app.YOUR-DOMAIN > storage-cors.json
+gcloud storage buckets update gs://YOUR_DOCUMENT_BUCKET --cors-file=storage-cors.json
+```
+
+Students must give consent before uploading (see `docs/PRIVACY.md`). Set `VITE_DOCUMENT_UPLOADS_ENABLED=true` only in a later release, after section 1's rules are deployed and the
 synthetic-document checks pass.
 
 ## 5. Source synchronization (not yet operational)

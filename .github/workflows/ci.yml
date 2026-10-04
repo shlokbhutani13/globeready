@@ -84,6 +84,13 @@ jobs:
           if docker run --rm --entrypoint sh globeready-api:ci -c 'test -e /app/.env -o -e /app/.local -o -e /app/.git -o -e /app/.claude -o -e /app/src/index.test.js'; then
             echo "A development or secret path is present in the image."; exit 1
           fi
+      - name: Verify real PDF extraction and OCR inside the image, offline
+        run: |
+          docker run --rm --network none \
+            -v "$PWD/scripts/release:/checks:ro" \
+            -v "$PWD/server/tests/fixtures/documents:/fixtures:ro" \
+            --entrypoint node globeready-api:ci \
+            /checks/container-extraction-check.mjs /app/src /fixtures
       - name: Run the production fail-closed matrix
         run: scripts/release/docker-fail-closed.sh globeready-api:ci
       - name: Scan the image for HIGH and CRITICAL vulnerabilities

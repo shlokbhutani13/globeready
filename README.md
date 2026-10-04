@@ -97,6 +97,8 @@ Read [SECURITY.md](SECURITY.md) and [docs/PRIVACY.md](docs/PRIVACY.md) before co
 
 ## Documentation
 
+- [V1 scope](docs/V1_SCOPE.md)
+- [Data policy: retention, deletion, backup, and restore](docs/DATA_POLICY.md)
 - [Modes: demo, local-user, and production](docs/MODES.md)
 - [Configuration contract](docs/CONFIGURATION.md)
 - [Operations: startup, shutdown, health, logging, local state](docs/OPERATIONS.md)

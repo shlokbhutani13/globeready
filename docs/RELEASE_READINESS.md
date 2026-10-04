@@ -9,17 +9,55 @@ CI gates, and documentation. Live infrastructure is classified below and was not
 
 ## Classification
 
-Every remaining issue belongs to exactly one class.
+Every remaining issue belongs to exactly one class. This table reflects the completion pass that followed the first
+hardening pass; the lists below supersede the earlier ones.
 
 | Class | Count | Meaning |
 | --- | --- | --- |
-| BLOCKER | **0** | A repository or code problem that must be fixed before provisioning. None remain open. |
-| PROVISIONING REQUIRED | 15 | Needs real cloud resources, accounts, or money. |
-| LIVE VERIFICATION REQUIRED | 12 | Implemented, but only a deployed environment can prove it. |
-| INTENTIONAL V1 LIMITATION | 11 | Known and accepted for the first release. |
-| FUTURE SCALE WORK | 9 | Not needed for the first deployment; needed at materially larger use. |
+| BLOCKER | **0** | A repository or code problem that must be fixed before provisioning. |
+| PROVISIONING REQUIRED | 17 | Needs real cloud resources, accounts, or money. |
+| LIVE VERIFICATION REQUIRED | 15 | Implemented, but only a deployed environment can prove it. |
+| INTENTIONAL V1 LIMITATION | 12 | Known and accepted for the first release. See `docs/V1_SCOPE.md`. |
+| FUTURE SCALE WORK | 9 | Not needed for the first deployment. |
 
-### Blockers
+### Completion pass changes
+
+- **Storage CORS.** `scripts/release/storage-cors.mjs` builds the bucket policy from explicit https origins. It prints
+  the policy and the apply command, and changes nothing. Tested.
+- **Vector indexes removed** from `firestore.indexes.json`. The tests and docs that asserted them were updated.
+- **PDF and OCR inside the container.** `scripts/release/container-extraction-check.mjs` runs with the network disabled,
+  against the real extraction code and local OCR. All 7 checks pass: text PDF (3 pages), malformed, blank, and
+  scanned PDFs refused with the right outcome, PNG and JPEG printed text read, and a PNG declared as a PDF refused.
+- **SDK usage checked against installed types, no live calls.** `@google/genai` takes `httpOptions.timeout` in
+  milliseconds on its constructor, and `embedContent` accepts `taskType` and `outputDimensionality`. The Admin SDK's
+  `verifyIdToken(token, checkRevoked)` and `deleteUser(uid)` match the calls in the code. No change was needed.
+- **Reminders.** Dedupe is by task and due date, so a rescheduled task gets a new reminder. The client checks at
+  sign-in, every 15 minutes, on window focus, and when the task list changes. In-app only; no background, email, or push.
+- **Consent.** Document reading and AI-written answers each need a recorded choice at the current wording version. The
+  server refuses indexing and document-scoped answers without document reading, and never sends passages to the model
+  without the AI choice. Firestore rules refuse document records without document reading consent. Consent is in the export
+  and audited without content.
+- **Copy.** The inbox no longer says "You're caught up" next to listed reminders. A closed Google re-authentication
+  pop-up now gets a plain instruction rather than the provider's error code.
+- **Policy documents.** `docs/DATA_POLICY.md` (retention, deletion, backup, restore) and `docs/V1_SCOPE.md`.
+
+### Defects found by this pass and fixed
+
+- The consent effect was placed after two early returns in `App`, which crashed the app on sign-in and sign-out ("Rendered
+  more hooks than during the previous render"). The client unit tests did not catch it, and the browser pass did. Fixed
+  by moving the effect above the returns. Unit tests do not render `App`, so this class of error relies on the browser pass.
+- Reminder dedupe by task alone would have hidden every rescheduled task's new reminder. Fixed.
+
+### Open risks
+
+- **Intermittent `ECONNRESET`** in the launch-journeys reminder test, seen once in the full suite and not reproduced in
+  9 later runs or 8 isolated runs. The cause is not identified. CI will show whether it recurs.
+- **Restore can resurrect deleted accounts** unless reconciled from the `audit.account_deleted` log lines. There is no
+  deletion ledger. Procedure in `docs/DATA_POLICY.md`.
+- **Storage uploads are not checked against consent** by the Storage rules. The server never reads such a file without
+  consent, and account deletion removes it.
+
+### Blockers (superseded by the completion pass above)
 
 None open. Three items found in this pass were blockers and are fixed and tested (see "Fixes"): the unbounded
 production assistant fallback, the local API listening on all network interfaces with unsigned tokens, and live Updates
@@ -43,6 +81,9 @@ publication that could not run in production. One intermittent test failure was 
 14. Gemini API key with a spending limit (optional, needs approval). Also a published AI-processing notice.
 15. Firebase App Check (optional but recommended): enforce it for Firestore, Storage, and the API so that only the
     released client can use the backend. It needs a registered web app and an attestation provider.
+16. Applying the Storage CORS policy generated by `scripts/release/storage-cors.mjs` to the document bucket.
+17. The backup decision: enabling Firestore point-in-time recovery and a Storage backup or versioning policy, with a
+    budget. The repository does not enable either (`docs/DATA_POLICY.md`).
 
 ### Live verification required
 
@@ -59,6 +100,10 @@ publication that could not run in production. One intermittent test failure was 
 10. Health and readiness probes as the platform calls them, and the single-instance behaviour of the rate limiter.
 11. The log collector receives the structured lines and the `audit.*` events.
 12. A rollback drill: redeploy the previous image digest and client build, and confirm the smoke checks.
+13. The consent flow on a live deployment, including the Storage upload that the CORS policy must allow.
+14. A live Gemini call with the approved key and the model name, once a key exists. Nothing in the repository has called
+    the live service; the SDK usage was checked against the installed types only.
+15. Admin token verification and revocation against real Firebase tokens, not the emulator's.
 
 ### Intentional V1 limitations
 
@@ -75,6 +120,7 @@ publication that could not run in production. One intermittent test failure was 
 9. Updates require sign-in. University sources become visible only after an administrator verifies each one.
 10. Demo mode uses canned development guidance, labelled as demo, and never runs in production.
 11. Local Updates are four synthetic items. The Google button in local mode is a mock identity.
+12. Reminders are in-app only, and appear while the app is open or on its next check. No background, email, or push reminders.
 
 ### Future scale work
 
@@ -85,7 +131,7 @@ publication that could not run in production. One intermittent test failure was 
 5. Per-student quotas for direct Firestore writes, and a limit on university connector creation from profile updates.
 6. A separate OCR worker or queue, and concurrency control beyond one-at-a-time recognition.
 7. Metrics and tracing beyond structured logs.
-8. Removal of inert code and indexes: the vector indexes, the summarizer module, and the legacy `/analyze` route.
+8. Removal of inert code: the summarizer module, the legacy `/analyze` route, and the embedding hook.
 9. Upgrade of the emulator tooling (see "Dependency and supply chain").
 
 ## Audit findings and fixes

@@ -90,8 +90,8 @@ the Auth identity, in that order. Each step can be repeated. See `docs/PRIVACY.m
 
 ## Components kept but inert
 
-- `ragChunks.embedding` vector indexes in `firestore.indexes.json`, the optional embedding hook in the indexer, and
-  `GEMINI_EMBEDDINGS_ENABLED`. Nothing writes or queries embeddings by default, and enabling them is refused.
+- The optional embedding hook in the indexer and `GEMINI_EMBEDDINGS_ENABLED`. Nothing writes or queries embeddings by
+  default, enabling them is refused, and no vector index is declared (they were removed).
 - `pushEnabled` in the news preferences route. It is accepted and stored, but nothing reads it and the interface does not
   offer it.
 - The summarizer module (`server/src/news/summarizer.js`) is not wired into production.
