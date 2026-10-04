@@ -42,3 +42,27 @@
 .button.danger:disabled{opacity:.45;cursor:not-allowed}
 .sidebar-footer a{min-height:44px;padding:0 12px;border-radius:10px;display:flex;align-items:center;gap:11px;color:#969eae;text-decoration:none;font-size:14px}
 .sidebar-footer a:hover{background:#252936;color:white}
+
+/* Home: one calm column with three answers (latest update, next task, Ask). */
+.home-page{max-width:640px;padding-top:64px}
+.home-header{margin-bottom:48px}
+.home-header h1{font:600 clamp(28px,4vw,36px)/1.15 Manrope,sans-serif;letter-spacing:-.035em;margin:0 0 8px}
+.home-header p{color:var(--muted);margin:0}
+.home-section{margin-bottom:40px}
+.home-section .eyebrow{margin-bottom:12px}
+.home-update{display:block;text-decoration:none;color:inherit;padding:18px 0;border-top:1px solid var(--line)}
+.home-update strong{display:block;font:500 17px/1.45 Manrope,sans-serif;margin-bottom:4px}
+.home-update small{color:var(--muted);font-size:13px}
+.home-task{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 0;border-top:1px solid var(--line)}
+.home-task label{display:flex;align-items:center;gap:12px;font-size:16px;cursor:pointer}
+.home-task input{width:18px;height:18px;accent-color:var(--blue);margin:0}
+.home-task time{color:var(--muted);font-size:13px;white-space:nowrap}
+.home-quiet{color:var(--muted);margin:0;padding:16px 0;border-top:1px solid var(--line)}
+.home-links{display:flex;flex-wrap:wrap;gap:18px;margin-top:12px;font-size:14px}
+.home-links a{color:var(--blue);text-decoration:none}
+.home-links a:hover{text-decoration:underline}
+.home-ask{width:100%;text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:14px;padding:18px 20px;cursor:pointer;display:flex;flex-direction:column;gap:4px;font:inherit;color:inherit}
+.home-ask span{font:600 16px Manrope,sans-serif}
+.home-ask small{color:var(--muted);font-size:13px}
+.home-ask:hover{border-color:#cfd5e0}
+@media (max-width:720px){.home-page{padding-top:36px}.home-header{margin-bottom:32px}}

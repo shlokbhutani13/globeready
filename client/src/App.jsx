@@ -269,7 +269,7 @@ export default function App() {
       {appError && <div className="app-error" role="alert"><span>{appError}</span><button onClick={() => setAppError("")}>Dismiss</button></div>}
       <Routes>
         <Route element={<AppShell onSignOut={signOut} isAdmin={isAdmin} unreadNotifications={unreadNotifications} />}>
-          <Route index element={<DashboardPage profile={profile} tasks={tasks} documents={documents} topNews={topNews} unreadNotifications={unreadNotifications} />} />
+          <Route index element={<DashboardPage profile={profile} tasks={tasks} topNews={topNews} unreadNotifications={unreadNotifications} onToggleTask={changeTask} />} />
           <Route path="news" element={(
             <NewsPage
               items={newsItems}

@@ -1,49 +1,65 @@
 import React from "react";
-import { ArrowUpRight, Bell, CalendarDays, CheckCircle2, FileText, Sparkles } from "lucide-react";
-import MetricCard from "../components/MetricCard";
+import { Link, useNavigate } from "react-router-dom";
 import Disclaimer from "../components/Disclaimer";
-import NewsCard from "../components/NewsCard";
 
-export default function DashboardPage({ profile = {}, tasks = [], documents = [], topNews = [], unreadNotifications = 0 }) {
+function greetingFor(date = new Date()) {
+  const hour = date.getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 18) return "Good afternoon";
+  return "Good evening";
+}
+
+// Home answers three questions: what changed, what is next, and what Ask can help with. Everything else
+// lives one tap deeper, so an empty day stays calm instead of filling with cards.
+export default function DashboardPage({ profile = {}, tasks = [], topNews = [], unreadNotifications = 0, onToggleTask }) {
+  const navigate = useNavigate();
   const firstName = profile.fullName?.split(" ")[0] || "there";
   const openTasks = tasks.filter((task) => !task.completed);
+  const nextTask = openTasks[0];
+  const topUpdate = topNews[0];
+
   return (
-    <div className="page">
-      <header className="page-header">
-        <div><span className="eyebrow">Student dashboard</span><h1>Good morning, {firstName}.</h1><p>{profile.university || "Your journey"} is organized and ready for review.</p></div>
-        <button className="button primary"><Sparkles size={17} /> Ask GlobeReady</button>
+    <div className="page home-page">
+      <header className="home-header">
+        <h1>{greetingFor()}, {firstName}.</h1>
+        {profile.university && <p>{profile.university}</p>}
       </header>
-      <section className="metric-grid">
-        <MetricCard icon={CheckCircle2} label="Open tasks" value={openTasks.length} detail="Review high-priority work" />
-        <MetricCard icon={CalendarDays} label="Next deadline" value={openTasks[0]?.dueDate || "None"} detail={openTasks[0]?.title || "You're caught up"} tone="gold" />
-        <MetricCard icon={FileText} label="Documents" value={documents.length} detail="Stored in your vault" tone="green" />
-        <MetricCard icon={Bell} label="Notifications" value={unreadNotifications} detail={unreadNotifications > 0 ? "Unread reminders" : "You're caught up"} tone="violet" />
-      </section>
-      <section className="dashboard-grid">
-        <article className="panel span-2">
-          <div className="panel-title"><div><span className="eyebrow">Plan</span><h2>Upcoming deadlines</h2></div><button>View all <ArrowUpRight size={15} /></button></div>
-          <div className="timeline">{openTasks.map((task) => <div className="timeline-row" key={task.id}><span className={`priority ${task.priority}`} /><div><strong>{task.title}</strong><small>{task.priority} priority</small></div><time>{task.dueDate || "No date"}</time></div>)}</div>
-        </article>
-        <article className="panel">
-          <div className="panel-title"><div><span className="eyebrow">Vault</span><h2>Recent documents</h2></div></div>
-          <div className="document-mini-list">{documents.map((document) => <div key={document.id}><span><FileText size={17} /></span><div><strong>{document.name}</strong><small>{document.category}</small></div></div>)}</div>
-        </article>
-        <article className="panel journey-card">
-          <span className="eyebrow">Your journey</span><h2>{profile.journeyStage || "Preparing for arrival"}</h2><p>Complete your profile and review your next three actions.</p>
-          <div className="progress"><span style={{ width: "68%" }} /></div><small>68% ready</small>
-        </article>
-        <article className="panel span-2 recommendation">
-          <span className="recommendation-icon"><Sparkles size={19} /></span>
-          <div><span className="eyebrow">Recommended for you</span><h2>Check your I-20 travel signature</h2><p>Review the signature date before international travel and confirm requirements with your university.</p></div>
-          <button className="button secondary">Open guide</button>
-        </article>
-        {topNews.length > 0 && (
-          <article className="panel span-2">
-            <div className="panel-title"><div><span className="eyebrow">Updates</span><h2>Most relevant for you</h2></div></div>
-            <div className="dashboard-news">{topNews.slice(0, 2).map((item) => <NewsCard key={item.id} item={item} compact />)}</div>
-          </article>
+
+      {topUpdate && (
+        <section className="home-section" aria-labelledby="home-update-title">
+          <span className="eyebrow" id="home-update-title">Latest update</span>
+          <Link className="home-update" to="/news">
+            <strong>{topUpdate.title || "Untitled update"}</strong>
+            <small>{topUpdate.publisher}</small>
+          </Link>
+        </section>
+      )}
+
+      <section className="home-section" aria-labelledby="home-next-title">
+        <span className="eyebrow" id="home-next-title">Next</span>
+        {nextTask ? (
+          <div className="home-task">
+            <label>
+              <input type="checkbox" checked={false} onChange={() => onToggleTask?.(nextTask.id)} />
+              <span>{nextTask.title}</span>
+            </label>
+            {nextTask.dueDate && <time dateTime={nextTask.dueDate}>{nextTask.dueDate}</time>}
+          </div>
+        ) : (
+          <p className="home-quiet">Nothing urgent. You are caught up.</p>
         )}
+        <div className="home-links">
+          {openTasks.length > 1 && <Link to="/tasks">{openTasks.length - 1} more task{openTasks.length === 2 ? "" : "s"}</Link>}
+          {unreadNotifications > 0 && <Link to="/notifications">{unreadNotifications} reminder{unreadNotifications === 1 ? "" : "s"}</Link>}
+          <Link to="/guides">Guides</Link>
+        </div>
       </section>
+
+      <button className="home-ask" type="button" onClick={() => navigate("/assistant")}>
+        <span>Ask GlobeReady</span>
+        <small>Questions about your documents, deadlines, or recent updates</small>
+      </button>
+
       <Disclaimer compact />
     </div>
   );
