@@ -13,9 +13,31 @@ import { fetchSource } from "./news/fetch-source.js";
 import { createSnapshotReader } from "./news/snapshots.js";
 import { createNewsSync } from "./news/sync-news.js";
 import { createDemoStore } from "./store.js";
+import { assertDemoModeValue, ConfigError, isDemoMode } from "./runtime-config.js";
 
 const port = Number(process.env.PORT || 5051);
-const firebase = createFirebaseAdmin();
+
+function refuseToStart(message) {
+  console.error(`GlobeReady refused to start: ${message}`);
+  process.exit(1);
+}
+
+let firebase;
+try {
+  assertDemoModeValue(process.env);
+  firebase = createFirebaseAdmin();
+} catch (error) {
+  refuseToStart(error instanceof ConfigError ? error.message : "configuration could not be loaded.");
+}
+
+if (firebase) {
+  try {
+    await firebase.auth.listUsers(1);
+  } catch {
+    refuseToStart("Firebase Admin could not reach Firebase Auth with the configured credentials.");
+  }
+}
+
 const fallback = createAssistant();
 const store = firebase?.firestore ? createFirestoreStore(firebase.firestore) : createDemoStore();
 const assistant = createGeminiAssistant({
@@ -36,6 +58,7 @@ const newsSync = createNewsSync({
   },
 });
 const app = createApp({
+  demoMode: isDemoMode(process.env),
   auth: firebase?.auth || null,
   store,
   assistant,

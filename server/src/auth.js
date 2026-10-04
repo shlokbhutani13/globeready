@@ -1,7 +1,12 @@
-export function createAuthMiddleware(adminAuth) {
+export function createAuthMiddleware(adminAuth, { demoMode = false } = {}) {
   return async function authenticate(request, response, next) {
     try {
       if (!adminAuth) {
+        if (!demoMode) {
+          return response.status(401).json({
+            error: { code: "authentication_unavailable", message: "Authentication is not configured for this server." },
+          });
+        }
         const uid = request.get("x-demo-user");
         if (!uid) {
           return response.status(401).json({

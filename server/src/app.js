@@ -44,6 +44,7 @@ export function createApp({
   reminders = createReminderService({ store, clock }),
   account = {},
   recentLoginWindowMs,
+  demoMode = process.env.DEMO_MODE === "true",
 } = {}) {
   const app = express();
   const allowedOrigin = process.env.CLIENT_URL || "http://localhost:5173";
@@ -54,12 +55,12 @@ export function createApp({
   app.get("/api/health", (_request, response) => {
     response.json({
       ok: true,
-      mode: auth ? "live" : "demo",
+      mode: auth ? "live" : demoMode ? "demo" : "demo-disabled",
       services: { auth: Boolean(auth), ai: assistant?.mode === "live" },
     });
   });
 
-  const authenticate = createAuthMiddleware(auth);
+  const authenticate = createAuthMiddleware(auth, { demoMode });
   const requireAdmin = createAdminMiddleware({ adminUids });
   const requireScheduler = createSchedulerMiddleware(schedulerSecret);
   app.use("/api/profile", authenticate, profileRouter(store));

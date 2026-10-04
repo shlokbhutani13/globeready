@@ -57,7 +57,9 @@ cd server && npm ci && npm run dev
 cd client && npm ci && npm run dev
 ```
 
-Open `http://localhost:5173` and choose **Continue in demo mode**. Demo mode uses sample data in memory and needs no Firebase or Gemini credentials. Live accounts, documents, and deletion require Firebase configuration.
+For local demo mode only, set `DEMO_MODE=true` and `NODE_ENV=development` in `server/.env` before starting the API. Demo mode uses sample data in memory, accepts an `x-demo-user` header as the identity, and needs no Firebase or Gemini credentials. Without `DEMO_MODE=true` the API refuses to start unless Firebase credentials are configured, and it never falls back to demo identities.
+
+Open `http://localhost:5173` and choose **Continue in demo mode**. Live accounts, documents, and deletion require Firebase configuration.
 
 ## Verification
 

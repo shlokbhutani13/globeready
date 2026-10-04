@@ -82,9 +82,10 @@ Server variables (see `server/.env.example`):
 | --- | --- | --- |
 | `PORT` | No (5051) | Listen port |
 | `CLIENT_URL` | Yes in production | The only browser origin allowed by CORS |
-| `FIREBASE_PROJECT_ID` | Yes for live mode | Admin SDK project |
-| `FIREBASE_CLIENT_EMAIL` | Yes for live mode | Service account email |
-| `FIREBASE_PRIVATE_KEY` | Yes for live mode | Service account key; keep `\n` escapes |
+| `DEMO_MODE` | Keep `false` or unset | Only `true` enables the demo identity header. Refused when `NODE_ENV=production`. The image sets `NODE_ENV=production`. |
+| `FIREBASE_PROJECT_ID` | Yes | Admin SDK project. Required outside demo mode. |
+| `FIREBASE_CLIENT_EMAIL` | Optional | Explicit service-account email. Set with `FIREBASE_PRIVATE_KEY`, or leave both unset to use Application Default Credentials (for example an attached Cloud Run service account). |
+| `FIREBASE_PRIVATE_KEY` | Optional | Explicit service-account key, with `\n` escapes. Prefer Application Default Credentials. |
 | `FIREBASE_STORAGE_BUCKET` | Yes for documents and deletion | Bucket name; account deletion removes `users/{uid}/` objects from it |
 | `ADMIN_UIDS` | Optional | Comma-separated UIDs allowed to review news |
 | `GEMINI_API_KEY` | Optional | Generated document answers. Without it, answers show "unavailable" |
@@ -107,7 +108,7 @@ Check the API:
 curl https://your-api.example/api/health
 ```
 
-The response reports `services.auth: true` when Firebase Admin is configured, and `services.ai: true` only when Gemini is configured.
+The response reports `services.auth: true` when Firebase Admin is configured. `mode` is `live`, `demo`, or `demo-disabled`; a production deployment must report `live`. A server without Firebase credentials does not start.
 
 ## 4. Client configuration
 
