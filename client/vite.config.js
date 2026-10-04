@@ -7,6 +7,11 @@ export default defineConfig(({ mode, command }) => {
   }
   return {
     plugins: [react()],
+    // Build-time switch for the local emulator wiring. It is false in every build that is not local-user, so the
+    // emulator addresses are removed from production bundles rather than only guarded at runtime.
+    define: {
+      __GLOBEREADY_LOCAL_USER__: JSON.stringify(mode === 'local-user'),
+    },
     build: {
       chunkSizeWarningLimit: 650,
       rollupOptions: {

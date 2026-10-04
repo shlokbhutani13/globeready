@@ -5,11 +5,15 @@ import {
 import { deleteObject, ref, uploadBytesResumable } from "firebase/storage";
 import { db, storage, storageAvailable } from "./firebase";
 
+// Storage rules accept at most 200 characters per file name, starting with a letter or digit. The base name is
+// capped so a long original name cannot make a valid upload fail at the rules.
+const maxBaseNameLength = 120;
+
 export function sanitizeFilename(name) {
   const parts = name.split(".");
-  const extension = parts.length > 1 ? `.${parts.pop().replace(/[^a-z0-9]/gi, "")}` : "";
-  const base = parts.join(".").replace(/[^a-z0-9]+/gi, "_").replace(/^_+|_+$/g, "");
-  return `${base || "document"}${extension.toLowerCase()}`;
+  const extension = parts.length > 1 ? `.${parts.pop().replace(/[^a-z0-9]/gi, "").slice(0, 10)}` : "";
+  const base = parts.join(".").replace(/[^a-z0-9]+/gi, "_").replace(/^_+|_+$/g, "").slice(0, maxBaseNameLength);
+  return `${base.replace(/^_+|_+$/g, "") || "document"}${extension.toLowerCase()}`;
 }
 
 export function documentStoragePath(uid, documentId, filename) {

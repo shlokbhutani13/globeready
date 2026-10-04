@@ -33,8 +33,8 @@ export const auth = app ? getAuth(app) : null;
 export const db = app ? getFirestore(app) : null;
 export const storage = app ? getStorage(app) : null;
 
-// Ports match firebase.json and scripts/local-user; used only in local-user mode.
-if (localUserMode && app) {
+// Ports match firebase.json and scripts/local-user. The build-time constant removes this block from non-local builds.
+if (__GLOBEREADY_LOCAL_USER__ && localUserMode && app) {
   connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
   connectFirestoreEmulator(db, "127.0.0.1", 8089);
   connectStorageEmulator(storage, "127.0.0.1", 9199);
