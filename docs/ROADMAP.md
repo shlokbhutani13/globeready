@@ -13,13 +13,13 @@
 
 ## Next release
 
-- Account deletion and configurable document-retention controls
-- University-specific onboarding packs
-- In-app deadline reminders and calendar export
-- Assistant conversation history
-- Document expiration notifications
-- Firebase emulator integration tests
+- Scheduled source synchronization, once a scheduler is approved (see `docs/RELEASE_READINESS.md`)
+- Scheduled deletion of expired source snapshots
 - Credentialed synthetic-document tests against the chosen deployment
+- Live verification of Google sign-in and the deletion path (`DEPLOYMENT.md`, section 9)
+- University-specific onboarding packs
+- Calendar export
+- Document expiration notifications
 
 ## Later
 

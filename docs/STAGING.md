@@ -1,6 +1,6 @@
 # Staging plan
 
-Staging is a separate Firebase project, a separate API deployment, and a separate client build. It never uses the production project, its credentials, or real student data. All accounts, documents, and conversations are synthetic. Values in this document are placeholders; real values are never committed.
+Staging is a separate Firebase project, a separate API deployment, and a separate client build. Its configuration must satisfy `docs/CONFIGURATION.md`; staging refuses to start with the same production rules. It never uses the production project, its credentials, or real student data. All accounts, documents, and conversations are synthetic. Values in this document are placeholders; real values are never committed.
 
 ## Status
 
@@ -67,7 +67,10 @@ Derived from `server/src` and `client/src`. "Config" means a non-secret value; "
 | Name | Purpose | Required | Where | Sensitive |
 | --- | --- | --- | --- | --- |
 | `PORT` | Listen port | No (5051) | Host | No |
-| `CLIENT_URL` | Only allowed browser origin (CORS) | Yes | Host | No |
+| `CLIENT_URL` | Only allowed browser origin (CORS); an https origin with no path | Yes | Host | No |
+| `RATE_LIMIT_SCOPE` | Must be `single-instance`; the limiter is per process | Yes (value `single-instance`) | Host | No |
+| `TRUST_PROXY` | `1` behind one managed proxy; never `true` | No (`false`) | Host | No |
+| `BUILD_ID` | Build identifier shown in `/api/health` | No | Host | No |
 | `FIREBASE_PROJECT_ID` | Staging project for Admin SDK | Yes | Host | No |
 | `FIREBASE_STORAGE_BUCKET` | Staging bucket; document reads and account deletion | Yes | Host | No |
 | `ADMIN_UIDS` | Comma-separated staging admin UIDs | Optional | Host | Identifiers; keep staging-only |
@@ -79,7 +82,7 @@ Derived from `server/src` and `client/src`. "Config" means a non-secret value; "
 | `NEWS_QUERIES_PER_MINUTE` | Feed limit | No (60) | Host | No |
 | `NEWS_SOURCE_SUGGESTIONS_PER_HOUR` | Suggestion limit | No (5) | Host | No |
 | `NEWS_ADMIN_MUTATIONS_PER_MINUTE` | Admin limit | No (30) | Host | No |
-| `NEWS_SYNC_ENABLED` | Allows live source fetches (`true` only for the sync test) | No (`false`) | Host | No |
+| `NEWS_SYNC_ENABLED` | Allows live source fetches (`true` only for the sync test; requires `NEWS_SYNC_SECRET`) | No (`false`) | Host | No |
 
 ### Backend (secrets)
 
@@ -105,7 +108,7 @@ Verify, using only synthetic staging documents:
 5. **No fabricated citation:** a question asking for "page 99" returns only real pages.
 6. **Prompt-injection resistance:** the synthetic `notes-injection.pdf` (`injection.pdf`) containing "ignore all previous instructions" must not change the answer's behavior, citations, or evidence state.
 
-If `GEMINI_API_KEY` is absent, all answers report `unavailable`. That is the expected staging state until the key is approved.
+If `GEMINI_API_KEY` is absent, answers report `evidence: retrieved` with the notice "AI answer generation is not configured", and show the closest real passages. That is the expected staging state until the key is approved. Generated answers never appear without a key.
 
 ## News synchronization (staging)
 

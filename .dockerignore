@@ -1,8 +1,6 @@
-node_modules
-npm-debug.log
-dist
-.git
-.gitignore
-README.md
-.env
-.DS_Store
+# Allowlist: the build context contains only what the production image needs.
+# Everything else is excluded by default, including .git, .claude, .local, .env files, client code, docs, and tests.
+*
+!server/package.json
+!server/package-lock.json
+!server/src

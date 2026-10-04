@@ -9,7 +9,7 @@ GlobeReady helps international students in the United States follow verified off
 
 GlobeReady provides general information, not legal, immigration, tax, health, or financial advice. Confirm decisions with your Designated School Official (DSO), your university, or the relevant government agency.
 
-> **Release status:** not yet released. See [DEPLOYMENT.md](DEPLOYMENT.md) for the launch scope, limitations, and the steps required before release.
+> **Release status:** not released. Nothing has been deployed. The current production-readiness position and its open items are in [docs/RELEASE_READINESS.md](docs/RELEASE_READINESS.md).
 
 ## What the launch includes
 
@@ -41,25 +41,35 @@ The client reads a student's own records through Firebase rules. The API verifie
 
 ## Run locally
 
-Requirements: Node.js 22 (`.nvmrc`).
+Requirements: Node.js 22 (`.nvmrc`). Local-user mode also needs Java 21 for the Firebase emulators.
+
+GlobeReady has three modes. They are mutually exclusive and documented in [docs/MODES.md](docs/MODES.md):
+
+| Mode | Start | What it is |
+| --- | --- | --- |
+| Demo | `npm run demo` in `server/` and `client/` | Sample data in memory; no account, no uploads. Development only. |
+| Local-user | `npm run local-user` in `client/` | Real accounts, rules, uploads, and document reading, on the Firebase emulators on this computer. Persists across restarts. Development only. |
+| Production | Not started locally | Real Firebase only. Refuses to start without its full configuration. See [docs/CONFIGURATION.md](docs/CONFIGURATION.md). |
+
+Local-user mode, from a fresh clone:
 
 ```bash
-git clone https://github.com/shlokbhutani13/globeready.git
-cd globeready
-cp server/.env.example server/.env
-cp client/.env.example client/.env.local
+cd server && npm ci && cd ../client && npm ci
+npm run local-user        # starts the emulators, seeds two synthetic accounts, starts the API and the app
 ```
 
-Start the API in one terminal and the client in another:
+Open `http://127.0.0.1:5173`. The seeded accounts and their passwords are in `.local/credentials.json` (ignored by git).
+The Google button is a mock identity from the emulator; it is not your Google account. Stop with `npm run local-user:stop`,
+and delete all local data with `npm run local-user:reset`. Details are in [docs/OPERATIONS.md](docs/OPERATIONS.md).
+
+Demo mode:
 
 ```bash
-cd server && npm ci && npm run dev
-cd client && npm ci && npm run dev
+cd server && npm run demo        # terminal 1
+cd client && npm run demo        # terminal 2 (uses client/.env.demo, which contains no credentials)
 ```
 
-For explicit local demo mode, run `npm run demo` in both `server/` and `client/`. Demo mode uses sample data in memory, accepts an `x-demo-user` header as the identity, and needs no Firebase or Gemini credentials. It is development-only; without both explicit demo commands the client sends no demo identity and the API never falls back to one.
-
-Open `http://localhost:5173` and choose **Continue in demo mode**. Live accounts, documents, and deletion require Firebase configuration.
+Demo mode accepts the `x-demo-user` header as the identity. Production refuses it.
 
 ## Verification
 
@@ -68,24 +78,35 @@ cd server && npm ci && npm test && npm run lint && npm run test:rules
 cd client && npm ci && npm test && npm run build
 ```
 
-`npm run test:rules` starts the Firestore, Auth, and Storage emulators (requires Java 21). It covers the Firestore rules, recursive account deletion, and the account deletion path with real Auth tokens and Storage objects. GitHub Actions runs these checks on every push and pull request.
+`npm run test:rules` starts the Firestore, Auth, and Storage emulators (requires Java 21). It covers the security rules,
+recursive account deletion, the account path with real Auth tokens and Storage objects, and the source-snapshot commit
+under a lease. The production image is checked with `scripts/release/docker-fail-closed.sh <image>`. GitHub Actions runs
+all of these on every push and pull request. Nothing is deployed by CI.
 
 ## Security and privacy
 
-- Protected API routes derive identity from verified Firebase ID tokens. Request bodies cannot select another student.
+- Protected API routes derive identity from verified Firebase ID tokens, with revocation checks. Request bodies cannot select another student.
 - Firestore and Storage rules restrict each student's records to their own UID. Retrieval chunks are server-only.
-- Uploaded files are checked by type, size, and private path, both at upload and again before reading.
+- Uploaded files are checked by declared type, real file signature, size, and exact private path, both at upload and again before reading.
 - A university domain is registered only as pending until an administrator verifies it.
-- Account deletion requires a recent sign-in and removes the student's stored data.
+- Account deletion requires a recent sign-in and removes the student's stored data, in an order that can be retried.
 - Generated answers are limited to retrieved evidence, and definitive legal or status conclusions are replaced with a referral.
+- Production refuses to start without its full configuration, and never falls back to demo or local-user behavior.
 
 Read [SECURITY.md](SECURITY.md) and [docs/PRIVACY.md](docs/PRIVACY.md) before configuring real identity documents.
 
 ## Documentation
 
-- [Deployment and release checklist](DEPLOYMENT.md)
+- [Modes: demo, local-user, and production](docs/MODES.md)
+- [Configuration contract](docs/CONFIGURATION.md)
+- [Operations: startup, shutdown, health, logging, local state](docs/OPERATIONS.md)
+- [Deployment procedure](DEPLOYMENT.md)
+- [Rollback and recovery](docs/ROLLBACK.md)
+- [Smoke tests](docs/SMOKE_TESTS.md)
+- [Release readiness](docs/RELEASE_READINESS.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Privacy model](docs/PRIVACY.md)
+- [Security policy](SECURITY.md)
 - [Roadmap](docs/ROADMAP.md)
 - [Contributing](CONTRIBUTING.md)
 

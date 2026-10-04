@@ -1,220 +1,226 @@
 # Deployment
 
-This guide describes the reduced launch architecture: one responsive React client, one Express API, Firebase Authentication, Firestore, and Cloud Storage. It does not deploy anything by itself. Every command below changes a real Firebase project or host, so run each step only after you approve that target.
+This guide is the procedure for a future production deployment of the launch architecture: one React client (static
+build), one Express API (container image), Firebase Authentication, Firestore, and Cloud Storage. **Nothing in this
+repository deploys anything.** Each step below changes a real project, host, or bill. Run a step only after the target
+and its cost have been approved in writing.
+
+The required settings are in `docs/CONFIGURATION.md`. The modes are explained in `docs/MODES.md`. Operations, rollback,
+and smoke tests are in `docs/OPERATIONS.md`, `docs/ROLLBACK.md`, and `docs/SMOKE_TESTS.md`. The readiness position is
+recorded in `docs/RELEASE_READINESS.md`.
 
 ## Runtime
 
 | Component | Version | Source of truth |
 | --- | --- | --- |
-| Node.js | 22 LTS (`>=22.12.0`) | `.nvmrc`, `engines` in both packages, CI, `Dockerfile` (`node:22-alpine`) |
-| npm | ships with Node 22 | `package-lock.json` in each package |
-| Java | 21 (only for emulator tests) | CI `emulators` job |
+| Node.js | 22 LTS (`>=22.12.0`) | `.nvmrc`, `engines` in both packages |
+| Container base | `node:22.23.3-alpine`, pinned by digest | `Dockerfile` |
+| npm | Ships with Node 22 | `package-lock.json` in each package |
+| Java 21 | Emulator tests only | CI `emulators` job |
 
-Node 24 also satisfies the dependency engine ranges, but CI and the Docker image are pinned to 22. Use 22 for release builds.
+Use Node 22 for release builds. CI and the image are pinned to it.
 
-## What launches
+## What launches, and what does not
 
 | Area | Launch state | Notes |
 | --- | --- | --- |
-| Sign in (email/password, Google) | Works | Firebase Authentication. Google re-authentication is used before account deletion. |
-| Profile, university, time zone | Works | University domains are only ever registered as **pending** until an administrator verifies them. |
-| Updates feed, save/unsave, freshness | Works with a limitation | Shows only verified, published items. **Needs scheduled source sync** (section 5) or the feed stays empty. |
-| Tasks, deadlines, calendar | Works | Calendar is a month view with day filtering. |
-| Reminders and notification inbox | Works | In-app only. No browser push, no service worker. |
-| Text-based PDF upload and extraction | Works | Real text extraction with page references. |
-| Scanned or image-only PDFs | **Not supported** | Shown as "no readable text" with the upload kept. Do not advertise scanned-PDF reading. |
-| Malformed, password-protected, or blank PDFs | Explicit failure state | Shown as "could not be read" or "no readable text"; the upload is kept and can be deleted. |
-| PNG/JPEG printed-text OCR | Works with limitations | Local OCR of printed text. Handwriting is **not supported**; low-resolution, skewed, or very large photos may fail. Failures keep the upload and offer retry. |
-| Document-grounded answers | Works when Gemini is configured | Without `GEMINI_API_KEY`, answers show an explicit "unavailable" notice. Answers never fall back to invented guidance. |
-| Conversation history | Works | Per student. |
-| Data export | Works | JSON download of the signed-in student's data. |
-| Account deletion | Works with a verified path in emulators; live Firebase run still required | Requires a recent Google sign-in or a fresh sign-in (5 minutes). |
-| Admin news review | Works for listed administrators | Approve/reject is bound to the committed source snapshot. |
-| Email reminders and digests | **Not available** | Preferences are saved; no email is sent. Do not advertise email. |
+| Email/password and Google sign-in | Works once configured | Google sign-in is verified only in a live project (see "Live verification"). |
+| Profile, university, time zone | Works | A `.edu` domain is stored as **pending** until an administrator verifies it. |
+| Tasks, calendar, reminders, inbox | Works | In-app only. No email, no browser push. |
+| Text PDFs (page-referenced) | Works | Up to 10 MB and 100 pages. |
+| PNG/JPEG printed-text OCR | Works with limits | Handwriting, low-resolution, and very large photos may fail; the upload is kept with a retry. |
+| Scanned or image-only PDFs | Not supported | Reported as "no readable text"; the upload is kept. |
+| Document answers | Retrieved passages without Gemini; generated answers with a key | Answers never fall back to invented guidance. |
+| Updates from verified sources | **Waiting on a scheduler** | Live publication needs an approved scheduler (section 5). Each university source also needs an administrator to verify it. Until then the feed shows what has been reviewed, with an honest freshness state. |
+| Data export and account deletion | Works | Deletion needs a recent sign-in (5 minutes). |
+| Admin news review | Works for listed administrators | Approval is bound to the committed source snapshot and its revision. |
 
-## Intentionally not part of launch
+## 1. Firebase project (provisioning required)
 
-- Browser push notifications, service workers, and push subscriptions (a legacy `pushSubscriptions` subcollection is deleted with accounts).
-- Vector embeddings and vector search. Retrieval is deterministic term matching over the student's own chunks.
-- A separate scheduled-functions package. Source sync runs from the API when a scheduler calls it.
-- Email delivery provider integration.
-- Scanned-PDF OCR, handwriting recognition, layout analysis, and multi-language OCR.
-- Large university catalogues. Universities enter through verified `.edu` sources reviewed by an administrator.
-
-## 1. Firebase project
-
-1. Create or select a Firebase project. Record the project ID.
-2. Authentication: enable **Email/Password** and **Google**. Under Settings > Authorized domains, add the client's final domain.
-3. Firestore: create the database in production mode.
-4. Storage: create a bucket. Per Firebase's Storage plan FAQ (September 2024), provisioning a new default bucket requires the Blaze pay-as-you-go plan, and the Spark plan cannot use Cloud Storage. Legacy `appspot.com` buckets created before that date keep a no-cost tier. Set a budget alert before enabling Blaze.
-5. Deploy the checked-in rules and indexes to the chosen project only:
+1. Create or select a Firebase project. Record its ID. Do not reuse a project that holds anything else.
+2. Authentication: enable **Email/Password** and **Google**. Under Authorized domains, add the client's final domain only.
+3. Firestore: create the database in production mode, in a region chosen once.
+4. Cloud Storage: create the bucket. A new default bucket requires the Blaze plan (Firebase's Storage plan FAQ).
+   Set a budget and alert before enabling billing.
+5. Deploy the checked-in rules and indexes to that project only:
 
 ```bash
 firebase use YOUR_PROJECT_ID
 firebase deploy --only firestore:rules,firestore:indexes,storage
 ```
 
-`firestore.indexes.json` declares vector indexes on `ragChunks.embedding`. Nothing writes embeddings at launch (see section 6), so these indexes are inert, but Firestore will still create them on deploy. Remove them from `firestore.indexes.json` in a follow-up that also updates the tests that assert their presence.
+Confirm `firebase use` before each deploy. The repository has no `.firebaserc`, so the target must be selected every time.
 
-Rules to verify after deploy:
-- `firestore.rules` denies all client access to `newsItemState`, `reviewQueue`, `newsReviewAudits`, `newsSources`, `newsRuns`, `newsLeases`, and `ragChunks`.
-- `storage.rules` allows reads and deletes only for the owner of `users/{uid}/documents/{docId}/{fileName}` (exactly two segments below `documents/`, with restricted names). Creates and updates are allowed only for that owner, only as PDF, PNG, or JPEG, and only up to 10 MB. Storage rules are covered by the emulator suite.
+After deploy, confirm with a synthetic account:
 
-## 2. Service account (API)
+- `firestore.rules` denies all client access to `newsItemState`, `reviewQueue`, `newsReviewAudits`, `newsSources`,
+  `newsRuns`, `newsLeases`, `newsSourceSnapshots`, and `ragChunks`.
+- `storage.rules` allows reads and deletes only for the owner of `users/{uid}/documents/{docId}/{fileName}`, and creates
+  or updates only for PDF, PNG, or JPEG up to 10 MB.
 
-Create a dedicated service account for the API. Grant only what the code uses. These roles are the recommended minimum; confirm them in your project before release, because the emulator tests cannot prove IAM bindings:
+`firestore.indexes.json` declares vector indexes on `ragChunks.embedding`. Nothing writes embeddings, so they are inert,
+but Firestore creates them on deploy. Removing them is a follow-up that also updates the tests that assert them.
+
+## 2. Service account (provisioning required)
+
+Create one service account for the API. Grant only what the code uses. Confirm these roles in the live project, since
+the emulator tests cannot prove IAM bindings:
 
 | Need | Recommended role |
 | --- | --- |
-| Verify ID tokens; delete Auth users during account deletion | Firebase Authentication Admin |
-| Read/write Firestore, including recursive account deletion | Cloud Datastore User (Firestore) |
-| Read document bytes, read metadata, delete a user's objects | Storage Object Admin on the GlobeReady bucket only |
+| Verify ID tokens (with revocation checks); delete Auth users in account deletion | Firebase Authentication Admin |
+| Read and write Firestore, including recursive account deletion | Cloud Datastore User |
+| Read document bytes and metadata; delete a student's objects | Storage Object Admin, on the GlobeReady bucket only |
 
-Store the private key in the host's encrypted secret settings. Do not commit it.
+Use Application Default Credentials on the platform (an attached service account). If a key file is unavoidable, store
+it only in the platform's secret manager, and never in the repository or the image.
 
-## 3. API configuration
+## 3. API (provisioning required)
 
-Deploy the repository `Dockerfile`, or the `server/` package on a Node 22 host. The image starts `node src/index.js` on `PORT`.
-
-Server variables (see `server/.env.example`):
-
-| Variable | Required | Purpose |
-| --- | --- | --- |
-| `PORT` | No (5051) | Listen port |
-| `CLIENT_URL` | Yes in production | The only browser origin allowed by CORS |
-| `DEMO_MODE` | Keep `false` or unset | Only `true` enables the demo identity header. Refused when `NODE_ENV=production`. The image sets `NODE_ENV=production`. |
-| `FIREBASE_PROJECT_ID` | Yes | Admin SDK project. Required outside demo mode. |
-| `FIREBASE_CLIENT_EMAIL` | Optional | Explicit service-account email. Set with `FIREBASE_PRIVATE_KEY`, or leave both unset to use Application Default Credentials (for example an attached Cloud Run service account). |
-| `FIREBASE_PRIVATE_KEY` | Optional | Explicit service-account key, with `\n` escapes. Prefer Application Default Credentials. |
-| `FIREBASE_STORAGE_BUCKET` | Yes for documents and deletion | Bucket name; account deletion removes `users/{uid}/` objects from it |
-| `ADMIN_UIDS` | Optional | Comma-separated UIDs allowed to review news |
-| `GEMINI_API_KEY` | Optional | Generated document answers. Without it, answers show "unavailable" |
-| `GEMINI_MODEL` | No (`gemini-2.5-flash`) | Answer model |
-| `DOCUMENT_OCR_ENABLED` | No (`true`) | Set `false` to disable local image OCR |
-| `GEMINI_EMBEDDINGS_ENABLED` | Keep `false` | Inert at launch; not supported |
-| `AI_REQUESTS_PER_MINUTE` | No (12) | Per-user, per-instance limit on AI routes |
-| `NEWS_QUERIES_PER_MINUTE`, `NEWS_SOURCE_SUGGESTIONS_PER_HOUR`, `NEWS_ADMIN_MUTATIONS_PER_MINUTE` | No | Route limits |
-| `NEWS_SYNC_ENABLED` | Keep `false` until section 5 | Enables live source fetches |
-| `NEWS_SYNC_SECRET` | Required with sync | Bearer secret for the internal sync endpoint, at least 16 characters |
-
-Notes:
-- Local OCR runs inside the API process and needs memory. Measure peak memory with a real photo before choosing an instance size. Concurrent OCR is serialized, with a 45-second limit per image.
-- The API keeps per-user rate limits in process memory. Run one instance, or move the limiter to a shared store before scaling out.
-- `GEMINI_API_KEY` sends retrieved document excerpts to Google for answer generation. That is an external processing step; see `docs/PRIVACY.md`.
-
-Check the API:
+Build and publish the image from the repository root:
 
 ```bash
-curl https://your-api.example/api/health
+docker build -t YOUR_REGISTRY/globeready-api:COMMIT_SHA .
 ```
 
-The response reports `services.auth: true` when Firebase Admin is configured. `mode` is `live`, `demo`, or `demo-disabled`; a production deployment must report `live`. A server without Firebase credentials does not start.
+The image is built in two stages. Production dependencies are installed in a build stage from the lockfile. The
+runtime stage contains only the pinned Node binary, those production modules, and `server/src`. The package managers
+bundled in the base image (npm, npx, corepack, yarn) are removed, because the process only runs `node`. The image runs
+as the unprivileged `node` user, listens on `HOST=0.0.0.0` and `PORT` (default 5051), sets `NODE_ENV=production`, and
+checks liveness with `/api/health/live`. Record the image digest of each release. CI scans the image with a pinned
+Trivy release and fails on any HIGH or CRITICAL finding.
 
-## 4. Client configuration
+Set the production variables from `docs/CONFIGURATION.md`. The minimum is:
 
-Deploy `client/` as a static Vite build. `client/vercel.json` and `firebase.json` both rewrite unknown paths to `index.html`.
-
-Build variables (see `client/.env.example`):
-
-| Variable | Purpose |
+| Variable | Value |
 | --- | --- |
-| `VITE_API_URL` | Public API origin, for example `https://your-api.example` |
-| `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_STORAGE_BUCKET`, `VITE_FIREBASE_APP_ID` | Firebase web-app configuration. These identify the project; rules enforce access. |
-| `VITE_DOCUMENT_UPLOADS_ENABLED` | `true` only after Storage rules are deployed and the API is configured |
+| `FIREBASE_PROJECT_ID` | The project from section 1 |
+| `FIREBASE_STORAGE_BUCKET` | The bucket from section 1 |
+| `CLIENT_URL` | The https origin of the client, for example `https://app.YOUR-DOMAIN` |
+| `RATE_LIMIT_SCOPE` | `single-instance` (run exactly one instance; see below) |
+| `TRUST_PROXY` | `1` behind one managed proxy, otherwise `false` |
+| `BUILD_ID` | The commit SHA or release tag |
 
-For the second release, after the storage billing gate and synthetic-document checks pass, the upload build uses:
+Run exactly one instance, or deploy a shared rate-limit store first. The limiter counts per process, so two instances
+would double each student's budget. Set the platform's maximum instance count to `1`.
 
-```text
-VITE_DOCUMENT_UPLOADS_ENABLED=true
+The API refuses to start, and says why, if any requirement is missing, malformed, or still a placeholder. A server that
+starts is reporting ready only after Firebase Auth has answered. Check:
+
+```bash
+curl https://api.YOUR-DOMAIN/api/health        # mode production, services.auth true
+curl https://api.YOUR-DOMAIN/api/health/ready  # ready
 ```
 
-Build and deploy only after reviewing the target:
+Keep these off in the first deployment: `NEWS_SYNC_ENABLED` (section 5), `GEMINI_API_KEY` (section 6), and the document
+upload switch in the client (section 4).
+
+Local OCR runs inside the API process. Measure its memory and first-request latency on the real host before choosing
+the instance size (`docs/STAGING.md` has the measurement procedure and the earlier unexplained slow run).
+
+## 4. Client (provisioning required)
+
+Build the static client. Production builds require an https `VITE_API_URL` and have no localhost fallback:
 
 ```bash
 cd client
 npm ci
+VITE_API_URL=https://api.YOUR-DOMAIN \
+VITE_FIREBASE_API_KEY=... VITE_FIREBASE_AUTH_DOMAIN=... VITE_FIREBASE_PROJECT_ID=... \
+VITE_FIREBASE_STORAGE_BUCKET=... VITE_FIREBASE_APP_ID=... \
+VITE_DOCUMENT_UPLOADS_ENABLED=false \
 npm run build
 ```
 
-Firebase Hosting (optional): from the repository root, `firebase use YOUR_PROJECT_ID && firebase deploy --only hosting`. The hosting config serves `client/dist`.
+The build refuses `VITE_DEMO_MODE` and `VITE_LOCAL_USER_MODE`, and it removes the emulator wiring from the bundle. Host
+`client/dist` with `firebase.json` hosting (`firebase deploy --only hosting`) or any static host that rewrites unknown
+paths to `index.html`. `client/vercel.json` provides that rewrite for Vercel.
 
-## 5. Source synchronization (required for the Updates promise)
+Set `VITE_DOCUMENT_UPLOADS_ENABLED=true` only in a later release, after section 1's rules are deployed and the
+synthetic-document checks pass.
 
-The feed shows only items that were published from a verified source. With `NEWS_SYNC_ENABLED=false`, no source is fetched and the feed stays empty. To launch Updates:
+## 5. Source synchronization (not yet operational)
 
-1. Set `NEWS_SYNC_ENABLED=true` and `NEWS_SYNC_SECRET` in the API environment.
-2. Run a dry run first from a scheduler or a trusted shell:
+Live publication is fail-closed. It does not run until all of the following are done:
+
+1. **Snapshot commits**: implemented. Source text is committed in Firestore under the same lease that fences the
+   update, in one transaction (`newsSourceSnapshots`, server-only).
+2. **Robots policy**: implemented. University sources read `robots.txt` through the same SSRF-safe fetcher. A source
+   whose robots file is missing is allowed; one that cannot be read, or that disallows the path, is refused.
+3. **Administrator verification**: each source must be verified and enabled through the admin screen. University
+   sources start as `verification-pending`.
+4. **A scheduler**: none is provided. Invoke the sync endpoint from a scheduler you approve, at the cadence in
+   `server/src/news/default-sources.js`. Do not use a scheduled function without approval.
+
+When those are approved, the sequence is:
 
 ```bash
-curl -X POST https://your-api.example/api/internal/news/sync \
+# Set NEWS_SYNC_ENABLED=true and NEWS_SYNC_SECRET (16+ characters) in the host's secret store.
+curl -X POST https://api.YOUR-DOMAIN/api/internal/news/sync \
   -H "Authorization: Bearer $NEWS_SYNC_SECRET" -H "Content-Type: application/json" \
   -d '{"sourceIds":["federal-register"],"dryRun":true}'
 ```
 
-3. Schedule the same call with `dryRun:false` at the cadence in the source registry (`server/src/news/default-sources.js`). Use an external scheduler; GlobeReady does not ship a scheduled-functions package.
-4. Confirm with `GET /api/news` that `sourceHealth.state` moves from `not-checked` to `current`.
+Run a dry run first, then one live run, then confirm with `GET /api/news` that `sourceHealth.state` moves from
+`not-checked` to `current`. A source whose checks stop is reported as **delayed** once it is older than twice its
+cadence. It is never shown as "no update".
 
-Only sources marked `verified` and `enabled` are fetched. University sources stay pending until an administrator verifies them through the admin screen.
+Only sources that are `verified` and `enabled` are fetched.
 
-## 6. Gemini configuration
+## 6. Gemini (optional, provisioning and approval required)
 
-- Answers: set `GEMINI_API_KEY` and optionally `GEMINI_MODEL`. Retrieved excerpts are sent to Google for each answer. Excerpts are fenced as untrusted data, and generated text is screened for definitive legal or status conclusions.
-- Embeddings: not used at launch. `GEMINI_EMBEDDINGS_ENABLED` must remain `false`.
+Set `GEMINI_API_KEY` in the host's secret store. Each answer then sends the question, minimal profile fields
+(visa type, journey stage, degree level, program, university), and up to six retrieved excerpts to Google. Read
+`docs/PRIVACY.md` first. Keep `GEMINI_EMBEDDINGS_ENABLED=false`; it is refused otherwise. Use a key with a spending
+limit, restricted to the Generative Language API, from a project that holds nothing else.
 
-## 7. Emulator and CI checks
+## 7. Verification before any deployment
 
-Run locally before any deployment (requires Java 21 for the emulators):
+Run these from a clean checkout of the commit to be released:
 
 ```bash
-cd server && npm ci && npm test && npm run lint && npm run test:rules
-cd ../client && npm ci && npm test && npm run build
+cd server && npm ci && npm test && npm run lint && npm run test:rules && npm audit --omit=dev --audit-level=moderate
+cd ../client && npm ci && npm test && npm run build && npm audit --omit=dev --audit-level=moderate
+cd .. && docker build -t globeready-api:ci . && scripts/release/docker-fail-closed.sh globeready-api:ci
 ```
 
-`npm run test:rules` starts the Firestore, Auth, and Storage emulators. It verifies the rules, recursive Firestore account deletion, and the full account deletion path with real Auth tokens and Storage objects, including the recent-sign-in refusal and partial-failure retry.
-
-CI (`.github/workflows/ci.yml`) runs the server suite, lint, syntax, and production audit; the emulator suite; and the client suite, build, and production audit. CI uses no production secrets.
+CI runs the same gates on every push: server, emulators, client, and the Docker image with its fail-closed matrix. CI
+uses no production secret, and no workflow deploys. Deployment stays manual.
 
 ## 8. Deployment sequence
 
-1. Confirm the CI run for the exact commit is green.
-2. Create the Firebase services (section 1) and deploy rules and indexes to the target project.
-3. Create the service account and grant the roles in section 2.
-4. Deploy the API with the variables in section 3. Keep `NEWS_SYNC_ENABLED=false` and `VITE_DOCUMENT_UPLOADS_ENABLED=false` for the first deployment.
-5. Run the smoke checklist below against the API.
-6. Deploy the client with `VITE_DOCUMENT_UPLOADS_ENABLED=false`. Complete the smoke checklist on the client.
-7. Enable uploads and the Gemini key in a second release after the synthetic-document checks pass.
-8. Enable source synchronization (section 5) after the dry runs show expected results.
+Derived from the architecture. Do not reorder without a reason.
 
-## 9. Smoke-test checklist
+1. CI is green for the exact commit. Record the commit and the image digest.
+2. Provision the Firebase project, Auth providers, Firestore, and Storage (section 1). Deploy rules and indexes.
+3. Create the service account and grant the roles (section 2).
+4. Deploy the API image with production variables and one instance (section 3). Confirm `/api/health/ready`.
+5. Run the read-only smoke checks against the API (`docs/SMOKE_TESTS.md`).
+6. Deploy the client with uploads disabled (section 4). Run the browser checks in `docs/SMOKE_TESTS.md`.
+7. In a second release, enable uploads, then the Gemini key, each after its checks pass.
+8. Enable source synchronization only after section 5's three conditions are met and the dry run is reviewed.
 
-Use a synthetic test account and synthetic documents only. Record the result of each step.
+## 9. Live verification (cannot be completed without a live project)
 
-- [ ] `GET /api/health` reports auth enabled.
-- [ ] A new account signs up, completes the profile, and the page refresh keeps it.
-- [ ] Entering a `.edu` domain shows the school as "verification pending", never "covered".
-- [ ] Tasks: create with a due date, edit, complete, and see the calendar day.
-- [ ] Notifications: an overdue task produces one reminder; a second check produces none.
-- [ ] With uploads enabled: a text-based PDF indexes; a printed-text PNG or JPEG indexes or shows a retry state; a scanned PDF shows "no readable text" and keeps the upload; a text file is refused.
-- [ ] A document question returns a citation with the page; an unrelated question says the evidence was not found.
-- [ ] A second test account cannot read the first account's documents, conversations, or export.
-- [ ] Export downloads JSON containing only the signed-in account's data.
-- [ ] Deletion from a fresh sign-in removes the account; the old token gets 401 afterwards. A stale sign-in is refused with a re-sign-in message.
-- [ ] A non-administrator receives 403 from `/api/admin/news/review`.
-- [ ] Updates show "source check delayed" when a verified source fails, and nothing claims completeness.
+Each of these needs the real services and a synthetic account. Record each result with its date.
+
+- Google sign-in through the real provider, including the consent screen and the authorized domain.
+- Storage upload, extraction, indexing, deletion, and the owner-only rules, against the real bucket.
+- Account deletion from a fresh sign-in, with the Auth, Firestore, and Storage results confirmed.
+- Revoked and disabled account behaviour (a disabled account's token must return 401).
+- Logs reach the chosen collector; `audit.*` events are visible.
+- Backup restore for Firestore and Storage, if the retention policy requires it.
 
 ## 10. Rollback
 
-- Client: redeploy the previous build artifact. Client changes hold no server state.
-- API: redeploy the previous image. Data written by the newer version (profile fields, `analysisError`, conversation messages) is read tolerantly by the older version.
-- Rules and indexes: roll back by redeploying the previous `firestore.rules` and `storage.rules` files. Do not delete indexes while queries depend on them.
-- Accounts: deletion is not reversible. Keep a documented retention and backup policy before enabling deletion for real users.
-- Source sync: set `NEWS_SYNC_ENABLED=false` to stop fetches immediately; the last published items remain visible with their freshness state.
+See `docs/ROLLBACK.md`. In short: redeploy the previous client build or image digest, keep the configuration values
+that were valid, and disable a feature with its switch before editing code.
 
-## 11. Manual work that cannot be automated here
+## 11. Work that needs a person or an approval
 
-- Create the Firebase project, billing, and budget alert.
-- Configure Authentication providers and authorized domains.
-- Grant the service-account roles in section 2 and verify them against a live project.
-- Run the deletion path once against a live project with a synthetic account.
-- Publish a privacy notice that covers Gemini answer processing and the local OCR processing (see `docs/PRIVACY.md`).
-- Choose a backup-retention policy for Firestore and Storage.
+- Creating the Firebase project and enabling billing, with a budget alert.
+- Configuring Authentication providers and authorized domains.
+- Granting and verifying the service-account roles against the live project.
+- The live verification in section 9.
+- Publishing a privacy notice that covers Gemini and OCR processing (`docs/PRIVACY.md`).
+- Choosing the backup-retention and deletion policy.

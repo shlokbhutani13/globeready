@@ -24,10 +24,11 @@ jobs:
         run: npm run lint
       - working-directory: server
         run: find src tests -name '*.js' -print0 | xargs -0 -n1 node --check
+      - run: find scripts -name '*.sh' -print0 | xargs -0 -n1 bash -n
       - working-directory: server
         run: npm test
       - working-directory: server
-        run: npm audit --omit=dev --audit-level=high
+        run: npm audit --omit=dev --audit-level=moderate
 
   emulators:
     name: Firestore, Auth, and Storage emulator tests
@@ -65,4 +66,28 @@ jobs:
       - working-directory: client
         run: npm run build
       - working-directory: client
-        run: npm audit --omit=dev --audit-level=high
+        run: npm audit --omit=dev --audit-level=moderate
+
+  docker:
+    name: Production image build and fail-closed matrix
+    runs-on: ubuntu-24.04
+    needs: [server, emulators, client]
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build the production image
+        run: docker build -t globeready-api:ci .
+      - name: Confirm the image runs as a non-root user with production mode set
+        run: |
+          docker run --rm --entrypoint sh globeready-api:ci -c 'test "$(id -u)" != "0" && test "$NODE_ENV" = "production"'
+      - name: Confirm the image contains no development or secret files
+        run: |
+          if docker run --rm --entrypoint sh globeready-api:ci -c 'test -e /app/.env -o -e /app/.local -o -e /app/.git -o -e /app/.claude -o -e /app/src/index.test.js'; then
+            echo "A development or secret path is present in the image."; exit 1
+          fi
+      - name: Run the production fail-closed matrix
+        run: scripts/release/docker-fail-closed.sh globeready-api:ci
+      - name: Scan the image for HIGH and CRITICAL vulnerabilities
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+            aquasec/trivy@sha256:6967db29ce5294d054121e94b3cb1262de858af63b4547bb1bade66a4306f2e4 \
+            image --quiet --exit-code 1 --severity HIGH,CRITICAL globeready-api:ci
