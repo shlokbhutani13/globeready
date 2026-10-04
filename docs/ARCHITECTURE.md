@@ -36,7 +36,7 @@ GlobeReady is a responsive React client backed by an Express API and Firebase. T
 
 ## Document pipeline
 
-1. The student uploads a PDF, PNG, or JPEG to their Storage folder. Storage rules enforce type and size.
+1. The student uploads a PDF, PNG, or JPEG to their Storage folder. Storage rules enforce type and size. Supported content is text-based PDFs and printed-text images; scanned PDFs and handwriting are not supported.
 2. The API re-checks the stored object (type, size, private path) before reading it.
 3. PDFs are parsed locally, with page references. Images are read by local OCR. Both go through one extraction function (`document-extraction.js`) that enforces size, page, and pixel limits.
 4. Text is split into bounded chunks with page references and stored under the owner's `ragChunks`. A failure keeps the upload and records a safe, retryable reason.

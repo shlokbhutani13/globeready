@@ -12,6 +12,11 @@ import { universityIdFor } from "../lib/news-data";
 afterEach(cleanup);
 
 describe("documents: bounded uploads and explicit processing states", () => {
+  test("states the real limits: scanned PDFs and handwriting are not read", () => {
+    render(<DocumentsPage documents={[]} />);
+    expect(screen.getByText(/scanned PDFs and handwriting cannot be read/i)).toBeInTheDocument();
+  });
+
   test("allows a PNG or JPEG to be read, not only PDFs", () => {
     render(<DocumentsPage documents={[{ id: "img", name: "passport.jpg", contentType: "image/jpeg", analysisStatus: "not_requested" }]} />);
     expect(screen.getByRole("button", { name: "Index & explain" })).toBeEnabled();

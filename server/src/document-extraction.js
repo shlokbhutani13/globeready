@@ -69,7 +69,10 @@ export async function extractDocument({ bytes, mimeType, ocr = null, parsePdf = 
     }))
     .filter((entry) => entry.text.trim());
   if (!readable.length) {
-    throw new DocumentExtractionError("no_readable_text", "No readable text was found in this document.");
+    throw new DocumentExtractionError(
+      "no_readable_text",
+      "No readable text was found. Scanned or image-only PDFs and handwriting cannot be read; upload a text-based PDF or a clear, printed photo.",
+    );
   }
   return {
     pages: readable,

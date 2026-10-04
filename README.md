@@ -15,7 +15,7 @@ GlobeReady provides general information, not legal, immigration, tax, health, or
 
 - **Updates:** verified federal and university updates with official links, legal-state labels, and freshness. Save and filter updates. Sources that are delayed are shown as delayed.
 - **My Plan:** tasks with due dates and priorities, a month calendar, and in-app reminders with a notification inbox.
-- **Documents and Assistant:** PDF uploads with page-referenced text extraction, and PNG/JPEG uploads read with local OCR. Document questions return citations, say when the evidence is missing, and route high-risk questions to a DSO or professional. Conversations are kept per student.
+- **Documents and Assistant:** text-based PDFs with page-referenced text, and PNG/JPEG photos of printed text read with local OCR. Scanned or image-only PDFs, handwriting, and malformed or blank files are not read; each gets a clear message and keeps the upload. Document questions return citations, say when the evidence is missing, and route high-risk questions to a DSO or professional. Conversations are kept per student.
 - **Account:** profile, university, time zone, email-preference settings (email is not sent yet), a JSON data export, and account deletion.
 
 Email delivery and browser push are not part of the launch.

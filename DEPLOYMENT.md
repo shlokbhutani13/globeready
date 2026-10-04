@@ -21,8 +21,10 @@ Node 24 also satisfies the dependency engine ranges, but CI and the Docker image
 | Updates feed, save/unsave, freshness | Works with a limitation | Shows only verified, published items. **Needs scheduled source sync** (section 5) or the feed stays empty. |
 | Tasks, deadlines, calendar | Works | Calendar is a month view with day filtering. |
 | Reminders and notification inbox | Works | In-app only. No browser push, no service worker. |
-| PDF upload and extraction | Works with limitations | Real text extraction with page references. Scanned or image-only PDFs are not read. |
-| PNG/JPEG upload and extraction | Works with limitations | Local OCR of printed text. Handwriting, low-resolution, skewed, or very large photos may fail. Failures keep the upload and offer retry. |
+| Text-based PDF upload and extraction | Works | Real text extraction with page references. |
+| Scanned or image-only PDFs | **Not supported** | Shown as "no readable text" with the upload kept. Do not advertise scanned-PDF reading. |
+| Malformed, password-protected, or blank PDFs | Explicit failure state | Shown as "could not be read" or "no readable text"; the upload is kept and can be deleted. |
+| PNG/JPEG printed-text OCR | Works with limitations | Local OCR of printed text. Handwriting is **not supported**; low-resolution, skewed, or very large photos may fail. Failures keep the upload and offer retry. |
 | Document-grounded answers | Works when Gemini is configured | Without `GEMINI_API_KEY`, answers show an explicit "unavailable" notice. Answers never fall back to invented guidance. |
 | Conversation history | Works | Per student. |
 | Data export | Works | JSON download of the signed-in student's data. |
@@ -36,7 +38,7 @@ Node 24 also satisfies the dependency engine ranges, but CI and the Docker image
 - Vector embeddings and vector search. Retrieval is deterministic term matching over the student's own chunks.
 - A separate scheduled-functions package. Source sync runs from the API when a scheduler calls it.
 - Email delivery provider integration.
-- Advanced OCR (handwriting, layout analysis, multi-language).
+- Scanned-PDF OCR, handwriting recognition, layout analysis, and multi-language OCR.
 - Large university catalogues. Universities enter through verified `.edu` sources reviewed by an administrator.
 
 ## 1. Firebase project
@@ -191,7 +193,7 @@ Use a synthetic test account and synthetic documents only. Record the result of 
 - [ ] Entering a `.edu` domain shows the school as "verification pending", never "covered".
 - [ ] Tasks: create with a due date, edit, complete, and see the calendar day.
 - [ ] Notifications: an overdue task produces one reminder; a second check produces none.
-- [ ] With uploads enabled: a PDF indexes; a PNG or JPEG indexes or shows a retry state; a text file is refused.
+- [ ] With uploads enabled: a text-based PDF indexes; a printed-text PNG or JPEG indexes or shows a retry state; a scanned PDF shows "no readable text" and keeps the upload; a text file is refused.
 - [ ] A document question returns a citation with the page; an unrelated question says the evidence was not found.
 - [ ] A second test account cannot read the first account's documents, conversations, or export.
 - [ ] Export downloads JSON containing only the signed-in account's data.

@@ -37,12 +37,11 @@ describe("application routes", () => {
     await demo("delete", `/api/tasks/${created.body.data.id}`).expect(204);
   });
 
-  test("rejects unsupported document types", async () => {
-    const response = await demo("post", "/api/documents")
-      .send({ name: "script.exe", contentType: "application/octet-stream", size: 100 })
-      .expect(422);
-
-    expect(response.body.error.code).toBe("invalid_document");
+  test("no longer exposes a document creation route that cannot be indexed", async () => {
+    await demo("post", "/api/documents")
+      .send({ name: "I-20.pdf", contentType: "application/pdf", size: 100 })
+      .expect(404);
+    expect(await createDemoStore().documents.list("student-a")).toEqual([]);
   });
 
   test("returns a sourced demo assistant response without Gemini", async () => {

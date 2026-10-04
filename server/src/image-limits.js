@@ -43,6 +43,6 @@ export function assertReasonableImage(bytes, mimeType) {
     throw new DocumentExtractionError("image_unreadable", "This image could not be read. Upload a clearer PNG or JPEG.");
   }
   if (size.width > maxImageSide || size.height > maxImageSide || size.width * size.height > maxImagePixels) {
-    throw new DocumentExtractionError("image_too_large", "This image has too many pixels to read safely. Upload a smaller photo or scan.");
+    throw new DocumentExtractionError("image_too_large", "This image has too many pixels to read safely. Upload a smaller photo.");
   }
 }
