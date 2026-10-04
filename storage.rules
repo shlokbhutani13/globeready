@@ -1,10 +1,15 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    match /users/{uid}/documents/{document=**} {
-      allow read, delete: if request.auth != null && request.auth.uid == uid;
+    match /users/{uid}/documents/{docId}/{fileName} {
+      allow read, delete: if request.auth != null
+        && request.auth.uid == uid
+        && docId.matches('[A-Za-z0-9][A-Za-z0-9_-]{0,127}')
+        && fileName.matches('[A-Za-z0-9][A-Za-z0-9_.-]{0,199}');
       allow create, update: if request.auth != null
         && request.auth.uid == uid
+        && docId.matches('[A-Za-z0-9][A-Za-z0-9_-]{0,127}')
+        && fileName.matches('[A-Za-z0-9][A-Za-z0-9_.-]{0,199}')
         && request.resource.size <= 10 * 1024 * 1024
         && request.resource.contentType.matches('application/pdf|image/png|image/jpeg');
     }

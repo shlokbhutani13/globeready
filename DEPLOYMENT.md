@@ -46,7 +46,7 @@ Node 24 also satisfies the dependency engine ranges, but CI and the Docker image
 1. Create or select a Firebase project. Record the project ID.
 2. Authentication: enable **Email/Password** and **Google**. Under Settings > Authorized domains, add the client's final domain.
 3. Firestore: create the database in production mode.
-4. Storage: create a bucket. Cloud Storage requires the Blaze plan, so set a budget alert first.
+4. Storage: create a bucket. Per Firebase's Storage plan FAQ (September 2024), provisioning a new default bucket requires the Blaze pay-as-you-go plan, and the Spark plan cannot use Cloud Storage. Legacy `appspot.com` buckets created before that date keep a no-cost tier. Set a budget alert before enabling Blaze.
 5. Deploy the checked-in rules and indexes to the chosen project only:
 
 ```bash
@@ -58,7 +58,7 @@ firebase deploy --only firestore:rules,firestore:indexes,storage
 
 Rules to verify after deploy:
 - `firestore.rules` denies all client access to `newsItemState`, `reviewQueue`, `newsReviewAudits`, `newsSources`, `newsRuns`, `newsLeases`, and `ragChunks`.
-- `storage.rules` allows reads and deletes only under `users/{uid}/documents/` for the owner, and creates only PDF, PNG, or JPEG files up to 10 MB.
+- `storage.rules` allows reads and deletes only for the owner of `users/{uid}/documents/{docId}/{fileName}` (exactly two segments below `documents/`, with restricted names). Creates and updates are allowed only for that owner, only as PDF, PNG, or JPEG, and only up to 10 MB. Storage rules are covered by the emulator suite.
 
 ## 2. Service account (API)
 
