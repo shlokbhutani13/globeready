@@ -57,6 +57,9 @@ describeEmulator("Firestore authorization rules", () => {
         title: "Private draft",
       });
       await setDoc(doc(database, "users", "alice", "tasks", "one"), { title: "Alice task" });
+      await setDoc(doc(database, "users", "alice"), {
+        consent: { version: "2026-10-04", documents: true, aiGeneration: false },
+      });
     });
   });
 
@@ -137,6 +140,23 @@ describeEmulator("Firestore authorization rules", () => {
       { ...validDocument("alice", "doc6"), size: 10 * 1024 * 1024 + 1 }));
     await assertFails(setDoc(doc(alice, "users", "alice", "documents", "doc7"),
       { ...validDocument("alice", "doc7"), analysisStatus: "complete" }));
+  });
+
+  test("a document record is refused until the student has consented to document reading", async () => {
+    const carol = environment.authenticatedContext("carol").firestore();
+    await assertFails(setDoc(doc(carol, "users", "carol", "documents", "doc-c"), validDocument("carol", "doc-c")));
+    await environment.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), "users", "carol"), {
+        consent: { version: "2026-10-04", documents: false, aiGeneration: false },
+      });
+    });
+    await assertFails(setDoc(doc(carol, "users", "carol", "documents", "doc-c"), validDocument("carol", "doc-c")));
+    await environment.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), "users", "carol"), {
+        consent: { version: "2026-10-04", documents: true, aiGeneration: false },
+      });
+    });
+    await assertSucceeds(setDoc(doc(carol, "users", "carol", "documents", "doc-c"), validDocument("carol", "doc-c")));
   });
 
   test("students cannot edit or delete document records directly; the API does that with the stored file", async () => {

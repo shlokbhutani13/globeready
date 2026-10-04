@@ -6,7 +6,7 @@ import { createDemoStore } from "../src/store.js";
 
 describe("document indexing route", () => {
   test("indexes only the requesting student's private document", async () => {
-    const store = createDemoStore();
+    const store = createDemoStore({ seedConsent: ["student-a", "student-b", "student-c", "student-d", "victim-uid"] });
     const document = await store.documents.create("student-a", {
       name: "I-20.pdf",
       contentType: "application/pdf",
@@ -37,7 +37,7 @@ describe("document indexing route", () => {
   });
 
   test("rejects an index path outside the authenticated student's folder", async () => {
-    const store = createDemoStore();
+    const store = createDemoStore({ seedConsent: ["student-a", "student-b", "student-c", "student-d", "victim-uid"] });
     const document = await store.documents.create("student-a", {
       name: "I-20.pdf",
       contentType: "application/pdf",
@@ -63,7 +63,7 @@ describe("document indexing route", () => {
   });
 
   test("records a failed index without retaining partial chunks", async () => {
-    const store = createDemoStore();
+    const store = createDemoStore({ seedConsent: ["student-a", "student-b", "student-c", "student-d", "victim-uid"] });
     const document = await store.documents.create("student-a", {
       name: "Unreadable.pdf",
       contentType: "application/pdf",
@@ -99,7 +99,7 @@ describe("document indexing route", () => {
   });
 
   test("deleting a document also removes its private index", async () => {
-    const store = createDemoStore();
+    const store = createDemoStore({ seedConsent: ["student-a", "student-b", "student-c", "student-d", "victim-uid"] });
     const document = await store.documents.create("student-a", { name: "Old.pdf" });
     await store.ragChunks.replace("student-a", document.id, [{
       index: 0,
@@ -118,6 +118,7 @@ describe("document indexing route", () => {
   test("passes an optional document scope to the assistant", async () => {
     const app = createApp({
       auth: null,
+      store: createDemoStore({ seedConsent: ["student-a"] }),
       assistant: {
         async answer({ documentId }) {
           return { answer: `Scoped to ${documentId}`, sources: [] };

@@ -166,9 +166,8 @@ describe("Firestore launch query audit", () => {
     }
   });
 
-  test("the declared indexes that no launch query needs are inert and listed explicitly", () => {
-    const unused = indexes.filter((index) => index.fields.some((field) => field.vectorConfig)).length;
-    expect(unused).toBe(2);
+  test("the manifest declares no vector indexes, because nothing queries embeddings", () => {
+    expect(indexes.filter((index) => index.fields.some((field) => field.vectorConfig)).length).toBe(0);
     expect(indexes.filter((index) => index.collectionGroup === "newsItems").length).toBe(12);
   });
 });

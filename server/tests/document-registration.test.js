@@ -19,7 +19,7 @@ const fakeIndexer = () => ({
 
 describe("document registration and indexing", () => {
   test("the supported flow registers a stored upload with its private path and indexes it", async () => {
-    const store = createDemoStore();
+    const store = createDemoStore({ seedConsent: ["student-a", "student-b", "student-c", "student-d", "victim-uid"] });
     const app = createApp({ store, auth: null, assistant: fakeIndexer() });
     const storagePath = "users/student-a/documents/doc-1/I-20.pdf";
     const registered = await store.documents.create("student-a", {
@@ -41,7 +41,7 @@ describe("document registration and indexing", () => {
   });
 
   test("a record without a private storage path cannot be indexed", async () => {
-    const store = createDemoStore();
+    const store = createDemoStore({ seedConsent: ["student-a", "student-b", "student-c", "student-d", "victim-uid"] });
     const app = createApp({ store, auth: null, assistant: fakeIndexer() });
     const unusable = await store.documents.create("student-a", {
       name: "orphan.pdf",

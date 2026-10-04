@@ -16,7 +16,7 @@ describe("assistant conversations", () => {
   let app;
 
   beforeEach(async () => {
-    store = createDemoStore();
+    store = createDemoStore({ seedConsent: ["student-a", "student-b", "student-c", "student-d", "victim-uid"] });
     const assistant = {
       mode: "live",
       async answer({ uid, question, documentId }) {

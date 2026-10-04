@@ -1,6 +1,8 @@
 import { citationFor, rankChunksLexically } from "./rag.js";
+import { consentRequiredMessage } from "./consent.js";
 
 export const insufficientEvidenceNotice = "GlobeReady could not find this in your uploaded documents or approved sources. Check the document itself, and confirm with your university international student office or the official source before acting.";
+export const generationOffNotice = "AI answer generation is off in your privacy settings. The passages below are the closest matches from your documents.";
 export const unavailableNotice = "GlobeReady could not generate a document-grounded answer right now. Try again later, or confirm with your university international student office.";
 
 function withoutDocumentAnswer(result, evidence, notice) {
@@ -18,7 +20,10 @@ export function createDocumentAssistant({
   if (!store?.ragChunks) throw new Error("The document index store is not configured.");
 
   return {
-    async answer({ uid, question, profile, documentId }) {
+    async answer({ uid, question, profile, documentId, allowDocuments = true, allowGeneration = true }) {
+      if (!allowDocuments) {
+        return withoutDocumentAnswer(await fallback.answer({ question, profile }), "consent_required", consentRequiredMessage);
+      }
       let candidates;
       try {
         candidates = await store.ragChunks.list(uid, documentId ? { documentId } : {});
@@ -35,6 +40,16 @@ export function createDocumentAssistant({
         );
       }
 
+      if (!allowGeneration) {
+        return {
+          mode: "retrieved",
+          answer: "Relevant passages from your documents are shown below.",
+          evidence: "retrieved",
+          notice: generationOffNotice,
+          documentCitations: chunks.map(citationFor),
+          sources: [],
+        };
+      }
       try {
         const result = await generateAnswer({ question, profile, chunks });
         return {

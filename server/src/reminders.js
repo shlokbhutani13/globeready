@@ -26,10 +26,11 @@ export function createReminderService({ store, clock = () => new Date() }) {
       ]);
       const timeZone = typeof profile?.timeZone === "string" && profile.timeZone ? profile.timeZone : "UTC";
       const today = todayFor(new Date(clock()), timeZone);
-      const remindedTaskIds = new Set(
+      // A reminder is identified by task and due date, so moving a task's due date earns a new reminder.
+      const remindedKeys = new Set(
         notifications
           .filter((notification) => notification?.type === "task-reminder")
-          .map((notification) => notification.taskId),
+          .map((notification) => `${notification.taskId}|${notification.dueDate}`),
       );
 
       const created = [];
@@ -37,7 +38,7 @@ export function createReminderService({ store, clock = () => new Date() }) {
         if (task.completed) continue;
         if (typeof task.dueDate !== "string" || !task.dueDate) continue;
         if (task.dueDate > today) continue;
-        if (remindedTaskIds.has(task.id)) continue;
+        if (remindedKeys.has(`${task.id}|${task.dueDate}`)) continue;
 
         const notification = await store.notifications.create(uid, {
           type: "task-reminder",

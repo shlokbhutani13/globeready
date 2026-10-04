@@ -1,96 +1,309 @@
 {
   "indexes": [
-    { "collectionGroup": "newsItems", "queryScope": "COLLECTION", "fields": [
-      { "fieldPath": "editorialState", "order": "ASCENDING" },
-      { "fieldPath": "publishedAt", "order": "DESCENDING" }
-    ] },
-    { "collectionGroup": "newsItems", "queryScope": "COLLECTION", "fields": [
-      { "fieldPath": "editorialState", "order": "ASCENDING" },
-      { "fieldPath": "urgency", "order": "DESCENDING" },
-      { "fieldPath": "publishedAt", "order": "DESCENDING" }
-    ] },
-    { "collectionGroup": "newsItems", "queryScope": "COLLECTION", "fields": [
-      { "fieldPath": "editorialState", "order": "ASCENDING" },
-      { "fieldPath": "urgencyRank", "order": "DESCENDING" },
-      { "fieldPath": "publishedAt", "order": "DESCENDING" },
-      { "fieldPath": "id", "order": "ASCENDING" }
-    ] },
-    { "collectionGroup": "newsItems", "queryScope": "COLLECTION", "fields": [
-      { "fieldPath": "editorialState", "order": "ASCENDING" },
-      { "fieldPath": "legalState", "order": "ASCENDING" },
-      { "fieldPath": "urgencyRank", "order": "DESCENDING" },
-      { "fieldPath": "publishedAt", "order": "DESCENDING" },
-      { "fieldPath": "id", "order": "ASCENDING" }
-    ] },
-    { "collectionGroup": "newsItems", "queryScope": "COLLECTION", "fields": [
-      { "fieldPath": "editorialState", "order": "ASCENDING" },
-      { "fieldPath": "topics", "arrayConfig": "CONTAINS" },
-      { "fieldPath": "urgencyRank", "order": "DESCENDING" },
-      { "fieldPath": "publishedAt", "order": "DESCENDING" },
-      { "fieldPath": "id", "order": "ASCENDING" }
-    ] },
-    { "collectionGroup": "newsItems", "queryScope": "COLLECTION", "fields": [
-      { "fieldPath": "editorialState", "order": "ASCENDING" },
-      { "fieldPath": "legalState", "order": "ASCENDING" },
-      { "fieldPath": "topics", "arrayConfig": "CONTAINS" },
-      { "fieldPath": "urgencyRank", "order": "DESCENDING" },
-      { "fieldPath": "publishedAt", "order": "DESCENDING" },
-      { "fieldPath": "id", "order": "ASCENDING" }
-    ] },
-    { "collectionGroup": "newsItems", "queryScope": "COLLECTION", "fields": [
-      { "fieldPath": "editorialState", "order": "ASCENDING" },
-      { "fieldPath": "visaTypes", "arrayConfig": "CONTAINS" },
-      { "fieldPath": "urgencyRank", "order": "DESCENDING" },
-      { "fieldPath": "publishedAt", "order": "DESCENDING" },
-      { "fieldPath": "id", "order": "ASCENDING" }
-    ] },
-    { "collectionGroup": "newsItems", "queryScope": "COLLECTION", "fields": [
-      { "fieldPath": "editorialState", "order": "ASCENDING" },
-      { "fieldPath": "legalState", "order": "ASCENDING" },
-      { "fieldPath": "visaTypes", "arrayConfig": "CONTAINS" },
-      { "fieldPath": "urgencyRank", "order": "DESCENDING" },
-      { "fieldPath": "publishedAt", "order": "DESCENDING" },
-      { "fieldPath": "id", "order": "ASCENDING" }
-    ] },
-    { "collectionGroup": "newsItems", "queryScope": "COLLECTION", "fields": [
-      { "fieldPath": "editorialState", "order": "ASCENDING" },
-      { "fieldPath": "universityIds", "arrayConfig": "CONTAINS" },
-      { "fieldPath": "urgencyRank", "order": "DESCENDING" },
-      { "fieldPath": "publishedAt", "order": "DESCENDING" },
-      { "fieldPath": "id", "order": "ASCENDING" }
-    ] },
-    { "collectionGroup": "newsItems", "queryScope": "COLLECTION", "fields": [
-      { "fieldPath": "editorialState", "order": "ASCENDING" },
-      { "fieldPath": "legalState", "order": "ASCENDING" },
-      { "fieldPath": "universityIds", "arrayConfig": "CONTAINS" },
-      { "fieldPath": "urgencyRank", "order": "DESCENDING" },
-      { "fieldPath": "publishedAt", "order": "DESCENDING" },
-      { "fieldPath": "id", "order": "ASCENDING" }
-    ] },
-    { "collectionGroup": "newsItems", "queryScope": "COLLECTION", "fields": [
-      { "fieldPath": "editorialState", "order": "ASCENDING" },
-      { "fieldPath": "audienceKeys", "arrayConfig": "CONTAINS" },
-      { "fieldPath": "urgencyRank", "order": "DESCENDING" },
-      { "fieldPath": "publishedAt", "order": "DESCENDING" },
-      { "fieldPath": "id", "order": "ASCENDING" }
-    ] },
-    { "collectionGroup": "newsItems", "queryScope": "COLLECTION", "fields": [
-      { "fieldPath": "editorialState", "order": "ASCENDING" },
-      { "fieldPath": "legalState", "order": "ASCENDING" },
-      { "fieldPath": "audienceKeys", "arrayConfig": "CONTAINS" },
-      { "fieldPath": "urgencyRank", "order": "DESCENDING" },
-      { "fieldPath": "publishedAt", "order": "DESCENDING" },
-      { "fieldPath": "id", "order": "ASCENDING" }
-    ] },
-    { "collectionGroup": "ragChunks", "queryScope": "COLLECTION_GROUP", "fields": [
-      { "fieldPath": "uid", "order": "ASCENDING" },
-      { "fieldPath": "embedding", "vectorConfig": { "dimension": 2048, "flat": {} } }
-    ] },
-    { "collectionGroup": "ragChunks", "queryScope": "COLLECTION_GROUP", "fields": [
-      { "fieldPath": "uid", "order": "ASCENDING" },
-      { "fieldPath": "documentId", "order": "ASCENDING" },
-      { "fieldPath": "embedding", "vectorConfig": { "dimension": 2048, "flat": {} } }
-    ] }
+    {
+      "collectionGroup": "newsItems",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "editorialState",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "publishedAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "newsItems",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "editorialState",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "urgency",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "publishedAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "newsItems",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "editorialState",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "urgencyRank",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "publishedAt",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "id",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "newsItems",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "editorialState",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "legalState",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "urgencyRank",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "publishedAt",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "id",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "newsItems",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "editorialState",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "topics",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "urgencyRank",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "publishedAt",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "id",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "newsItems",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "editorialState",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "legalState",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "topics",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "urgencyRank",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "publishedAt",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "id",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "newsItems",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "editorialState",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "visaTypes",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "urgencyRank",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "publishedAt",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "id",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "newsItems",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "editorialState",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "legalState",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "visaTypes",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "urgencyRank",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "publishedAt",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "id",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "newsItems",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "editorialState",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "universityIds",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "urgencyRank",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "publishedAt",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "id",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "newsItems",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "editorialState",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "legalState",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "universityIds",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "urgencyRank",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "publishedAt",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "id",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "newsItems",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "editorialState",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "audienceKeys",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "urgencyRank",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "publishedAt",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "id",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "newsItems",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "editorialState",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "legalState",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "audienceKeys",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "urgencyRank",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "publishedAt",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "id",
+          "order": "ASCENDING"
+        }
+      ]
+    }
   ],
   "fieldOverrides": []
 }

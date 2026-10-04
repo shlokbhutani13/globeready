@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { consentFrom, consentRequiredMessage } from "../consent.js";
 import { referralFor } from "../referrals.js";
 import { cleanText } from "../validation.js";
 
@@ -59,7 +60,18 @@ export function assistantRouter(store, assistant, aiLimiter = (_request, _respon
 
     const profile = await store.profiles.get(uid);
     const documentId = cleanText(request.body.documentId, 200) || undefined;
-    const answer = await assistant.answer({ uid, question, profile, documentId });
+    const consent = consentFrom(profile);
+    if (documentId && !consent.documents) {
+      return response.status(403).json({ error: { code: "consent_required", message: consentRequiredMessage } });
+    }
+    const answer = await assistant.answer({
+      uid,
+      question,
+      profile,
+      documentId,
+      allowDocuments: consent.documents,
+      allowGeneration: consent.aiGeneration,
+    });
     const referral = referralFor(question);
 
     if (!conversation) {

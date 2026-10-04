@@ -90,7 +90,10 @@ service cloud.firestore {
 
       match /documents/{docId} {
         allow read: if isOwner(uid);
-        allow create: if isOwner(uid) && validDocument(uid, docId, request.resource.data);
+        // A document record is created only after the student has consented to document reading.
+        allow create: if isOwner(uid)
+          && validDocument(uid, docId, request.resource.data)
+          && get(/databases/$(database)/documents/users/$(uid)).data.consent.documents == true;
         // Deleting a document removes its stored file first, so it goes through the API, never a direct delete.
         allow update, delete: if false;
       }

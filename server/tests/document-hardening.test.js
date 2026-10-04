@@ -42,7 +42,7 @@ describe("owned document paths are exact, not prefix-matched", () => {
 
 describe("document routes enforce the owned path", () => {
   async function appWithDocument(storagePath, { deleteStoredFile } = {}) {
-    const store = createDemoStore();
+    const store = createDemoStore({ seedConsent: ["student-a", "student-b", "student-c", "student-d", "victim-uid"] });
     const document = await store.documents.create("student-a", {
       name: "i20.pdf", contentType: "application/pdf", storagePath,
     });
@@ -52,7 +52,7 @@ describe("document routes enforce the owned path", () => {
 
   test("indexing rejects a traversal path before any storage read", async () => {
     const reads = vi.fn();
-    const store = createDemoStore();
+    const store = createDemoStore({ seedConsent: ["student-a", "student-b", "student-c", "student-d", "victim-uid"] });
     const document = await store.documents.create("student-a", {
       name: "i20.pdf",
       contentType: "application/pdf",

@@ -7,7 +7,7 @@ function pick(record, fields) {
 
 const profileFields = [
   "fullName", "homeCountry", "university", "universityId", "officialUniversityDomain", "degreeLevel",
-  "program", "visaType", "journeyStage", "startDate", "graduationDate", "timeZone", "updatedAt",
+  "program", "visaType", "journeyStage", "startDate", "graduationDate", "timeZone", "updatedAt", "consent",
 ];
 const preferenceFields = [
   "topics", "visaTypes", "homeCountries", "universityIds", "digestFrequency", "emailRemindersEnabled", "updatedAt",

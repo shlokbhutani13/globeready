@@ -36,7 +36,7 @@ function fakeBucket() {
 }
 
 describe("launch journeys across the real API, storage pipeline, and assistant", () => {
-  const store = createDemoStore();
+  const store = createDemoStore({ seedConsent: ["student-a", "student-b", "student-c", "student-d", "victim-uid"] });
   const bucket = fakeBucket();
   const indexer = createDocumentIndexer({ store, bucket, ocr: createLocalOcr() });
   const documentAssistant = createDocumentAssistant({

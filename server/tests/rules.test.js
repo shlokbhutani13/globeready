@@ -46,7 +46,7 @@ describe("Firebase ownership rules", () => {
     expect(rules).not.toContain("match /{collection}/{document=**}");
   });
 
-  test("declares the required news and RAG vector indexes", async () => {
+  test("declares the required news indexes and no vector indexes", async () => {
     const contents = await readOptional(resolve(root, "firestore.indexes.json"));
     const indexes = contents ? JSON.parse(contents).indexes : [];
     expect(indexes).toEqual(expect.arrayContaining([
@@ -106,25 +106,11 @@ describe("Firebase ownership rules", () => {
           { fieldPath: "id", order: "ASCENDING" },
         ],
       }),
-      expect.objectContaining({
-        collectionGroup: "ragChunks",
-        fields: [
-          { fieldPath: "uid", order: "ASCENDING" },
-          { fieldPath: "embedding", vectorConfig: { dimension: 2048, flat: {} } },
-        ],
-      }),
-      expect.objectContaining({
-        collectionGroup: "ragChunks",
-        fields: [
-          { fieldPath: "uid", order: "ASCENDING" },
-          { fieldPath: "documentId", order: "ASCENDING" },
-          { fieldPath: "embedding", vectorConfig: { dimension: 2048, flat: {} } },
-        ],
-      }),
     ]));
+    expect(indexes.some((index) => index.fields.some((field) => field.vectorConfig))).toBe(false);
   });
 
-  test("requests embeddings with the same dimension as the vector indexes", async () => {
+  test("requests embeddings at the dimension the (disabled) embedding path uses", async () => {
     const source = await readFile(resolve(root, "server/src/gemini.js"), "utf8");
     expect(source).toContain("outputDimensionality: 2048");
   });

@@ -15,7 +15,7 @@ const auth = {
 };
 
 function setup(extra = {}) {
-  const store = createDemoStore();
+  const store = createDemoStore({ seedConsent: ["student-a", "student-b", "student-c", "student-d", "victim-uid"] });
   const app = createApp({ store, auth, adminUids: ["local-admin"], ...extra });
   return { store, app };
 }

@@ -154,8 +154,8 @@ export function createGeminiAssistant({
 
   return {
     mode: ai ? "live" : "demo",
-    async answer({ uid, question, profile, documentId }) {
-      return documentAssistant.answer({ uid, question, profile, documentId });
+    async answer({ uid, question, profile, documentId, allowDocuments, allowGeneration }) {
+      return documentAssistant.answer({ uid, question, profile, documentId, allowDocuments, allowGeneration });
     },
     indexDocument,
     async analyzeDocument({ uid, document }) {

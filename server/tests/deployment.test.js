@@ -19,7 +19,7 @@ describe("deployment services", () => {
   });
 
   test("analyzes only a document owned by the authenticated user", async () => {
-    const store = createDemoStore();
+    const store = createDemoStore({ seedConsent: ["student-a", "student-b", "student-c", "student-d", "victim-uid"] });
     const document = await store.documents.create("student-a", {
       name: "I-20.pdf",
       contentType: "application/pdf",
@@ -50,7 +50,7 @@ describe("deployment services", () => {
   });
 
   test("rejects document metadata that points outside the authenticated user's storage folder", async () => {
-    const store = createDemoStore();
+    const store = createDemoStore({ seedConsent: ["student-a", "student-b", "student-c", "student-d", "victim-uid"] });
     const document = await store.documents.create("student-a", {
       name: "Unknown.pdf",
       contentType: "application/pdf",

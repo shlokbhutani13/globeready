@@ -16,6 +16,7 @@ import { profileRouter } from "./routes/profile.js";
 import { createUserRateLimiter } from "./rate-limit.js";
 import { resourcesRouter } from "./routes/resources.js";
 import { tasksRouter } from "./routes/tasks.js";
+import { consentRouter } from "./routes/consent.js";
 import {
   accessLog, errorHandler, jsonBodyLimit, notFound, requestIdentity, requireJsonBodies, securityHeaders,
 } from "./http.js";
@@ -112,6 +113,7 @@ export function createApp({
   const requireScheduler = createSchedulerMiddleware(schedulerSecret);
   app.use("/api/profile", authenticate, profileRouter(store));
   app.use("/api/tasks", authenticate, tasksRouter(store));
+  app.use("/api/consent", authenticate, consentRouter(store, { clock, auditLogger }));
   app.use("/api/documents", authenticate, documentsRouter(store, assistant || createAssistant(), aiLimiter, { deleteStoredFile }));
   app.use("/api/resources", authenticate, resourcesRouter(store));
   app.use("/api/assistant", authenticate, assistantRouter(store, assistant || createAssistant(), aiLimiter));

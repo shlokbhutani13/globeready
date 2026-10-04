@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
+import { consentVersion } from "./consent.js";
 import { isPublished, publicNewsItem } from "./news/schema.js";
 
 function createCollection() {
@@ -550,8 +551,14 @@ function createRagChunkCollection() {
   };
 }
 
-export function createDemoStore() {
+export function createDemoStore({ seedConsent = [] } = {}) {
   const profiles = new Map();
+  // Students listed here start with a current consent to document reading and AI answers. This seeds test and
+  // demonstration stores only; production consent is recorded by the student through the consent route.
+  for (const uid of seedConsent) {
+    const stamp = new Date(0).toISOString();
+    profiles.set(uid, { consent: { version: consentVersion, documents: true, aiGeneration: true, acceptedAt: stamp, updatedAt: stamp } });
+  }
   const leases = createLeaseStore();
   const sourceItems = new Map();
   const runItems = new Map();

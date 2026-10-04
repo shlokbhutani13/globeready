@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { consentFrom, consentRequiredMessage } from "../consent.js";
 import { isOwnedDocumentPath } from "../storage-paths.js";
 
 export function documentsRouter(store, assistant, aiLimiter = (_request, _response, next) => next(), {
@@ -38,7 +39,15 @@ export function documentsRouter(store, assistant, aiLimiter = (_request, _respon
     const removed = await store.documents.remove(request.user.uid, document.id);
     return removed ? response.status(204).end() : response.status(404).json({ error: { code: "document_not_found" } });
   });
+  const requireDocumentConsent = async (uid, response) => {
+    const consent = consentFrom(await store.profiles.get(uid));
+    if (consent.documents) return true;
+    response.status(403).json({ error: { code: "consent_required", message: consentRequiredMessage } });
+    return false;
+  };
+
   router.post("/:id/index", aiLimiter, async (request, response) => {
+    if (!await requireDocumentConsent(request.user.uid, response)) return undefined;
     const document = await ownedDocument(request.user.uid, request.params.id);
     if (!document) {
       return response.status(404).json({ error: { code: "document_not_found" } });
@@ -87,6 +96,7 @@ export function documentsRouter(store, assistant, aiLimiter = (_request, _respon
     }
   });
   router.post("/:id/analyze", aiLimiter, async (request, response) => {
+    if (!await requireDocumentConsent(request.user.uid, response)) return undefined;
     const document = await ownedDocument(request.user.uid, request.params.id);
     if (!document) {
       return response.status(404).json({ error: { code: "document_not_found" } });
