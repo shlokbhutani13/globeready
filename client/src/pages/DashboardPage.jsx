@@ -49,7 +49,7 @@ export default function DashboardPage({ profile = {}, tasks = [], topNews = [], 
           <p className="home-quiet">Nothing urgent. You are caught up.</p>
         )}
         <div className="home-links">
-          {openTasks.length > 1 && <Link to="/tasks">{openTasks.length - 1} more task{openTasks.length === 2 ? "" : "s"}</Link>}
+          <Link to="/tasks">{openTasks.length > 1 ? `${openTasks.length - 1} more task${openTasks.length === 2 ? "" : "s"}` : "Tasks"}</Link>
           {unreadNotifications > 0 && <Link to="/notifications">{unreadNotifications} reminder{unreadNotifications === 1 ? "" : "s"}</Link>}
           <Link to="/guides">Guides</Link>
         </div>
