@@ -1,9 +1,10 @@
-import { auth } from "./firebase";
+import { auth, clientMode } from "./firebase";
+import { authHeadersForMode } from "./runtime-mode";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5051";
 async function authHeaders() {
   const token = auth?.currentUser ? await auth.currentUser.getIdToken() : "";
-  return token ? { Authorization: `Bearer ${token}` } : { "x-demo-user": "globeready-demo" };
+  return authHeadersForMode(clientMode, token);
 }
 
 export async function apiRequest(path, options = {}) {

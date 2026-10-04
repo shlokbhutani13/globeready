@@ -8,7 +8,11 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run --environment=jsdom",
-    "lint": "vite build"
+    "lint": "vite build",
+    "demo": "vite --mode demo",
+    "local-user": "bash ../scripts/local-user/start.sh",
+    "local-user:stop": "bash ../scripts/local-user/stop.sh",
+    "local-user:reset": "bash ../scripts/local-user/reset.sh"
   },
   "dependencies": {
     "react": "^18.2.0",

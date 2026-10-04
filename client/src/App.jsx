@@ -15,7 +15,7 @@ import NewsAdminPage from "./pages/NewsAdminPage";
 import { useAuth } from "./lib/auth-context";
 import { apiDownload, apiRequest } from "./lib/api";
 import { deleteAccountWithReauth } from "./lib/account-deletion";
-import { storageAvailable } from "./lib/firebase";
+import { demoMode, localUserMode, storageAvailable } from "./lib/firebase";
 import {
   createTask, removeDocument, removeTask, saveResource, subscribeStudentData,
   toggleTask, uploadDocument,
@@ -110,7 +110,7 @@ export default function App() {
   }, [auth.user, profile.university]);
 
   if (auth.loading) return <div className="app-loading">Preparing GlobeReady…</div>;
-  if (!auth.user && !demo) return <LoginPage onDemo={() => setDemo(true)} auth={auth} />;
+  if (!auth.user && !demo) return <LoginPage onDemo={() => setDemo(true)} auth={auth} localUser={localUserMode} demoAvailable={demoMode} />;
 
   const live = Boolean(auth.user);
   const savedNewsIds = new Set(savedNews.map((item) => item.id));

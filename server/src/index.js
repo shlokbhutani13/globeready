@@ -1,7 +1,7 @@
 import "dotenv/config";
 
 import { createApp } from "./app.js";
-import { createAssistant } from "./assistant.js";
+import { createAssistant, createLocalFallback } from "./assistant.js";
 import { createFirebaseAdmin } from "./firebase-admin.js";
 import { createFirestoreStore } from "./firestore-store.js";
 import { createGeminiAssistant } from "./gemini.js";
@@ -13,7 +13,7 @@ import { fetchSource } from "./news/fetch-source.js";
 import { createSnapshotReader } from "./news/snapshots.js";
 import { createNewsSync } from "./news/sync-news.js";
 import { createDemoStore } from "./store.js";
-import { assertDemoModeValue, ConfigError, isDemoMode } from "./runtime-config.js";
+import { ConfigError, integrationConfigForRuntime, resolveRuntimeMode } from "./runtime-config.js";
 
 const port = Number(process.env.PORT || 5051);
 
@@ -23,8 +23,9 @@ function refuseToStart(message) {
 }
 
 let firebase;
+let runtime;
 try {
-  assertDemoModeValue(process.env);
+  runtime = resolveRuntimeMode(process.env);
   firebase = createFirebaseAdmin();
 } catch (error) {
   refuseToStart(error instanceof ConfigError ? error.message : "configuration could not be loaded.");
@@ -38,10 +39,13 @@ if (firebase) {
   }
 }
 
-const fallback = createAssistant();
+const fallback = runtime.mode === "local-user" ? createLocalFallback() : createAssistant();
+const integrations = integrationConfigForRuntime(runtime.mode, process.env);
 const store = firebase?.firestore ? createFirestoreStore(firebase.firestore) : createDemoStore();
 const assistant = createGeminiAssistant({
-  apiKey: process.env.GEMINI_API_KEY,
+  answerUnavailableLabel: runtime.mode === "local-user" ? " in local mode" : "",
+  apiKey: integrations.geminiApiKey,
+  embeddingsEnabled: integrations.geminiEmbeddingsEnabled,
   bucket: firebase?.bucket,
   store,
   fallback,
@@ -58,11 +62,12 @@ const newsSync = createNewsSync({
   },
 });
 const app = createApp({
-  demoMode: isDemoMode(process.env),
+  demoMode: runtime.mode === "demo",
   auth: firebase?.auth || null,
   store,
   assistant,
   newsSync,
+  newsSyncEnabled: integrations.newsSyncEnabled,
   snapshotStore,
   account: {
     deleteStoragePrefix: (uid) => (firebase?.bucket

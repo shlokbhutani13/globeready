@@ -8,7 +8,8 @@
       "port": 8089
     },
     "ui": {
-      "enabled": false
+      "enabled": true,
+      "port": 4000
     },
     "auth": {
       "port": 9099

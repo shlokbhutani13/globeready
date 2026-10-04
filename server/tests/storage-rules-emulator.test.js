@@ -45,6 +45,10 @@ describeEmulator("Storage security rules", () => {
   test("the owner can read and delete their own object", async () => {
     await assertSucceeds(getBytes(ref(as("alice"), alicePdf)));
     await assertSucceeds(getMetadata(ref(as("alice"), alicePdf)));
+    const disposable = ref(as("alice"), "users/alice/documents/doc-delete/disposable.pdf");
+    await assertSucceeds(uploadBytes(disposable, pdf(), pdfType));
+    await assertSucceeds(deleteObject(disposable));
+    await expect(getMetadata(disposable)).rejects.toMatchObject({ code: "storage/object-not-found" });
   });
 
   test("the stored metadata matches what the document pipeline checks", async () => {

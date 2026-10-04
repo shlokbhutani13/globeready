@@ -43,3 +43,31 @@ export function createAssistant() {
     },
   };
 }
+
+export function createLocalFallback() {
+  return {
+    mode: "local",
+    async answer({ question }) {
+      return {
+        mode: "local",
+        answer: "No passage in your uploaded documents answers this question.",
+        question,
+        actions: ["Ask a more specific question about a document you uploaded, or check an official source."],
+        sources: selectTrustedSources(question),
+        confidence: "low",
+        disclaimer: "General information. Verify deadlines and eligibility with official government and university sources.",
+      };
+    },
+    async analyzeDocument({ document }) {
+      return {
+        summary: `${document.name} could not be read in local mode.`,
+        importantDates: [],
+        actions: [],
+        terms: [],
+        confidence: "low",
+        disclaimer: "Verify all details with an official source.",
+        mode: "local",
+      };
+    },
+  };
+}

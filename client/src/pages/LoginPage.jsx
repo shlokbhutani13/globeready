@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { ArrowRight, BookOpenCheck, FileLock2, Globe2, Sparkles } from "lucide-react";
 
-export default function LoginPage({ onDemo, auth }) {
+export default function LoginPage({ onDemo, auth, localUser = false, demoAvailable = false }) {
   const [mode, setMode] = useState("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -34,10 +34,11 @@ export default function LoginPage({ onDemo, auth }) {
       </section>
       <section className="login-panel">
         <div className="login-card">
-          <span className="demo-pill">Demo available</span>
+          <span className="demo-pill">{localUser ? "Local development" : demoAvailable ? "Demo available" : "Secure sign-in"}</span>
           <h2>Welcome to GlobeReady</h2>
           <p>Sign in for your private workspace, or explore the product with safe sample data.</p>
-          <button className="button primary wide" onClick={onDemo}>Continue in demo mode <ArrowRight size={17} /></button>
+          {demoAvailable && <button className="button primary wide" onClick={onDemo}>Continue in demo mode <ArrowRight size={17} /></button>}
+          {localUser && <p className="local-user-note"><strong>Local development account.</strong> The Google button opens a mock Google identity from the local Firebase Auth emulator. It is not your Google account.</p>}
           <div className="login-divider"><span>Live authentication</span></div>
           <button className="button secondary wide" disabled={!auth.firebaseConfigured} onClick={() => auth.signInGoogle().catch((reason) => setError(reason.message))}>Continue with Google</button>
           <form className="auth-form" onSubmit={submit}>

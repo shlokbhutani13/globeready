@@ -6,3 +6,6 @@ dist/
 *.log
 .worktrees
 coverage/
+
+# Local-user mode: emulator data, credentials, logs, and process ids. Never commit.
+.local/

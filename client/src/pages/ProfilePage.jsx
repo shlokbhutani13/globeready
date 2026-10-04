@@ -1,10 +1,11 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Save } from "lucide-react";
 import { universityIdFor } from "../lib/news-data";
 
 export default function ProfilePage({ profile, onSave }) {
   const [form, setForm] = useState(profile);
   const [error, setError] = useState("");
+  useEffect(() => setForm(profile), [profile]);
   const field = (name) => ({ value: form[name] || "", onChange: (event) => setForm({ ...form, [name]: event.target.value }) });
   const submit = (event) => {
     event.preventDefault();

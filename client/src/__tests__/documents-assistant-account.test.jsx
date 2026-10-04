@@ -105,6 +105,14 @@ describe("assistant: grounded, honest answers", () => {
 });
 
 describe("profile: university domain and time zone", () => {
+  test("replaces placeholder form values when the authenticated profile loads asynchronously", () => {
+    const view = render(<ProfilePage profile={{ fullName: "Maya", university: "Demo University" }} onSave={() => {}} />);
+    view.rerender(<ProfilePage profile={{ fullName: "Local Student", university: "Example University" }} onSave={() => {}} />);
+
+    expect(screen.getByLabelText("Full name")).toHaveValue("Local Student");
+    expect(screen.getByRole("textbox", { name: "University", exact: true })).toHaveValue("Example University");
+  });
+
   test("submits a derived university ID and a validated .edu domain for the server to verify", () => {
     const onSave = vi.fn();
     render(<ProfilePage profile={{ fullName: "Maya", university: "UNC Chapel Hill" }} onSave={onSave} />);

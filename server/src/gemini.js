@@ -59,11 +59,11 @@ export function sanitizeModelAnswer(result) {
   return { answer: text, actions, confidence };
 }
 
-export function createGeminiAssistant({ apiKey, bucket, store, fallback, ocr = null }) {
+export function createGeminiAssistant({ apiKey, bucket, store, fallback, ocr = null, answerUnavailableLabel = "", embeddingsEnabled = process.env.GEMINI_EMBEDDINGS_ENABLED === "true" }) {
   if (!bucket || !store?.ragChunks) return fallback;
   const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
   // Launch retrieval is deterministic term matching; embeddings are opt-in and off by default.
-  const embed = ai && process.env.GEMINI_EMBEDDINGS_ENABLED === "true"
+  const embed = ai && embeddingsEnabled
     ? async (text, taskType) => responseEmbedding(await ai.models.embedContent({
       model: process.env.GEMINI_EMBEDDING_MODEL || "gemini-embedding-001",
       contents: [text],
@@ -74,8 +74,11 @@ export function createGeminiAssistant({ apiKey, bucket, store, fallback, ocr = n
   const documentAssistant = createDocumentAssistant({
     fallback,
     store,
+    answerUnavailableLabel,
     generateAnswer: async ({ question, profile, chunks }) => {
-      if (!ai) throw new Error("Answer generation is not configured.");
+      if (!ai) {
+        throw Object.assign(new Error("Answer generation is not configured."), { code: "answer_generation_not_configured" });
+      }
       const sources = selectTrustedSources(question);
       const response = await ai.models.generateContent({
         model: process.env.GEMINI_MODEL || "gemini-2.5-flash",

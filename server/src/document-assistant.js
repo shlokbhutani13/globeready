@@ -13,6 +13,7 @@ export function createDocumentAssistant({
   generateAnswer,
   minimumScore = 0.5,
   limit = 6,
+  answerUnavailableLabel = "",
 }) {
   if (!store?.ragChunks) throw new Error("The document index store is not configured.");
 
@@ -42,7 +43,18 @@ export function createDocumentAssistant({
           evidence: "grounded",
           documentCitations: chunks.map(citationFor),
         };
-      } catch {
+      } catch (error) {
+        if (error?.code === "answer_generation_not_configured") {
+          const notice = `AI answer generation is not configured${answerUnavailableLabel}. The passages below are the closest matches from your documents.`;
+          return {
+            mode: "retrieved",
+            answer: "Relevant passages from your documents are shown below.",
+            evidence: "retrieved",
+            notice,
+            documentCitations: chunks.map(citationFor),
+            sources: [],
+          };
+        }
         return withoutDocumentAnswer(
           await fallback.answer({ question, profile }),
           "unavailable",
