@@ -15,6 +15,7 @@ import NewsAdminPage from "./pages/NewsAdminPage";
 import { useAuth } from "./lib/auth-context";
 import { apiDownload, apiRequest } from "./lib/api";
 import { deleteAccountWithReauth } from "./lib/account-deletion";
+import { fetchConsent, saveConsent } from "./lib/consent";
 import { demoMode, localUserMode, storageAvailable } from "./lib/firebase";
 import {
   createTask, removeDocument, removeTask, saveResource, subscribeStudentData,
@@ -59,6 +60,33 @@ export default function App() {
   const [coverage, setCoverage] = useState(null);
   const [sourceHealth, setSourceHealth] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [consent, setConsent] = useState(null);
+
+  // Reminders are created by the API when a task is due. The check runs at sign-in, every 15 minutes, when the
+  // window regains focus, and after the task list changes, so a task that becomes due mid-session is reminded
+  // without a reload. The server is idempotent per task and due date, so repeated checks never duplicate.
+  useEffect(() => {
+    if (!auth.user) return undefined;
+    const check = () => { syncNotifications().catch(() => {}); };
+    check();
+    const timer = setInterval(check, 15 * 60_000);
+    window.addEventListener("focus", check);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener("focus", check);
+    };
+  }, [auth.user?.uid]);
+
+  // Consent is loaded before any early return, so every render calls the same hooks in the same order.
+  useEffect(() => {
+    if (!auth.user) return;
+    fetchConsent().then(setConsent).catch(() => setConsent(null));
+  }, [auth.user?.uid]);
+
+  useEffect(() => {
+    if (!auth.user || tasks.length === 0) return;
+    syncNotifications().catch(() => {});
+  }, [tasks]);
 
   useEffect(() => {
     if (!auth.user) return undefined;
@@ -90,7 +118,6 @@ export default function App() {
     const stopPreferences = subscribeNewsPreferences(auth.user.uid, setNewsPreferences, () => {});
     const stopNotifications = subscribeNotifications(auth.user.uid, setNotifications, () => {});
 
-    syncNotifications().catch(() => {});
     apiRequest("/api/admin/news/health").then(() => setIsAdmin(true)).catch(() => setIsAdmin(false));
 
     return () => {
@@ -189,6 +216,10 @@ export default function App() {
     await apiRequest("/api/profile", { method: "PUT", body: JSON.stringify(value) })
       .catch((error) => setAppError(error.message));
   };
+  const saveConsentChoice = async (choice) => {
+    const next = await saveConsent({ version: consent?.version, ...choice });
+    setConsent(next);
+  };
   const deleteAccount = async () => {
     await deleteAccountWithReauth({
       removeAccount: () => apiRequest("/api/account", { method: "DELETE", body: JSON.stringify({ confirmation: "DELETE MY ACCOUNT" }) }),
@@ -256,7 +287,7 @@ export default function App() {
               onUpdatePreferences={updatePreferences}
             />
           )} />
-          <Route path="documents" element={<DocumentsPage documents={documents} uploadProgress={uploadProgress} storageAvailable={!live || storageAvailable} onAdd={addDocument} onDelete={deleteDocument} onAnalyze={analyzeDocument} />} />
+          <Route path="documents" element={<DocumentsPage consent={live ? consent : undefined} onSaveConsent={saveConsentChoice} documents={documents} uploadProgress={uploadProgress} storageAvailable={!live || storageAvailable} onAdd={addDocument} onDelete={deleteDocument} onAnalyze={analyzeDocument} />} />
           <Route path="tasks" element={<TasksPage tasks={tasks} onAdd={addTask} onToggle={changeTask} onDelete={deleteTask} />} />
           <Route path="guides" element={<GuidesPage onSave={saveGuide} savedUrls={savedResources.map((resource) => resource.url)} />} />
           <Route path="assistant" element={<AssistantPage documents={documents.filter((document) => document.analysisStatus === "indexed")} />} />
@@ -265,6 +296,8 @@ export default function App() {
           <Route path="settings" element={(
             <SettingsPage
               live={live}
+              consent={live ? consent : undefined}
+              onSaveConsent={saveConsentChoice}
               preferences={newsPreferences}
               onUpdatePreferences={updatePreferences}
               onExport={() => apiDownload("/api/account/export", "globeready-account-export.json").catch((error) => setAppError(error.message))}

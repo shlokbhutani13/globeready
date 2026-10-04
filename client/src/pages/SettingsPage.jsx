@@ -1,9 +1,10 @@
 import React, { useState } from "react";
 import { Download, ShieldAlert, Trash2 } from "lucide-react";
+import ConsentPanel from "../components/ConsentPanel";
 
 export const deletionPhrase = "DELETE MY ACCOUNT";
 
-export default function SettingsPage({ live = true, preferences = {}, onUpdatePreferences, onExport, onDelete }) {
+export default function SettingsPage({ live = true, preferences = {}, onUpdatePreferences, onExport, onDelete, consent, onSaveConsent }) {
   const [confirmation, setConfirmation] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -31,6 +32,8 @@ export default function SettingsPage({ live = true, preferences = {}, onUpdatePr
   return (
     <div className="page">
       <header className="page-header"><div><span className="eyebrow">Account</span><h1>Settings</h1><p>Control your notifications, export your data, or delete your account.</p></div></header>
+
+      {consent !== undefined && <ConsentPanel consent={consent} onSave={onSaveConsent} />}
 
       <section className="panel settings-section">
         <div className="panel-title"><h2>Email and notifications</h2></div>

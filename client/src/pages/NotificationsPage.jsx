@@ -10,7 +10,7 @@ export default function NotificationsPage({ notifications = [], onMarkRead, onMa
         <div>
           <span className="eyebrow">Notification inbox</span>
           <h1>Notifications</h1>
-          <p>Reminders about your plan and matched updates. {unreadCount > 0 ? `${unreadCount} unread.` : "You're caught up."}</p>
+          <p>Reminders about your plan and matched updates. {unreadCount > 0 ? `${unreadCount} unread.` : "No unread reminders."}</p>
         </div>
         {unreadCount > 0 && (
           <button className="button secondary" onClick={onMarkAllRead}>

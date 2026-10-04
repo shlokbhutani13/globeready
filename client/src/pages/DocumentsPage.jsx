@@ -1,6 +1,7 @@
 import React, { useRef, useState } from "react";
 import { FilePlus2, FileText, LockKeyhole, Trash2, UploadCloud } from "lucide-react";
 import Disclaimer from "../components/Disclaimer";
+import ConsentPanel from "../components/ConsentPanel";
 
 const allowed = new Set(["application/pdf", "image/png", "image/jpeg"]);
 export function validateDocument(file) {
@@ -30,9 +31,15 @@ export default function DocumentsPage({
   onDelete = () => {},
   onAnalyze = () => {},
   uploadProgress = 0,
-  storageAvailable = true,
+  storageAvailable: storageAvailableSetting = true,
+  consent,
+  onSaveConsent = () => {},
 }) {
   const input = useRef(null);
+  // consent is undefined when the page is not in a signed-in account, so nothing is gated. In a signed-in
+  // account it is null while loading, and uploads stay closed until the student has consented.
+  const gated = consent !== undefined && !(consent && consent.documents);
+  const storageAvailable = storageAvailableSetting && !gated;
   const [error, setError] = useState("");
   const choose = (file) => {
     if (!file) return;
@@ -43,8 +50,9 @@ export default function DocumentsPage({
   return (
     <div className="page">
       <header className="page-header"><div><span className="eyebrow">Private document vault</span><h1>Your important documents</h1><p>Keep immigration, insurance, housing, and university records organized.</p></div><button className="button primary" disabled={!storageAvailable} onClick={() => input.current?.click()}><FilePlus2 size={17} /> Add document</button></header>
+      {consent !== undefined && <ConsentPanel consent={consent} onSave={onSaveConsent} compact />}
       <input ref={input} hidden disabled={!storageAvailable} type="file" accept=".pdf,.png,.jpg,.jpeg" onChange={(event) => choose(event.target.files?.[0])} />
-      <section className={`upload-zone${storageAvailable ? "" : " disabled"}`} onClick={() => storageAvailable && input.current?.click()}><span><UploadCloud size={27} /></span><div><h2>{storageAvailable ? "Upload a document" : "Document uploads unavailable"}</h2><p>{storageAvailable ? "Text-based PDFs, or PNG/JPEG photos of printed text, up to 10 MB. Scanned PDFs and handwriting cannot be read." : "Document uploads need Storage to be enabled for this deployment."}</p></div><LockKeyhole size={19} /></section>
+      <section className={`upload-zone${storageAvailable ? "" : " disabled"}`} onClick={() => storageAvailable && input.current?.click()}><span><UploadCloud size={27} /></span><div><h2>{storageAvailable ? "Upload a document" : gated ? "Turn on document reading to upload" : "Document uploads unavailable"}</h2><p>{storageAvailable ? "Text-based PDFs, or PNG/JPEG photos of printed text, up to 10 MB. Scanned PDFs and handwriting cannot be read." : "Document uploads need Storage to be enabled for this deployment."}</p></div><LockKeyhole size={19} /></section>
       {error && <div className="inline-error">{error}</div>}
       {uploadProgress > 0 && uploadProgress < 100 && <div className="upload-progress"><span style={{ width: `${uploadProgress}%` }} />Uploading {uploadProgress}%</div>}
       <section className="panel"><div className="panel-title"><div><span className="eyebrow">Vault</span><h2>{documents.length} documents</h2></div></div>
