@@ -974,5 +974,8 @@ export function createFirestoreStore(firestore, { clock = () => new Date() } = {
     savedNews: userCollectionStore(firestore, "savedNews", clock),
     notifications: userCollectionStore(firestore, "notifications", clock, { defaults: { read: false } }),
     conversationMessages: conversationMessageStore(firestore, clock),
+    async purgeUser(uid) {
+      await firestore.recursiveDelete(firestore.collection("users").doc(uid));
+    },
   };
 }

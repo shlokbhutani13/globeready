@@ -77,19 +77,21 @@ export function documentsRouter(store, assistant, aiLimiter = (_request, _respon
       await store.documents.update(request.user.uid, document.id, {
         analysis,
         analysisStatus: "indexed",
+        analysisError: null,
         indexedAt,
       });
       return response.json({ data: analysis });
     } catch (error) {
+      const analysisError = {
+        code: error?.code || "document_index_failed",
+        message: error?.safeMessage || "This document could not be read. Your upload is saved; you can retry.",
+        retryable: error?.retryable !== false,
+      };
       await store.documents.update(request.user.uid, document.id, {
         analysisStatus: "index_failed",
+        analysisError,
       });
-      return response.status(error?.status || 422).json({
-        error: {
-          code: error?.code || "document_index_failed",
-          message: error?.safeMessage || "This PDF could not be indexed.",
-        },
-      });
+      return response.status(error?.status || 422).json({ error: analysisError });
     }
   });
   router.post("/:id/analyze", aiLimiter, async (request, response) => {

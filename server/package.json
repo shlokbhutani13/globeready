@@ -8,7 +8,7 @@
     "start": "node src/index.js",
     "dev": "node --watch src/index.js",
     "test": "vitest run",
-    "test:rules": "firebase emulators:exec --only firestore --project globeready-test \"vitest run tests/firestore-rules-emulator.test.js\"",
+    "test:rules": "firebase emulators:exec --only firestore --project globeready-test \"vitest run tests/firestore-rules-emulator.test.js tests/firestore-account-emulator.test.js\"",
     "lint": "node --check src/index.js && node --check src/app.js"
   },
   "keywords": [],

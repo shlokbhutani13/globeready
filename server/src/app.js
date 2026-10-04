@@ -6,6 +6,7 @@ import { createAuthMiddleware } from "./auth.js";
 import { defaultNewsSources } from "./news/default-sources.js";
 import { createReminderService } from "./reminders.js";
 import { createDemoStore } from "./store.js";
+import { accountRouter } from "./routes/account.js";
 import { adminNewsRouter } from "./routes/admin-news.js";
 import { assistantRouter } from "./routes/assistant.js";
 import { documentsRouter } from "./routes/documents.js";
@@ -41,6 +42,7 @@ export function createApp({
   registeredNewsSources = defaultNewsSources,
   clock = () => new Date(),
   reminders = createReminderService({ store, clock }),
+  account = {},
 } = {}) {
   const app = express();
   const allowedOrigin = process.env.CLIENT_URL || "http://localhost:5173";
@@ -69,6 +71,7 @@ export function createApp({
     newsQueryLimiter,
     registeredSources: registeredNewsSources,
   }));
+  app.use("/api/account", authenticate, accountRouter(store, { account, clock }));
   app.post("/api/notifications/sync", authenticate, async (request, response) => {
     response.json({ data: await reminders.sync(request.user.uid) });
   });

@@ -8,14 +8,15 @@ import TasksPage from "./pages/TasksPage";
 import GuidesPage from "./pages/GuidesPage";
 import AssistantPage from "./pages/AssistantPage";
 import ProfilePage from "./pages/ProfilePage";
+import SettingsPage from "./pages/SettingsPage";
 import NewsPage from "./pages/NewsPage";
 import NotificationsPage from "./pages/NotificationsPage";
 import NewsAdminPage from "./pages/NewsAdminPage";
 import { useAuth } from "./lib/auth-context";
-import { apiRequest } from "./lib/api";
+import { apiDownload, apiRequest } from "./lib/api";
 import { storageAvailable } from "./lib/firebase";
 import {
-  createTask, removeDocument, removeTask, saveProfile, saveResource, subscribeStudentData,
+  createTask, removeDocument, removeTask, saveResource, subscribeStudentData,
   toggleTask, uploadDocument,
 } from "./lib/student-data";
 import {
@@ -171,8 +172,9 @@ export default function App() {
     setDocuments((current) => current.map((item) => item.id === document.id ? { ...item, analysisStatus: "indexing" } : item));
     const analysis = await apiRequest(`/api/documents/${document.id}/index`, { method: "POST" })
       .catch((error) => {
-        setAppError(error.message);
-        setDocuments((current) => current.map((item) => item.id === document.id ? { ...item, analysisStatus: "index_failed" } : item));
+        setDocuments((current) => current.map((item) => item.id === document.id
+          ? { ...item, analysisStatus: "index_failed", analysisError: { message: error.message, retryable: true } }
+          : item));
         return null;
       });
     if (!analysis) return;
@@ -180,7 +182,15 @@ export default function App() {
   };
   const updateProfile = async (value) => {
     setProfile(value);
-    if (live) await saveProfile(auth.user.uid, value);
+    if (!live) return;
+    setAppError("");
+    await apiRequest("/api/profile", { method: "PUT", body: JSON.stringify(value) })
+      .catch((error) => setAppError(error.message));
+  };
+  const deleteAccount = async () => {
+    await apiRequest("/api/account", { method: "DELETE", body: JSON.stringify({ confirmation: "DELETE MY ACCOUNT" }) });
+    await auth.signOutUser().catch(() => {});
+    setDemo(false);
   };
   const signOut = async () => {
     if (live) await auth.signOutUser();
@@ -245,6 +255,15 @@ export default function App() {
           <Route path="assistant" element={<AssistantPage documents={documents.filter((document) => document.analysisStatus === "indexed")} />} />
           <Route path="notifications" element={<NotificationsPage notifications={notifications} onMarkRead={markRead} onMarkAllRead={markAllRead} />} />
           <Route path="profile" element={<ProfilePage profile={profile} onSave={updateProfile} />} />
+          <Route path="settings" element={(
+            <SettingsPage
+              live={live}
+              preferences={newsPreferences}
+              onUpdatePreferences={updatePreferences}
+              onExport={() => apiDownload("/api/account/export", "globeready-account-export.json").catch((error) => setAppError(error.message))}
+              onDelete={deleteAccount}
+            />
+          )} />
           <Route path="admin/news" element={isAdmin ? <NewsAdminPage isAdmin={isAdmin} /> : <Navigate to="/" replace />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

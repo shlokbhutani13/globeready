@@ -37,7 +37,7 @@ export default function AppShell({ onSignOut, isAdmin = false, unreadNotificatio
             </NavLink>
           ))}
         </nav>
-        <div className="sidebar-footer"><button><Settings size={17} /> Settings</button><button onClick={onSignOut}><LogOut size={17} /> Sign out</button></div>
+        <div className="sidebar-footer"><NavLink to="/settings"><Settings size={17} /> Settings</NavLink><button onClick={onSignOut}><LogOut size={17} /> Sign out</button></div>
       </aside>
       <section className="app-main"><Outlet /></section>
       <nav className="mobile-nav" aria-label="Primary navigation">

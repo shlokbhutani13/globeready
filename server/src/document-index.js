@@ -1,5 +1,4 @@
-import { PDFParse } from "pdf-parse";
-
+import { DocumentExtractionError, extractDocument, maxDocumentBytes, allowedExtractionTypes } from "./document-extraction.js";
 import { chunkText } from "./rag.js";
 
 function assertPrivateStoragePath(uid, storagePath) {
@@ -25,32 +24,35 @@ async function mapWithConcurrency(items, limit, mapper) {
   return results;
 }
 
-export async function extractPdfText({ document, bucket }) {
-  if (document.contentType !== "application/pdf") {
-    throw new Error("Only PDF documents can be indexed for document chat.");
-  }
+export async function extractStoredDocument({ uid, document, bucket, ocr = null, parsePdf }) {
   if (!bucket) throw new Error("Private document storage is not configured.");
+  assertPrivateStoragePath(uid, document.storagePath);
 
-  const [bytes] = await bucket.file(document.storagePath).download();
-  const parser = new PDFParse({ data: bytes });
-  try {
-    const result = await parser.getText();
-    return result.pages.map((page) => ({ page: page.num, text: page.text }));
-  } finally {
-    await parser.destroy();
+  const file = bucket.file(document.storagePath);
+  const [metadata] = await file.getMetadata();
+  const size = Number(metadata?.size);
+  if (!allowedExtractionTypes.has(metadata?.contentType)) {
+    throw new DocumentExtractionError("unsupported_document_type", "Upload a PDF, PNG, or JPEG file.");
   }
+  if (!Number.isFinite(size) || size <= 0 || size > maxDocumentBytes) {
+    throw new DocumentExtractionError("document_too_large", "Files must be 10 MB or smaller.");
+  }
+
+  const [bytes] = await file.download();
+  return extractDocument({ bytes: new Uint8Array(bytes), mimeType: metadata.contentType, ocr, parsePdf });
 }
 
 export function createDocumentIndexer({
   store,
   bucket,
-  embed,
-  extractText = extractPdfText,
+  embed = null,
+  ocr = null,
+  extractText = ({ uid, document }) => extractStoredDocument({ uid, document, bucket, ocr }),
   maxChunks = 200,
   maxConcurrentEmbeddings = 4,
 }) {
   if (!store?.ragChunks) throw new Error("The document index store is not configured.");
-  if (typeof embed !== "function") throw new Error("An embedding function is required.");
+  if (embed !== null && typeof embed !== "function") throw new Error("An embedding function must be a function when provided.");
   if (!Number.isInteger(maxConcurrentEmbeddings) || maxConcurrentEmbeddings < 1) {
     throw new Error("Embedding concurrency must be a positive integer.");
   }
@@ -59,7 +61,7 @@ export function createDocumentIndexer({
     async index({ uid, document }) {
       assertPrivateStoragePath(uid, document.storagePath);
       try {
-        const extracted = await extractText({ document, bucket });
+        const extracted = await extractText({ uid, document, bucket });
         const pages = Array.isArray(extracted)
           ? extracted
           : [{ page: null, text: extracted }];
@@ -77,7 +79,7 @@ export function createDocumentIndexer({
           async (chunk) => ({
             ...chunk,
             documentName: document.name,
-            embedding: await embed(chunk.text, "RETRIEVAL_DOCUMENT"),
+            ...(embed ? { embedding: await embed(chunk.text, "RETRIEVAL_DOCUMENT") } : {}),
           }),
         );
         await store.ragChunks.replace(uid, document.id, indexedChunks);

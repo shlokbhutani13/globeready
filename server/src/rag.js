@@ -46,3 +46,35 @@ export function citationFor(chunk) {
     excerpt: String(chunk.text || "").slice(0, 240),
   };
 }
+
+const fillerWords = new Set([
+  "a", "about", "am", "an", "and", "are", "at", "be", "by", "can", "do", "does", "for", "from", "how",
+  "i", "if", "in", "is", "it", "me", "my", "of", "on", "or", "should", "the", "their", "this", "that",
+  "to", "what", "when", "where", "which", "who", "why", "will", "with", "would", "you", "your",
+]);
+
+function normalizeTerm(term) {
+  return term.length > 4 && term.endsWith("s") ? term.slice(0, -1) : term;
+}
+
+export function meaningfulTerms(value) {
+  const terms = String(value || "").toLowerCase().match(/[a-z0-9]+/g) || [];
+  return [...new Set(terms.filter((term) => term.length > 1 && !fillerWords.has(term)).map(normalizeTerm))];
+}
+
+export function lexicalScore(question, text) {
+  const query = meaningfulTerms(question);
+  if (!query.length) return 0;
+  const haystack = new Set(meaningfulTerms(text));
+  return query.filter((term) => haystack.has(term)).length / query.length;
+}
+
+export function rankChunksLexically(question, chunks, { limit = 6, minimumScore = 0.5 } = {}) {
+  return chunks
+    .map((chunk) => ({ ...chunk, score: lexicalScore(question, chunk.text) }))
+    .filter((chunk) => chunk.score > 0 && chunk.score >= minimumScore)
+    .sort((left, right) => right.score - left.score
+      || (left.index ?? 0) - (right.index ?? 0)
+      || String(left.id).localeCompare(String(right.id)))
+    .slice(0, limit);
+}

@@ -9,6 +9,13 @@ export function validateDocument(file) {
   return "";
 }
 
+const readableImageTypes = new Set(["image/png", "image/jpeg"]);
+
+function isReadableDocument(document) {
+  if (document.contentType === "application/pdf" || document.name?.toLowerCase().endsWith(".pdf")) return true;
+  return readableImageTypes.has(document.contentType) || /\.(png|jpe?g)$/i.test(document.name || "");
+}
+
 function indexingLabel(document) {
   if (document.storageMode?.includes("demo")) return "Demo metadata";
   if (document.analysisStatus === "indexing") return "Indexing";
@@ -42,11 +49,16 @@ export default function DocumentsPage({
       {uploadProgress > 0 && uploadProgress < 100 && <div className="upload-progress"><span style={{ width: `${uploadProgress}%` }} />Uploading {uploadProgress}%</div>}
       <section className="panel"><div className="panel-title"><div><span className="eyebrow">Vault</span><h2>{documents.length} documents</h2></div></div>
         <div className="document-table">{documents.map((document) => {
-          const isPdf = document.contentType === "application/pdf" || document.name.toLowerCase().endsWith(".pdf");
+          const readable = isReadableDocument(document);
           const isDemo = document.storageMode?.includes("demo");
           const isIndexing = document.analysisStatus === "indexing";
-          const actionLabel = !isPdf ? "PDFs only" : isDemo ? "Demo explanation" : isIndexing ? "Indexing…" : document.analysisStatus === "indexed" ? "Re-index" : "Index & explain";
-          return <div className="document-row" key={document.id}><span className="file-icon"><FileText size={18} /></span><div><strong>{document.name}</strong><small>{document.category} · {document.storageMode || "Firebase Storage"}</small>{isPdf && <small className={`document-status ${document.analysisStatus || "not-indexed"}`}>{indexingLabel(document)}</small>}{document.analysis?.summary && <small>{document.analysis.summary}</small>}{document.analysis?.chunkCount && <small>Indexed for Assistant · {document.analysis.chunkCount} sections</small>}</div><button className="analyze-button" disabled={!isPdf || isIndexing} onClick={() => onAnalyze(document)}>{actionLabel}</button><button aria-label={`Delete ${document.name}`} onClick={() => onDelete(document)}><Trash2 size={16} /></button></div>;
+          const actionLabel = !readable ? "Unsupported type"
+            : isDemo ? "Demo explanation"
+            : isIndexing ? "Indexing…"
+            : document.analysisStatus === "indexed" ? "Re-index"
+            : document.analysisStatus === "index_failed" ? "Retry indexing"
+            : "Index & explain";
+          return <div className="document-row" key={document.id}><span className="file-icon"><FileText size={18} /></span><div><strong>{document.name}</strong><small>{document.category} · {document.storageMode || "Firebase Storage"}</small>{readable && <small className={`document-status ${document.analysisStatus || "not-indexed"}`}>{indexingLabel(document)}</small>}{document.analysisStatus === "index_failed" && document.analysisError?.message && <small className="document-error" role="status">{document.analysisError.message}</small>}{document.analysis?.summary && <small>{document.analysis.summary}</small>}{document.analysis?.chunkCount && <small>Indexed for Assistant · {document.analysis.chunkCount} sections</small>}</div><button className="analyze-button" disabled={!readable || isIndexing} onClick={() => onAnalyze(document)}>{actionLabel}</button><button aria-label={`Delete ${document.name}`} onClick={() => onDelete(document)}><Trash2 size={16} /></button></div>;
         })}</div>
       </section>
       <Disclaimer />

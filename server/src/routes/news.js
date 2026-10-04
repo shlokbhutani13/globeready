@@ -23,7 +23,7 @@ const legalStates = new Set([
 ]);
 const filterFields = new Set(["topic", "visaType", "universityId", "legalState", "limit", "cursor"]);
 const preferenceFields = new Set([
-  "visaTypes", "homeCountries", "universityIds", "topics", "digestFrequency", "pushEnabled",
+  "visaTypes", "homeCountries", "universityIds", "topics", "digestFrequency", "pushEnabled", "emailRemindersEnabled",
 ]);
 const idPattern = /^[A-Za-z0-9][A-Za-z0-9:_-]{0,127}$/u;
 
@@ -86,6 +86,10 @@ function parsePreferences(body) {
   if (Object.hasOwn(body, "digestFrequency")) {
     if (!["daily", "weekly", "off"].includes(body.digestFrequency)) return null;
     parsed.digestFrequency = body.digestFrequency;
+  }
+  if (Object.hasOwn(body, "emailRemindersEnabled")) {
+    if (typeof body.emailRemindersEnabled !== "boolean") return null;
+    parsed.emailRemindersEnabled = body.emailRemindersEnabled;
   }
   if (Object.hasOwn(body, "pushEnabled")) {
     if (typeof body.pushEnabled !== "boolean") return null;

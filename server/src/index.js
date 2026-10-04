@@ -39,6 +39,12 @@ const app = createApp({
   assistant,
   newsSync,
   snapshotStore,
+  account: {
+    deleteStoragePrefix: (uid) => (firebase?.bucket
+      ? firebase.bucket.deleteFiles({ prefix: `users/${uid}/` })
+      : Promise.resolve()),
+    deleteAuthUser: firebase ? (uid) => firebase.auth.deleteUser(uid) : null,
+  },
 });
 
 app.listen(port, () => {

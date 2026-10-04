@@ -30,6 +30,9 @@ function createCollection() {
     async remove(uid, id) {
       return userItems(uid).delete(id);
     },
+    async purgeUser(uid) {
+      byUser.delete(uid);
+    },
   };
 }
 
@@ -470,6 +473,9 @@ function createNewsPreferencesStore() {
       preferencesByUser.set(uid, preference);
       return preference;
     },
+    async purgeUser(uid) {
+      preferencesByUser.delete(uid);
+    },
   };
 }
 
@@ -496,6 +502,9 @@ function createConversationMessageCollection() {
     },
     async remove(uid, conversationId, id) {
       return messages(uid, conversationId).delete(id);
+    },
+    async purgeUser(uid) {
+      byUser.delete(uid);
     },
   };
 }
@@ -535,6 +544,9 @@ function createRagChunkCollection() {
         if (item.documentId === documentId) items.delete(id);
       }
     },
+    async purgeUser(uid) {
+      byUser.delete(uid);
+    },
   };
 }
 
@@ -569,6 +581,16 @@ export function createDemoStore() {
   };
   const newsSources = createGlobalCollection({ leases, items: sourceItems });
   const newsRuns = createGlobalCollection({ leases, items: runItems });
+  const tasks = createCollection();
+  const documents = createCollection();
+  const resources = createCollection();
+  const conversations = createCollection();
+  const ragChunks = createRagChunkCollection();
+  const newsPreferences = createNewsPreferencesStore();
+  const savedNews = createCollection();
+  const notifications = createCollection();
+  const conversationMessages = createConversationMessageCollection();
+  const userScoped = [tasks, documents, resources, conversations, ragChunks, newsPreferences, savedNews, notifications, conversationMessages];
   return {
     profiles: {
       async get(uid) {
@@ -585,11 +607,15 @@ export function createDemoStore() {
         return profile;
       },
     },
-    tasks: createCollection(),
-    documents: createCollection(),
-    resources: createCollection(),
-    conversations: createCollection(),
-    ragChunks: createRagChunkCollection(),
+    tasks,
+    documents,
+    resources,
+    conversations,
+    ragChunks,
+    async purgeUser(uid) {
+      profiles.delete(uid);
+      await Promise.all(userScoped.map((collection) => collection.purgeUser(uid)));
+    },
     news: createNewsStore({ reviewItems, auditItems, leases }),
     newsSources,
     newsRuns,
@@ -610,9 +636,9 @@ export function createDemoStore() {
     reviewQueue,
     reviewAudit: readOnlyGlobalCollection(auditItems),
     leases,
-    newsPreferences: createNewsPreferencesStore(),
-    savedNews: createCollection(),
-    notifications: createCollection(),
-    conversationMessages: createConversationMessageCollection(),
+    newsPreferences,
+    savedNews,
+    notifications,
+    conversationMessages,
   };
 }

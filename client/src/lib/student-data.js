@@ -30,10 +30,6 @@ export function subscribeStudentData(uid, handlers) {
   ];
 }
 
-export function saveProfile(uid, profile) {
-  return setDoc(doc(db, "users", uid), { ...profile, updatedAt: serverTimestamp() }, { merge: true });
-}
-
 export function createTask(uid, input) {
   const details = typeof input === "string" ? { title: input } : (input || {});
   return addDoc(collection(db, "users", uid, "tasks"), {

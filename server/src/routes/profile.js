@@ -5,6 +5,14 @@ import { cleanText, validDate } from "../validation.js";
 
 const universityIdPattern = /^[A-Za-z0-9][A-Za-z0-9:_-]{0,127}$/u;
 
+function validTimeZone(value) {
+  if (value === undefined || value === "") return "";
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: value });
+    return value;
+  } catch { return null; }
+}
+
 function officialUniversityDomain(value) {
   if (value === undefined || value === "") return "";
   try {
@@ -21,9 +29,11 @@ export function profileRouter(store) {
   router.put("/", async (request, response) => {
     const universityId = cleanText(request.body.universityId, 128);
     const domain = officialUniversityDomain(request.body.officialUniversityDomain);
-    if ((universityId && !universityIdPattern.test(universityId)) || domain === null || (domain && !universityId)) {
+    const timeZone = validTimeZone(request.body.timeZone);
+    if ((universityId && !universityIdPattern.test(universityId))
+      || domain === null || (domain && !universityId) || timeZone === null) {
       return response.status(422).json({
-        error: { code: "invalid_profile", message: "Use a valid university ID and official .edu domain." },
+        error: { code: "invalid_profile", message: "Use a valid university ID, official .edu domain, and time zone." },
       });
     }
     const input = {
@@ -38,6 +48,7 @@ export function profileRouter(store) {
       graduationDate: request.body.graduationDate || "",
       universityId,
       officialUniversityDomain: domain,
+      timeZone,
     };
     if (!validDate(input.startDate) || !validDate(input.graduationDate)) {
       return response.status(422).json({

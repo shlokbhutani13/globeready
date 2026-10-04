@@ -28,6 +28,7 @@ export function createAuthMiddleware(adminAuth) {
         uid: decoded.uid,
         email: decoded.email,
         admin: decoded.admin === true,
+        authTime: Number.isFinite(decoded.auth_time) ? decoded.auth_time : null,
         demo: false,
       };
       return next();

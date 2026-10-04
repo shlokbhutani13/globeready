@@ -1,40 +1,53 @@
-import { citationFor, rankChunks } from "./rag.js";
+import { citationFor, rankChunksLexically } from "./rag.js";
 
-function withEmptyDocumentCitations(result) {
-  return { ...result, documentCitations: [] };
+export const insufficientEvidenceNotice = "GlobeReady could not find this in your uploaded documents or approved sources. Check the document itself, and confirm with your university international student office or the official source before acting.";
+export const unavailableNotice = "GlobeReady could not generate a document-grounded answer right now. Try again later, or confirm with your university international student office.";
+
+function withoutDocumentAnswer(result, evidence, notice) {
+  return { ...result, evidence, notice, documentCitations: [] };
 }
 
 export function createDocumentAssistant({
   fallback,
   store,
-  embed,
   generateAnswer,
-  minimumScore = 0.25,
+  minimumScore = 0.5,
+  limit = 6,
 }) {
   if (!store?.ragChunks) throw new Error("The document index store is not configured.");
 
   return {
     async answer({ uid, question, profile, documentId }) {
+      let candidates;
       try {
-        const queryEmbedding = await embed(question, "RETRIEVAL_QUERY");
-        const candidates = await store.ragChunks.list(
-          uid,
-          documentId ? { documentId } : {},
-        );
-        const chunks = rankChunks(queryEmbedding, candidates)
-          .filter((chunk) => chunk.score >= minimumScore);
-        if (!chunks.length) {
-          return withEmptyDocumentCitations(await fallback.answer({ question, profile }));
-        }
+        candidates = await store.ragChunks.list(uid, documentId ? { documentId } : {});
+      } catch {
+        return withoutDocumentAnswer(await fallback.answer({ question, profile }), "unavailable", unavailableNotice);
+      }
 
+      const chunks = rankChunksLexically(question, candidates, { limit, minimumScore });
+      if (!chunks.length) {
+        return withoutDocumentAnswer(
+          await fallback.answer({ question, profile }),
+          "insufficient",
+          insufficientEvidenceNotice,
+        );
+      }
+
+      try {
         const result = await generateAnswer({ question, profile, chunks });
         return {
           ...result,
           mode: "live",
+          evidence: "grounded",
           documentCitations: chunks.map(citationFor),
         };
       } catch {
-        return withEmptyDocumentCitations(await fallback.answer({ question, profile }));
+        return withoutDocumentAnswer(
+          await fallback.answer({ question, profile }),
+          "unavailable",
+          unavailableNotice,
+        );
       }
     },
   };
