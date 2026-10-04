@@ -45,7 +45,7 @@ describe("extractDocument", () => {
 
   test("fails closed for images when no OCR adapter is configured, as a retryable state", async () => {
     const error = await extractDocument({
-      bytes: Buffer.from([0x89, 0x50]),
+      bytes: Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0x0d]),
       mimeType: "image/png",
       ocr: null,
     }).catch((caught) => caught);

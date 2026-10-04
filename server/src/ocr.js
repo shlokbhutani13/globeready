@@ -30,7 +30,7 @@ export function createLocalOcr({ timeoutMs = recognitionTimeoutMs, workerFactory
     if (stale) await stale.terminate().catch(() => {});
   };
 
-  return async function ocr({ bytes, mimeType }) {
+  const ocr = async function ocr({ bytes, mimeType }) {
     assertReasonableImage(bytes, mimeType);
     const job = queue.then(() => Promise.race([
       recognize(bytes),
@@ -54,4 +54,7 @@ export function createLocalOcr({ timeoutMs = recognitionTimeoutMs, workerFactory
       );
     }
   };
+  // Releases the recognition worker during graceful shutdown.
+  ocr.shutdown = reset;
+  return ocr;
 }

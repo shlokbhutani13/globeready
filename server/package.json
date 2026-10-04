@@ -9,7 +9,7 @@
     "dev": "node --watch src/index.js",
     "demo": "DEMO_MODE=true NODE_ENV=development node src/index.js",
     "test": "vitest run",
-    "test:rules": "firebase emulators:exec --only firestore,auth,storage --project globeready-test \"vitest run tests/firestore-rules-emulator.test.js tests/firestore-account-emulator.test.js tests/account-emulator.test.js tests/storage-rules-emulator.test.js tests/local-user-mode.test.js\"",
+    "test:rules": "firebase emulators:exec --only firestore,auth,storage --project globeready-test \"vitest run tests/firestore-rules-emulator.test.js tests/firestore-account-emulator.test.js tests/account-emulator.test.js tests/storage-rules-emulator.test.js tests/firestore-snapshots-emulator.test.js tests/local-user-mode.test.js\"",
     "lint": "node --check src/index.js && node --check src/app.js"
   },
   "keywords": [],

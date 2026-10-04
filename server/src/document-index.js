@@ -1,9 +1,9 @@
 import { DocumentExtractionError, extractDocument, maxDocumentBytes, allowedExtractionTypes } from "./document-extraction.js";
 import { chunkText } from "./rag.js";
+import { isOwnedDocumentPath } from "./storage-paths.js";
 
 function assertPrivateStoragePath(uid, storagePath) {
-  const ownedPrefix = `users/${uid}/documents/`;
-  if (!storagePath || !storagePath.startsWith(ownedPrefix)) {
+  if (!isOwnedDocumentPath(uid, storagePath)) {
     throw new Error("Document must be stored in the authenticated user's private document folder.");
   }
 }
@@ -39,6 +39,10 @@ export async function extractStoredDocument({ uid, document, bucket, ocr = null,
   }
 
   const [bytes] = await file.download();
+  // Metadata can be stale or wrong; the bytes are the authority on size.
+  if (bytes.length > maxDocumentBytes) {
+    throw new DocumentExtractionError("document_too_large", "Files must be 10 MB or smaller.");
+  }
   return extractDocument({ bytes: new Uint8Array(bytes), mimeType: metadata.contentType, ocr, parsePdf });
 }
 

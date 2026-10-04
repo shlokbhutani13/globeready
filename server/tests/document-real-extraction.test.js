@@ -94,12 +94,12 @@ describe("production image extraction (real local OCR)", () => {
     expect(ocrCalled).toBe(false);
   });
 
-  test("reports bytes labelled as an image that are not an image as unreadable", async () => {
+  test("rejects bytes labelled as an image whose signature does not match the declared type", async () => {
     await expect(extractDocument({
       bytes: new Uint8Array(Buffer.from("not an image at all, just text")),
       mimeType: "image/jpeg",
       ocr,
-    })).rejects.toMatchObject({ code: "image_unreadable" });
+    })).rejects.toMatchObject({ code: "file_type_mismatch" });
   });
 
   test("a recognition failure is safe and retryable and leaves no partial index", async () => {

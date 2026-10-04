@@ -1,20 +1,41 @@
 import { Router } from "express";
+import { isOwnedDocumentPath } from "../storage-paths.js";
 
-export function documentsRouter(store, assistant, aiLimiter = (_request, _response, next) => next()) {
+export function documentsRouter(store, assistant, aiLimiter = (_request, _response, next) => next(), {
+  deleteStoredFile = null,
+} = {}) {
   const router = Router();
   const ownedDocument = async (uid, id) => {
     const documents = await store.documents.list(uid);
     return documents.find((item) => item.id === id);
   };
-  const invalidStoragePath = (uid, document) =>
-    !document.storagePath || !document.storagePath.startsWith(`users/${uid}/documents/`);
+  const invalidStoragePath = (uid, document) => !isOwnedDocumentPath(uid, document.storagePath);
 
   router.get("/", async (request, response) => {
     response.json({ data: await store.documents.list(request.user.uid) });
   });
   router.delete("/:id", async (request, response) => {
-    await store.ragChunks?.removeForDocument(request.user.uid, request.params.id);
-    const removed = await store.documents.remove(request.user.uid, request.params.id);
+    const document = await ownedDocument(request.user.uid, request.params.id);
+    if (!document) return response.status(404).json({ error: { code: "document_not_found" } });
+    // The stored file goes first and must succeed before the metadata is removed, so a failure leaves the record
+    // in place for a safe retry instead of orphaning the file. A path outside the owner's folder never reaches
+    // storage; only its metadata is removed.
+    if (document.storagePath && !invalidStoragePath(request.user.uid, document)) {
+      if (typeof deleteStoredFile !== "function") {
+        return response.status(503).json({
+          error: { code: "document_storage_unavailable", message: "Documents cannot be deleted right now. Try again later." },
+        });
+      }
+      try {
+        await deleteStoredFile(document.storagePath);
+      } catch {
+        return response.status(503).json({
+          error: { code: "document_storage_unavailable", message: "Documents cannot be deleted right now. Try again later." },
+        });
+      }
+    }
+    await store.ragChunks?.removeForDocument(request.user.uid, document.id);
+    const removed = await store.documents.remove(request.user.uid, document.id);
     return removed ? response.status(204).end() : response.status(404).json({ error: { code: "document_not_found" } });
   });
   router.post("/:id/index", aiLimiter, async (request, response) => {

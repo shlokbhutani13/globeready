@@ -1,4 +1,5 @@
 import { classifyQuestion, selectTrustedSources } from "./trusted-resources.js";
+import { unavailableNotice } from "./document-assistant.js";
 
 const guidance = {
   ssn: "Confirm your eligibility before an SSN appointment. Prepare your passport, visa, I-20, I-94, and the employment or university letter required for your situation.",
@@ -68,6 +69,43 @@ export function createLocalFallback() {
         disclaimer: "Verify all details with an official source.",
         mode: "local",
       };
+    },
+  };
+}
+
+// Used in production when no document storage is configured. It never returns guidance text that could be
+// mistaken for an answer grounded in the student's documents or in a model.
+export function createUnavailableAssistant() {
+  return {
+    mode: "unavailable",
+    async answer({ question }) {
+      return {
+        mode: "unavailable",
+        answer: "",
+        question,
+        evidence: "unavailable",
+        notice: unavailableNotice,
+        documentCitations: [],
+        sources: selectTrustedSources(question),
+        confidence: "low",
+        disclaimer: "General information only. Confirm with your university and official sources.",
+      };
+    },
+    async indexDocument() {
+      throw Object.assign(new Error("Document indexing is unavailable."), {
+        code: "document_index_unavailable",
+        safeMessage: "Document reading is not available right now. Your upload is saved; try again later.",
+        retryable: true,
+        status: 503,
+      });
+    },
+    async analyzeDocument() {
+      throw Object.assign(new Error("Document analysis is unavailable."), {
+        code: "document_index_unavailable",
+        safeMessage: "Document reading is not available right now. Your upload is saved; try again later.",
+        retryable: true,
+        status: 503,
+      });
     },
   };
 }

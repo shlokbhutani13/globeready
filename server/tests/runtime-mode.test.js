@@ -1,9 +1,13 @@
 import { execFileSync } from "node:child_process";
 import { generateKeyPairSync } from "node:crypto";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
 import { createFirebaseAdmin } from "../src/firebase-admin.js";
 import { integrationConfigForRuntime, resolveRuntimeMode, ConfigError } from "../src/runtime-config.js";
+
+// Tests in this file start real Node processes. Their budget is set explicitly, so a loaded machine
+// cannot fail a correct refusal by exceeding vitest's 5-second default.
+vi.setConfig({ testTimeout: 60_000 });
 
 const hosts = {
   FIREBASE_AUTH_EMULATOR_HOST: "127.0.0.1:9099",

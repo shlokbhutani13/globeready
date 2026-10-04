@@ -2,11 +2,15 @@ import { execFileSync } from "node:child_process";
 import { accessSync, constants, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import request from "supertest";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
 import { createApp } from "../src/app.js";
 import { createFirebaseAdmin } from "../src/firebase-admin.js";
 import { createFirestoreStore } from "../src/firestore-store.js";
+
+// Tests in this file start real Node processes. Their budget is set explicitly, so a loaded machine
+// cannot fail a correct refusal by exceeding vitest's 5-second default.
+vi.setConfig({ testTimeout: 60_000 });
 
 const root = fileURLToPath(new URL("../..", import.meta.url));
 const serverDir = fileURLToPath(new URL("..", import.meta.url));

@@ -113,6 +113,7 @@ export function newsRouter(store, {
   sourceSuggestionLimiter = pass,
   newsQueryLimiter = pass,
   registeredSources = [],
+  clock = () => new Date(),
 } = {}) {
   const router = Router();
   router.get("/university-coverage", newsQueryLimiter, async (request, response) => {
@@ -134,7 +135,7 @@ export function newsRouter(store, {
       data: {
         items: [...results].slice(0, filters.limit),
         nextCursor: results.cursor || null,
-        sourceHealth: sourceHealth(mergedSources(registeredSources, stored)),
+        sourceHealth: sourceHealth(mergedSources(registeredSources, stored), clock().getTime()),
       },
     });
   });

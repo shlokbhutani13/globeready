@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 
 import { isPublished } from "./news/schema.js";
+import { SNAPSHOT_COMMIT_PROTOCOL } from "./news/snapshots.js";
 
 const urgencyRanks = new Map([
   ["critical", 4],
@@ -926,6 +927,94 @@ function leaseStore(firestore, clock) {
   };
 }
 
+
+// Source snapshots are the normalized text an approval is checked against. They are written in the same
+// Firestore transaction domain as the leases that fence them, so a commit either happens while the lease is
+// owned or not at all. No cross-service promotion is needed. The collection is server-only in firestore.rules.
+const snapshotPathPattern = /^news-source-snapshots\/[a-z0-9](?:[a-z0-9_-]{0,198}[a-z0-9])?\/[a-f0-9]{64}\.txt$/iu;
+const maxSnapshotBytes = 900_000;
+
+function snapshotPathFor(sourceId, contentHash) {
+  if (typeof sourceId !== "string" || !/^[a-z0-9](?:[a-z0-9_-]{0,198}[a-z0-9])?$/iu.test(sourceId)) {
+    throw new Error("Snapshot source ID is invalid.");
+  }
+  if (typeof contentHash !== "string" || !/^[a-f0-9]{64}$/u.test(contentHash)) {
+    throw new Error("Snapshot content hash must be a lowercase SHA-256 hash.");
+  }
+  return `news-source-snapshots/${sourceId}/${contentHash}.txt`;
+}
+
+function snapshotReference(firestore, path) {
+  return firestore.collection("newsSourceSnapshots").doc(stableId(path));
+}
+
+export function createFirestoreSnapshotStore(firestore, { clock = () => new Date(), retentionDays = 90 } = {}) {
+  const dayMilliseconds = 86_400_000;
+  return {
+    isPrivate: true,
+    supportsFencing: true,
+    commitProtocol: SNAPSHOT_COMMIT_PROTOCOL,
+    async save(sourceId, contentHash, content, { fence, signal } = {}) {
+      const path = snapshotPathFor(sourceId, contentHash);
+      if (!fence || typeof fence.key !== "string" || typeof fence.owner !== "string") {
+        throw new Error("Snapshot save requires an ownership fence.");
+      }
+      if (typeof content !== "string") throw new Error("Snapshot content must be text.");
+      const normalized = content.toWellFormed().replace(/\s+/gu, " ").trim();
+      if (Buffer.byteLength(normalized, "utf8") > maxSnapshotBytes) {
+        throw Object.assign(new Error("Source text is too large to keep as a verified snapshot."), { code: "snapshot_too_large" });
+      }
+      if (signal?.aborted) throw signal.reason instanceof Error ? signal.reason : new Error("Snapshot save was aborted.");
+      const reference = snapshotReference(firestore, path);
+      const expiresAt = new Date(currentDate(clock).valueOf() + retentionDays * dayMilliseconds);
+      return firestore.runTransaction(async (transaction) => {
+        await assertFence(transaction, firestore, fence, clock);
+        const snapshot = await transaction.get(reference);
+        const current = snapshot.exists ? snapshot.data() : null;
+        if (current?.committed === true && current.path === path && current.content === normalized) {
+          return { path, committed: true, commitId: current.commitId, expiresAt: current.expiresAt, reused: true };
+        }
+        if (current) {
+          // A different text under the same content hash is not a valid snapshot. Refuse rather than overwrite.
+          throw new Error("A snapshot with this identity already exists with different content.");
+        }
+        const commitId = randomUUID();
+        transaction.set(reference, {
+          path,
+          content: normalized,
+          contentHash,
+          commitId,
+          committed: true,
+          createdAt: currentDate(clock),
+          expiresAt,
+        });
+        return { path, committed: true, commitId, expiresAt: expiresAt.toISOString(), reused: false };
+      });
+    },
+    async discard({ path, commitId } = {}) {
+      if (typeof path !== "string" || !snapshotPathPattern.test(path) || typeof commitId !== "string" || !commitId) return false;
+      const reference = snapshotReference(firestore, path);
+      return firestore.runTransaction(async (transaction) => {
+        const snapshot = await transaction.get(reference);
+        if (!snapshot.exists || snapshot.data()?.commitId !== commitId) return false;
+        transaction.delete(reference);
+        return true;
+      });
+    },
+    async readCommitted({ path, commitId } = {}) {
+      if (typeof path !== "string" || !snapshotPathPattern.test(path) || typeof commitId !== "string" || !commitId) {
+        throw new Error("A matching committed snapshot marker is required.");
+      }
+      const snapshot = await snapshotReference(firestore, path).get();
+      const current = snapshot.exists ? snapshot.data() : null;
+      if (!current || current.committed !== true || current.path !== path || current.commitId !== commitId) {
+        throw new Error("A matching committed snapshot marker is required.");
+      }
+      return current.content;
+    },
+  };
+}
+
 export function createFirestoreStore(firestore, { clock = () => new Date() } = {}) {
   if (!firestore || typeof firestore.collection !== "function"
     || typeof firestore.runTransaction !== "function" || typeof firestore.batch !== "function") {
@@ -970,6 +1059,7 @@ export function createFirestoreStore(firestore, { clock = () => new Date() } = {
     reviewQueue: reviewQueueStore(firestore, clock),
     reviewAudit: readOnlyGlobalCollectionStore(firestore, "newsReviewAudits", clock),
     leases,
+    snapshots: createFirestoreSnapshotStore(firestore, { clock }),
     newsPreferences: newsPreferencesStore(firestore, clock),
     savedNews: userCollectionStore(firestore, "savedNews", clock),
     notifications: userCollectionStore(firestore, "notifications", clock, { defaults: { read: false } }),

@@ -10,11 +10,32 @@ const pdfType = "application/pdf";
 const imageTypes = new Set(["image/png", "image/jpeg"]);
 export const allowedExtractionTypes = new Set([pdfType, ...imageTypes]);
 
+// Declared MIME types are not trusted: the file must carry the signature of the type it claims.
+const signatures = {
+  "image/png": [[0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]],
+  "image/jpeg": [[0xff, 0xd8, 0xff]],
+};
+
+export function hasExpectedSignature(bytes, mimeType) {
+  if (mimeType === pdfType) {
+    // A PDF may have junk before its header; the header must appear near the start.
+    const head = Buffer.from(bytes.subarray(0, 1024)).toString("latin1");
+    return head.includes("%PDF-");
+  }
+  return (signatures[mimeType] || []).some((signature) => signature.every((value, index) => bytes[index] === value));
+}
+
 export function assertSupportedDocument({ mimeType, size }) {
   if (!allowedExtractionTypes.has(mimeType)) {
     throw new DocumentExtractionError("unsupported_document_type", "Upload a PDF, PNG, or JPEG file.");
   }
-  if (!Number.isFinite(size) || size <= 0 || size > maxDocumentBytes) {
+  if (!Number.isFinite(size) || size < 0) {
+    throw new DocumentExtractionError("invalid_document_bytes", "The document could not be read.");
+  }
+  if (size === 0) {
+    throw new DocumentExtractionError("empty_document", "This file is empty. Upload the document again.");
+  }
+  if (size > maxDocumentBytes) {
     throw new DocumentExtractionError("document_too_large", "Files must be 10 MB or smaller.");
   }
 }
@@ -46,6 +67,12 @@ export async function extractDocument({ bytes, mimeType, ocr = null, parsePdf = 
     throw new DocumentExtractionError("invalid_document_bytes", "The document could not be read.");
   }
   assertSupportedDocument({ mimeType, size: bytes.byteLength });
+  if (!hasExpectedSignature(bytes, mimeType)) {
+    throw new DocumentExtractionError(
+      "file_type_mismatch",
+      "This file does not match its type. Upload a PDF, PNG, or JPEG file.",
+    );
+  }
 
   let pages;
   if (mimeType === pdfType) {

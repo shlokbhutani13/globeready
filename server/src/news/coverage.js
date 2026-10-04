@@ -35,10 +35,27 @@ export function universityCoverage(sources, universityId) {
   };
 }
 
-export function sourceHealth(sources) {
+const defaultCadenceHours = 12;
+const hourMilliseconds = 60 * 60_000;
+
+// A source that has not completed a check within twice its cadence is delayed, even when no failure was recorded.
+// Without this, a source whose checks stopped would keep reading as current.
+function isStale(source, now) {
+  if (typeof source.lastCheckedAt !== "string") return false;
+  const checkedAt = Date.parse(source.lastCheckedAt);
+  if (!Number.isFinite(checkedAt)) return true;
+  const cadenceHours = Number.isInteger(source.cadenceHours) && source.cadenceHours > 0
+    ? source.cadenceHours
+    : defaultCadenceHours;
+  return now - checkedAt > 2 * cadenceHours * hourMilliseconds;
+}
+
+export function sourceHealth(sources, now = Date.now()) {
   const active = (Array.isArray(sources) ? sources : []).filter((source) => source.verified === true && source.enabled === true);
   const checked = active.filter((source) => typeof source.lastCheckedAt === "string");
-  const delayed = active.filter((source) => (Number(source.consecutiveFailures) || 0) > 0 || source.lastRunStatus === "failed");
+  const delayed = active.filter((source) => (Number(source.consecutiveFailures) || 0) > 0
+    || source.lastRunStatus === "failed"
+    || isStale(source, now));
   const lastCheckedAt = checked.map((source) => source.lastCheckedAt).sort().at(-1) || null;
   if (delayed.length > 0) {
     return {

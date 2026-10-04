@@ -77,6 +77,6 @@ describe("authentication modes", () => {
   test("health remains available without authentication", async () => {
     const app = createApp({ store: createDemoStore(), auth: null });
     const response = await request(app).get("/api/health").expect(200);
-    expect(response.body.mode).toBe("demo-disabled");
+    expect(response.body.mode).toBe("unconfigured");
   });
 });

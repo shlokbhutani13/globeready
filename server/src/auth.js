@@ -25,7 +25,8 @@ export function createAuthMiddleware(adminAuth, { demoMode = false } = {}) {
       }
 
       const token = authorization.slice("Bearer ".length);
-      const decoded = await adminAuth.verifyIdToken(token);
+      // checkRevoked also rejects disabled accounts and tokens issued before a revocation.
+      const decoded = await adminAuth.verifyIdToken(token, true);
       if (typeof decoded?.uid !== "string" || !decoded.uid || decoded.uid.length > 128) {
         throw new Error("Verified token is missing a valid UID.");
       }

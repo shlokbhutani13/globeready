@@ -74,11 +74,25 @@ async function anonymizeReviewSubmissions(store, uid) {
   }
 }
 
+// Deletion order matters: each step is idempotent, so a failed request can be retried safely.
+// Storage and Firestore are removed first; the Auth identity is deleted last so a retry can still authenticate.
 export async function deleteAccount({ store, uid, deleteStoragePrefix, deleteAuthUser = null }) {
+  if (typeof deleteStoragePrefix !== "function") {
+    throw Object.assign(new Error("Document storage is not configured; account deletion cannot continue."), {
+      code: "account_deletion_unavailable",
+      safeMessage: "Account deletion is temporarily unavailable. Your data has not been changed; try again later.",
+      status: 503,
+    });
+  }
   await deleteStoragePrefix(uid);
   await store.purgeUser(uid);
   await anonymizeReviewSubmissions(store, uid);
   if (!deleteAuthUser) return { authIdentity: "not-configured" };
-  await deleteAuthUser(uid);
+  try {
+    await deleteAuthUser(uid);
+  } catch (error) {
+    // Already removed by an earlier attempt: the outcome is the same, so treat it as success.
+    if (error?.code !== "auth/user-not-found") throw error;
+  }
   return { authIdentity: "deleted" };
 }

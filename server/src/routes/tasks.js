@@ -27,11 +27,17 @@ export function tasksRouter(store) {
     response.status(201).json({ data: task });
   });
   router.patch("/:id", async (request, response) => {
+    const titleProvided = request.body.title !== undefined;
+    if (titleProvided && (typeof request.body.title !== "string" || !cleanText(request.body.title))) {
+      return response.status(422).json({
+        error: { code: "invalid_task", message: "A task title must be non-empty text." },
+      });
+    }
     const task = await store.tasks.update(request.user.uid, request.params.id, {
       ...(typeof request.body.completed === "boolean"
         ? { completed: request.body.completed }
         : {}),
-      ...(request.body.title ? { title: cleanText(request.body.title) } : {}),
+      ...(titleProvided ? { title: cleanText(request.body.title) } : {}),
     });
     if (!task) return response.status(404).json({ error: { code: "task_not_found" } });
     response.json({ data: task });

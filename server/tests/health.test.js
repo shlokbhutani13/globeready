@@ -12,6 +12,8 @@ describe("health", () => {
     expect(response.body).toEqual({
       ok: true,
       mode: "demo",
+      version: expect.any(String),
+      build: "unset",
       services: { auth: false, ai: false },
     });
   });
@@ -26,7 +28,9 @@ describe("health", () => {
 
     expect(response.body).toEqual({
       ok: true,
-      mode: "live",
+      mode: "production",
+      version: expect.any(String),
+      build: "unset",
       services: { auth: true, ai: false },
     });
   });

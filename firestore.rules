@@ -5,6 +5,42 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid == uid;
     }
 
+    // Shape checks for the records a student writes directly. Calendar validity of dates is enforced by the API;
+    // these rules enforce types, lengths, allowed keys, and the owned storage path.
+    function validTask(data) {
+      return data.keys().hasOnly(['title', 'category', 'priority', 'dueDate', 'notes', 'completed', 'source', 'createdAt', 'updatedAt'])
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 200
+        && data.completed is bool
+        && data.source == 'user'
+        && (!('category' in data) || (data.category is string && data.category.size() <= 80))
+        && (!('priority' in data) || data.priority in ['low', 'medium', 'high'])
+        && (!('dueDate' in data) || data.dueDate == '' || (data.dueDate is string && data.dueDate.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')))
+        && (!('notes' in data) || (data.notes is string && data.notes.size() <= 1000));
+    }
+
+    function validDocument(uid, docId, data) {
+      return data.keys().hasOnly(['name', 'category', 'contentType', 'size', 'storagePath', 'storageMode', 'analysisStatus', 'uploadedAt', 'createdAt', 'updatedAt'])
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 200
+        && data.contentType in ['application/pdf', 'image/png', 'image/jpeg']
+        && data.size is int && data.size > 0 && data.size <= 10485760
+        && data.storagePath is string
+        && data.storagePath.split('/').size() == 5
+        && data.storagePath.split('/')[0] == 'users'
+        && data.storagePath.split('/')[1] == uid
+        && data.storagePath.split('/')[2] == 'documents'
+        && data.storagePath.split('/')[3] == docId
+        && data.storagePath.split('/')[4].matches('[A-Za-z0-9][A-Za-z0-9_.-]{0,199}')
+        && data.analysisStatus == 'not_requested';
+    }
+
+    function validSavedResource(data) {
+      return data.keys().hasOnly(['title', 'url', 'category', 'source', 'createdAt', 'updatedAt'])
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 200
+        && data.url is string && data.url.size() <= 500 && data.url.matches('https://.+')
+        && (!('category' in data) || (data.category is string && data.category.size() <= 80))
+        && (!('source' in data) || (data.source is string && data.source.size() <= 200));
+    }
+
     match /newsItems/{newsItemId} {
       allow read: if resource.data.editorialState in ['published-source-only', 'approved'];
       allow write: if false;
@@ -32,37 +68,67 @@ service cloud.firestore {
     match /newsLeases/{document=**} {
       allow read, write: if false;
     }
+    match /newsSourceSnapshots/{document=**} {
+      allow read, write: if false;
+    }
 
+    // Owners read their own records. Owners write only the records the client itself writes, and each write must
+    // have the shape the client sends. Everything else (profile, preferences, saved updates, conversations, and the
+    // legacy push collection) is written by the API through the Admin SDK, so owners cannot write it directly.
     match /users/{uid} {
-      allow read, write: if isOwner(uid);
+      allow read: if isOwner(uid);
+      allow write: if false;
 
-      match /tasks/{document=**} {
-        allow read, write: if isOwner(uid);
+      match /tasks/{taskId} {
+        allow read: if isOwner(uid);
+        allow create: if isOwner(uid) && validTask(request.resource.data);
+        allow update: if isOwner(uid)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['completed', 'updatedAt'])
+          && request.resource.data.completed is bool;
+        allow delete: if isOwner(uid);
       }
-      match /documents/{document=**} {
-        allow read, write: if isOwner(uid);
+
+      match /documents/{docId} {
+        allow read: if isOwner(uid);
+        allow create: if isOwner(uid) && validDocument(uid, docId, request.resource.data);
+        // Deleting a document removes its stored file first, so it goes through the API, never a direct delete.
+        allow update, delete: if false;
       }
-      match /savedResources/{document=**} {
-        allow read, write: if isOwner(uid);
+
+      match /savedResources/{resourceId} {
+        allow read: if isOwner(uid);
+        allow create: if isOwner(uid) && validSavedResource(request.resource.data);
+        allow update, delete: if false;
       }
+
+      match /notifications/{notificationId} {
+        allow read: if isOwner(uid);
+        allow create, delete: if false;
+        allow update: if isOwner(uid)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read', 'updatedAt'])
+          && request.resource.data.read is bool;
+      }
+
       match /newsPreferences/{document=**} {
-        allow read, write: if isOwner(uid);
+        allow read: if isOwner(uid);
+        allow write: if false;
       }
       match /savedNews/{document=**} {
-        allow read, write: if isOwner(uid);
-      }
-      match /notifications/{document=**} {
-        allow read, write: if isOwner(uid);
+        allow read: if isOwner(uid);
+        allow write: if false;
       }
       match /conversations/{conversationId} {
-        allow read, write: if isOwner(uid);
+        allow read: if isOwner(uid);
+        allow write: if false;
 
         match /messages/{messageId} {
-          allow read, write: if isOwner(uid);
+          allow read: if isOwner(uid);
+          allow write: if false;
         }
       }
       match /pushSubscriptions/{document=**} {
-        allow read, write: if isOwner(uid);
+        allow read: if isOwner(uid);
+        allow write: if false;
       }
       match /ragChunks/{document=**} {
         allow read, write: if false;

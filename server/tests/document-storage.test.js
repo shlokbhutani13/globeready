@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 
 import { extractStoredDocument } from "../src/document-index.js";
 
-function fakeBucket({ size = 1024, contentType = "application/pdf", bytes = Buffer.from("%PDF") } = {}) {
+function fakeBucket({ size = 1024, contentType = "application/pdf", bytes = Buffer.from("%PDF-1.4\n") } = {}) {
   const calls = { metadata: 0, download: 0 };
   return {
     calls,
