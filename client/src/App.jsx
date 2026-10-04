@@ -8,6 +8,9 @@ import TasksPage from "./pages/TasksPage";
 import GuidesPage from "./pages/GuidesPage";
 import AssistantPage from "./pages/AssistantPage";
 import ProfilePage from "./pages/ProfilePage";
+import NewsPage from "./pages/NewsPage";
+import NotificationsPage from "./pages/NotificationsPage";
+import NewsAdminPage from "./pages/NewsAdminPage";
 import { useAuth } from "./lib/auth-context";
 import { apiRequest } from "./lib/api";
 import { storageAvailable } from "./lib/firebase";
@@ -15,6 +18,11 @@ import {
   createTask, removeDocument, removeTask, saveProfile, saveResource, subscribeStudentData,
   toggleTask, uploadDocument,
 } from "./lib/student-data";
+import {
+  fetchUniversityCoverage, markAllNotificationsRead, markNotificationRead, rankNewsItems,
+  saveNews, subscribeNews, subscribeNewsPreferences, subscribeNotifications, subscribeSavedNews,
+  syncNotifications, universityIdFor, unsaveNews, updateNewsPreferences,
+} from "./lib/news-data";
 
 const initialProfile = { fullName: "Maya Singh", homeCountry: "India", university: "UNC Chapel Hill", program: "Computer Science", visaType: "F-1", journeyStage: "Preparing for arrival" };
 const emptyProfile = { fullName: "", homeCountry: "", university: "", program: "", visaType: "F-1", journeyStage: "Preparing for arrival" };
@@ -38,12 +46,30 @@ export default function App() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [appError, setAppError] = useState("");
 
+  const [newsItems, setNewsItems] = useState([]);
+  const [newsLoading, setNewsLoading] = useState(false);
+  const [newsError, setNewsError] = useState("");
+  const [newsFilters, setNewsFilters] = useState({});
+  const [newsRetryToken, setNewsRetryToken] = useState(0);
+  const [savedNews, setSavedNews] = useState([]);
+  const [newsPreferences, setNewsPreferences] = useState({});
+  const [notifications, setNotifications] = useState([]);
+  const [coverage, setCoverage] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+
   useEffect(() => {
     if (!auth.user) return undefined;
     setProfile({ ...emptyProfile, fullName: auth.user.displayName || "" });
     setTasks([]);
     setDocuments([]);
     setSavedResources([]);
+    setNewsItems([]);
+    setNewsLoading(true);
+    setSavedNews([]);
+    setNewsPreferences({});
+    setNotifications([]);
+    setIsAdmin(false);
+
     const unsubscribers = subscribeStudentData(auth.user.uid, {
       profile: (value) => setProfile({ ...emptyProfile, fullName: auth.user.displayName || "", ...value }),
       tasks: setTasks,
@@ -51,19 +77,53 @@ export default function App() {
       savedResources: setSavedResources,
       error: (error) => setAppError(error?.message || "Could not load your workspace."),
     });
-    return () => unsubscribers.forEach((unsubscribe) => unsubscribe());
-  }, [auth.user]);
+
+    const stopNews = subscribeNews(
+      newsFilters,
+      (items) => { setNewsItems(items); setNewsLoading(false); setNewsError(""); },
+      (error) => { setNewsLoading(false); setNewsError(error?.message || "Could not load updates."); },
+    );
+    const stopSavedNews = subscribeSavedNews(auth.user.uid, setSavedNews, () => {});
+    const stopPreferences = subscribeNewsPreferences(auth.user.uid, setNewsPreferences, () => {});
+    const stopNotifications = subscribeNotifications(auth.user.uid, setNotifications, () => {});
+
+    syncNotifications().catch(() => {});
+    apiRequest("/api/admin/news/health").then(() => setIsAdmin(true)).catch(() => setIsAdmin(false));
+
+    return () => {
+      unsubscribers.forEach((unsubscribe) => unsubscribe());
+      stopNews();
+      stopSavedNews();
+      stopPreferences();
+      stopNotifications();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [auth.user, JSON.stringify(newsFilters), newsRetryToken]);
+
+  useEffect(() => {
+    const universityId = universityIdFor(profile.university);
+    if (!auth.user || !universityId) { setCoverage(null); return; }
+    fetchUniversityCoverage(universityId).then(setCoverage).catch(() => setCoverage(null));
+  }, [auth.user, profile.university]);
 
   if (auth.loading) return <div className="app-loading">Preparing GlobeReady…</div>;
   if (!auth.user && !demo) return <LoginPage onDemo={() => setDemo(true)} auth={auth} />;
 
   const live = Boolean(auth.user);
-  const addTask = async (title) => {
+  const savedNewsIds = new Set(savedNews.map((item) => item.id));
+  const unreadNotifications = notifications.filter((notification) => !notification.read).length;
+  const topNews = rankNewsItems(newsItems, profile).slice(0, 2);
+
+  const addTask = async (input) => {
+    const details = typeof input === "string" ? { title: input, dueDate: "", priority: "medium" } : input;
     if (live) {
       setAppError("");
-      return createTask(auth.user.uid, title).catch((error) => setAppError(error.message));
+      return createTask(auth.user.uid, details).catch((error) => setAppError(error.message));
     }
-    setTasks([...tasks, { id: crypto.randomUUID(), title, category: "General", priority: "medium", dueDate: "", completed: false }]);
+    setTasks([...tasks, {
+      id: crypto.randomUUID(), title: details.title, category: "General",
+      priority: details.priority || "medium", dueDate: details.dueDate || "", completed: false,
+    }]);
   };
   const changeTask = async (id) => {
     const task = tasks.find((item) => item.id === id);
@@ -131,18 +191,61 @@ export default function App() {
     if (!live) return;
     await saveResource(auth.user.uid, guide);
   };
+  const toggleSaveNews = async (item) => {
+    if (!live) return;
+    try {
+      if (savedNewsIds.has(item.id)) await unsaveNews(item.id);
+      else await saveNews(item.id);
+    } catch (error) {
+      setAppError(error.message);
+    }
+  };
+  const updatePreferences = async (input) => {
+    if (!live) return;
+    try {
+      await updateNewsPreferences(input);
+    } catch (error) {
+      setAppError(error.message);
+    }
+  };
+  const markRead = async (notification) => {
+    if (!live) return;
+    markNotificationRead(auth.user.uid, notification.id).catch((error) => setAppError(error.message));
+  };
+  const markAllRead = async () => {
+    if (!live) return;
+    markAllNotificationsRead(auth.user.uid, notifications).catch((error) => setAppError(error.message));
+  };
 
   return (
     <BrowserRouter>
       {appError && <div className="app-error" role="alert"><span>{appError}</span><button onClick={() => setAppError("")}>Dismiss</button></div>}
       <Routes>
-        <Route element={<AppShell onSignOut={signOut} />}>
-          <Route index element={<DashboardPage profile={profile} tasks={tasks} documents={documents} />} />
+        <Route element={<AppShell onSignOut={signOut} isAdmin={isAdmin} unreadNotifications={unreadNotifications} />}>
+          <Route index element={<DashboardPage profile={profile} tasks={tasks} documents={documents} topNews={topNews} unreadNotifications={unreadNotifications} />} />
+          <Route path="news" element={(
+            <NewsPage
+              items={newsItems}
+              loading={newsLoading}
+              error={newsError}
+              onRetry={() => setNewsRetryToken((value) => value + 1)}
+              filters={newsFilters}
+              onFilterChange={setNewsFilters}
+              savedIds={savedNewsIds}
+              onToggleSave={toggleSaveNews}
+              coverage={coverage}
+              profile={profile}
+              preferences={newsPreferences}
+              onUpdatePreferences={updatePreferences}
+            />
+          )} />
           <Route path="documents" element={<DocumentsPage documents={documents} uploadProgress={uploadProgress} storageAvailable={!live || storageAvailable} onAdd={addDocument} onDelete={deleteDocument} onAnalyze={analyzeDocument} />} />
           <Route path="tasks" element={<TasksPage tasks={tasks} onAdd={addTask} onToggle={changeTask} onDelete={deleteTask} />} />
           <Route path="guides" element={<GuidesPage onSave={saveGuide} savedUrls={savedResources.map((resource) => resource.url)} />} />
           <Route path="assistant" element={<AssistantPage documents={documents.filter((document) => document.analysisStatus === "indexed")} />} />
+          <Route path="notifications" element={<NotificationsPage notifications={notifications} onMarkRead={markRead} onMarkAllRead={markAllRead} />} />
           <Route path="profile" element={<ProfilePage profile={profile} onSave={updateProfile} />} />
+          <Route path="admin/news" element={isAdmin ? <NewsAdminPage isAdmin={isAdmin} /> : <Navigate to="/" replace />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

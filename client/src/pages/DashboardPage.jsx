@@ -1,9 +1,10 @@
 import React from "react";
-import { ArrowUpRight, CalendarDays, CheckCircle2, Clock3, FileText, Sparkles } from "lucide-react";
+import { ArrowUpRight, Bell, CalendarDays, CheckCircle2, FileText, Sparkles } from "lucide-react";
 import MetricCard from "../components/MetricCard";
 import Disclaimer from "../components/Disclaimer";
+import NewsCard from "../components/NewsCard";
 
-export default function DashboardPage({ profile = {}, tasks = [], documents = [] }) {
+export default function DashboardPage({ profile = {}, tasks = [], documents = [], topNews = [], unreadNotifications = 0 }) {
   const firstName = profile.fullName?.split(" ")[0] || "there";
   const openTasks = tasks.filter((task) => !task.completed);
   return (
@@ -16,7 +17,7 @@ export default function DashboardPage({ profile = {}, tasks = [], documents = []
         <MetricCard icon={CheckCircle2} label="Open tasks" value={openTasks.length} detail="Review high-priority work" />
         <MetricCard icon={CalendarDays} label="Next deadline" value={openTasks[0]?.dueDate || "None"} detail={openTasks[0]?.title || "You're caught up"} tone="gold" />
         <MetricCard icon={FileText} label="Documents" value={documents.length} detail="Stored in your vault" tone="green" />
-        <MetricCard icon={Clock3} label="Journey stage" value={profile.journeyStage || "Preparing"} detail="Personalizes recommendations" tone="violet" />
+        <MetricCard icon={Bell} label="Notifications" value={unreadNotifications} detail={unreadNotifications > 0 ? "Unread reminders" : "You're caught up"} tone="violet" />
       </section>
       <section className="dashboard-grid">
         <article className="panel span-2">
@@ -36,6 +37,12 @@ export default function DashboardPage({ profile = {}, tasks = [], documents = []
           <div><span className="eyebrow">Recommended for you</span><h2>Check your I-20 travel signature</h2><p>Review the signature date before international travel and confirm requirements with your university.</p></div>
           <button className="button secondary">Open guide</button>
         </article>
+        {topNews.length > 0 && (
+          <article className="panel span-2">
+            <div className="panel-title"><div><span className="eyebrow">Updates</span><h2>Most relevant for you</h2></div></div>
+            <div className="dashboard-news">{topNews.slice(0, 2).map((item) => <NewsCard key={item.id} item={item} compact />)}</div>
+          </article>
+        )}
       </section>
       <Disclaimer compact />
     </div>

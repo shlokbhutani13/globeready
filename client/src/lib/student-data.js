@@ -34,10 +34,17 @@ export function saveProfile(uid, profile) {
   return setDoc(doc(db, "users", uid), { ...profile, updatedAt: serverTimestamp() }, { merge: true });
 }
 
-export function createTask(uid, title) {
+export function createTask(uid, input) {
+  const details = typeof input === "string" ? { title: input } : (input || {});
   return addDoc(collection(db, "users", uid, "tasks"), {
-    title, category: "General", priority: "medium", dueDate: "", completed: false,
-    source: "user", createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+    title: details.title || "",
+    category: details.category || "General",
+    priority: details.priority || "medium",
+    dueDate: details.dueDate || "",
+    completed: false,
+    source: "user",
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
   });
 }
 

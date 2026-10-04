@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { mergedSources, universityCoverage } from "../news/coverage.js";
 import { canonicalOfficialUrl } from "../news/official-url.js";
 import { isPublished, publicNewsItem } from "../news/schema.js";
 
@@ -104,8 +105,21 @@ function canonicalSuggestion(body) {
 
 const pass = (_request, _response, next) => next();
 
-export function newsRouter(store, { sourceSuggestionLimiter = pass, newsQueryLimiter = pass } = {}) {
+export function newsRouter(store, {
+  sourceSuggestionLimiter = pass,
+  newsQueryLimiter = pass,
+  registeredSources = [],
+} = {}) {
   const router = Router();
+  router.get("/university-coverage", newsQueryLimiter, async (request, response) => {
+    const universityId = request.query.universityId;
+    if (Object.keys(request.query).some((key) => key !== "universityId")
+      || typeof universityId !== "string" || !idPattern.test(universityId)) {
+      return invalid(response, "Provide a valid universityId.");
+    }
+    const stored = await store.newsSources.listGlobal();
+    response.json({ data: universityCoverage(mergedSources(registeredSources, stored), universityId) });
+  });
   router.get("/", newsQueryLimiter, async (request, response) => {
     let filters;
     try { filters = parseFilters(request.query); } catch (error) { return invalid(response, error.message); }

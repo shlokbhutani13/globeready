@@ -4,6 +4,7 @@ import { createAdminMiddleware, createSchedulerMiddleware } from "./admin-auth.j
 import { createAssistant } from "./assistant.js";
 import { createAuthMiddleware } from "./auth.js";
 import { defaultNewsSources } from "./news/default-sources.js";
+import { createReminderService } from "./reminders.js";
 import { createDemoStore } from "./store.js";
 import { adminNewsRouter } from "./routes/admin-news.js";
 import { assistantRouter } from "./routes/assistant.js";
@@ -39,6 +40,7 @@ export function createApp({
   newsSyncEnabled = process.env.NEWS_SYNC_ENABLED === "true",
   registeredNewsSources = defaultNewsSources,
   clock = () => new Date(),
+  reminders = createReminderService({ store, clock }),
 } = {}) {
   const app = express();
   const allowedOrigin = process.env.CLIENT_URL || "http://localhost:5173";
@@ -62,7 +64,14 @@ export function createApp({
   app.use("/api/documents", authenticate, documentsRouter(store, assistant || createAssistant(), aiLimiter));
   app.use("/api/resources", authenticate, resourcesRouter(store));
   app.use("/api/assistant", authenticate, assistantRouter(store, assistant || createAssistant(), aiLimiter));
-  app.use("/api/news", authenticate, newsRouter(store, { sourceSuggestionLimiter, newsQueryLimiter }));
+  app.use("/api/news", authenticate, newsRouter(store, {
+    sourceSuggestionLimiter,
+    newsQueryLimiter,
+    registeredSources: registeredNewsSources,
+  }));
+  app.post("/api/notifications/sync", authenticate, async (request, response) => {
+    response.json({ data: await reminders.sync(request.user.uid) });
+  });
   app.use("/api/admin/news", authenticate, requireAdmin, adminNewsRouter(store, {
     newsSync,
     snapshotStore,
