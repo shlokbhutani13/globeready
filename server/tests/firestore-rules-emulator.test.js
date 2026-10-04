@@ -82,6 +82,7 @@ describeEmulator("Firestore authorization rules", () => {
     for (const path of [
       "newsItemState/item",
       "reviewQueue/review",
+      "newsReviewAudits/audit",
       "newsSources/source",
       "newsRuns/run",
       "newsLeases/lease",

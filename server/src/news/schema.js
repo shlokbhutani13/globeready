@@ -34,6 +34,16 @@ export const editorialStates = new Set([
   "archived",
 ]);
 
+export const publicNewsFields = new Set([
+  "id", "sourceId", "sourceKey", "externalId", "relatedExternalId", "canonicalUrl",
+  "officialPdfUrl", "sourceVerified", "title", "publisher", "publishedAt", "updatedAt",
+  "effectiveAt", "expiresAt", "sourceDocumentType", "sourceLegalState", "documentType",
+  "legalState", "editorialState", "docketNumber", "regulationIdNumber", "excerpt",
+  "sourceExcerpt", "plainLanguageSummary", "actions", "urgency", "relevance", "highImpact",
+  "topics", "visaTypes", "nationalities", "universityIds", "journeyStages", "relatedIds",
+  "supersedesIds", "supersededByIds", "firstSeenAt", "lastSeenAt", "createdAt", "recordUpdatedAt",
+]);
+
 function cleanText(value, max = 500) {
   return typeof value === "string" ? value.trim().slice(0, max) : "";
 }
@@ -75,24 +85,15 @@ export function isPublished(item) {
 }
 
 export function publicNewsItem(item) {
-  const {
-    normalizedText,
-    contentHash,
-    currentRevisionId,
-    snapshotPath,
-    snapshotCommitId,
-    classifierConfidence,
-    classifierMatchedTerms,
-    classifierExplanation,
-    summaryProvenance,
-    reviewerUid,
-    reviewedAt,
-    reviewId,
-    approvalEvidence,
-    baseLegalState,
-    ...safe
-  } = item;
-  return safe;
+  if (!item || typeof item !== "object") return {};
+  const result = Object.fromEntries([...publicNewsFields]
+    .filter((field) => Object.hasOwn(item, field) && item[field] !== undefined)
+    .map((field) => [field, item[field]]));
+  if (item.editorialState !== "approved") {
+    result.plainLanguageSummary = "";
+    result.actions = [];
+  }
+  return result;
 }
 
 export function normalizeNewsCandidate(candidate = {}, source = {}) {

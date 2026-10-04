@@ -32,7 +32,7 @@ describe("Firebase ownership rules", () => {
 
   test("Firestore denies provenance, review, source-state, run, and lease collections", async () => {
     const rules = await readFile(resolve(root, "firestore.rules"), "utf8");
-    for (const path of ["newsItemState", "reviewQueue", "newsSources", "newsRuns", "newsLeases"]) {
+    for (const path of ["newsItemState", "reviewQueue", "newsReviewAudits", "newsSources", "newsRuns", "newsLeases"]) {
       expect(rules).toContain(`match /${path}/{document=**}`);
     }
     expect(rules).toMatch(/match \/newsItems\/\{newsItemId\}[\s\S]*?match \/\{document=\*\*\}[\s\S]*?allow read, write:\s*if false/u);

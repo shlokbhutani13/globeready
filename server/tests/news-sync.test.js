@@ -144,6 +144,8 @@ async function createValidatedReview(store, newsItemId, summary = "Reviewed summ
   const evidence = {
     contentHash: item.contentHash,
     revisionId: item.currentRevisionId,
+    sourceId: item.sourceId ?? null,
+    snapshotPath: item.snapshotPath ?? null,
     sourceVerified: true,
     snapshotCommitId: item.snapshotCommitId ?? null,
     validatedAt: "2026-09-14T13:00:00.000Z",
@@ -1549,5 +1551,33 @@ describe("news source synchronization", () => {
     });
 
     await expect(sync.syncSource(pending.id)).rejects.toThrow(/disabled|pending/i);
+  });
+
+  test("refuses disabled, unverified, and verification-pending stored sources even in dry-run", async () => {
+    for (const state of [
+      { enabled: false, verified: true, verificationState: "verified" },
+      { enabled: true, verified: false, verificationState: "verified" },
+      { enabled: true, verified: true, verificationState: "verification-pending" },
+    ]) {
+      const store = createDemoStore();
+      await store.newsSources.upsert("stored-source", {
+        id: "stored-source",
+        publisher: "Stored source",
+        adapter: "feed",
+        url: "https://example.edu/feed.xml",
+        allowedHosts: ["example.edu"],
+        ...state,
+      });
+      const fetchSource = vi.fn();
+      const sync = createNewsSync({
+        store,
+        adapters: { feed: { collect: vi.fn() } },
+        fetchSource,
+        sources: [],
+      });
+
+      await expect(sync.syncSource("stored-source", { dryRun: true })).rejects.toThrow(/disabled|verified|pending/i);
+      expect(fetchSource).not.toHaveBeenCalled();
+    }
   });
 });

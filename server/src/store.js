@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { isPublished, publicNewsItem } from "./news/schema.js";
 
 function createCollection() {
@@ -89,7 +89,46 @@ export function createGlobalCollection({ leases, items = new Map() } = {}) {
   };
 }
 
-function createNewsStore({ reviewQueue, leases }) {
+function auditId(reviewId, decision) {
+  return createHash("sha256").update(`${reviewId}\0${decision}`).digest("hex");
+}
+
+function readOnlyGlobalCollection(items) {
+  return {
+    async listGlobal() {
+      return [...items.values()].sort((left, right) =>
+        String(right.reviewedAt || right.createdAt).localeCompare(String(left.reviewedAt || left.createdAt)));
+    },
+    async get(id) {
+      return items.get(id) || null;
+    },
+  };
+}
+
+function decisionAudit({ review, decision, reviewerUid, reviewedAt }) {
+  return {
+    id: auditId(review.id, decision),
+    type: "review-decision-audit",
+    decision,
+    reviewerUid,
+    reviewedAt,
+    reviewId: review.id,
+    newsItemId: review.newsItemId || null,
+    contentHash: review.contentHash || null,
+    revisionId: review.revisionId || null,
+    createdAt: reviewedAt,
+  };
+}
+
+function assertNewAudit(auditItems, audit) {
+  const existing = auditItems.get(audit.id);
+  if (existing && JSON.stringify(existing) !== JSON.stringify(audit)) {
+    throw new Error("Review decision audit already exists with different metadata.");
+  }
+  return existing;
+}
+
+function createNewsStore({ reviewItems, auditItems, leases }) {
   const itemsBySourceKey = new Map();
   const revisionsByItemId = new Map();
   const urgency = new Map([
@@ -246,9 +285,14 @@ function createNewsStore({ reviewQueue, leases }) {
       itemsBySourceKey.set(sourceKey, item);
       return { item, created: false, changed: true };
     },
-    async approve(id, { reviewerUid, reviewedAt, reviewId } = {}) {
+    async decideReview(id, { decision, ...metadata } = {}) {
+      if (decision === "approve") return this.approve(id, metadata);
+      if (decision === "reject") return this.reject(id, metadata);
+      throw new Error("News review decision must be approve or reject.");
+    },
+    async approve(id, { reviewerUid, reviewedAt, reviewId, validation } = {}) {
       const current = [...itemsBySourceKey.values()].find((item) => item.id === id);
-      const review = await reviewQueue.get(reviewId);
+      const review = reviewItems.get(reviewId);
       if (!current || !review || review.newsItemId !== id) {
         throw new Error("News approval requires a matching review record.");
       }
@@ -257,31 +301,53 @@ function createNewsStore({ reviewQueue, leases }) {
       }
       if (review.status === "consumed") {
         if (current.editorialState === "approved" && current.reviewId === reviewId
-          && review.consumedBy === reviewerUid.trim() && review.consumedAt === reviewedAt) return current;
+          && review.consumedBy === reviewerUid.trim() && review.consumedAt === reviewedAt) {
+          const audit = decisionAudit({ review, decision: "approve", reviewerUid: reviewerUid.trim(), reviewedAt });
+          assertNewAudit(auditItems, audit);
+          auditItems.set(audit.id, audit);
+          return current;
+        }
         throw new Error("News approval cannot reuse a consumed review.");
       }
-      if (review.status !== "validated" || review.editorialState !== "review-required"
-        || typeof review.reason !== "string" || !review.reason.trim()
-        || review.contentHash !== current.contentHash
-        || review.revisionId !== current.currentRevisionId) {
+      const inlineValidation = review.status === "pending" && Boolean(validation);
+      const reviewForApproval = inlineValidation
+        ? {
+          ...review,
+          status: "validated",
+          draft: validation.draft,
+          validationEvidence: validation.evidence,
+          validatedBy: reviewerUid.trim(),
+          validatedAt: reviewedAt,
+        }
+        : review;
+      if ((inlineValidation && current.editorialState !== "review-required")
+        || reviewForApproval.status !== "validated"
+        || reviewForApproval.editorialState !== "review-required"
+        || typeof reviewForApproval.reason !== "string" || !reviewForApproval.reason.trim()
+        || reviewForApproval.contentHash !== current.contentHash
+        || reviewForApproval.revisionId !== current.currentRevisionId) {
         throw new Error("News approval requires a validated review for the current content revision.");
       }
-      const evidence = review.validationEvidence;
+      const evidence = reviewForApproval.validationEvidence;
       if (!evidence || evidence.contentHash !== current.contentHash
         || evidence.revisionId !== current.currentRevisionId || evidence.sourceVerified !== true
-        || evidence.snapshotCommitId !== (current.snapshotCommitId ?? null)) {
+        || (evidence.sourceId ?? null) !== (current.sourceId ?? null)
+        || (evidence.snapshotPath ?? null) !== (current.snapshotPath ?? null)
+        || evidence.snapshotCommitId !== (current.snapshotCommitId ?? null)
+        || (inlineValidation && (typeof evidence.validatedAt !== "string"
+          || evidence.validatedAt !== reviewedAt))) {
         throw new Error("News approval requires validation evidence for the current content revision.");
       }
-      if (!review.draft || typeof review.draft.plainLanguageSummary !== "string"
-        || !Array.isArray(review.draft.actions)) {
+      if (!reviewForApproval.draft || typeof reviewForApproval.draft.plainLanguageSummary !== "string"
+        || !Array.isArray(reviewForApproval.draft.actions)) {
         throw new Error("News approval requires a stored reviewed draft.");
       }
 
       const item = {
         ...current,
         editorialState: "approved",
-        plainLanguageSummary: review.draft.plainLanguageSummary.trim(),
-        actions: review.draft.actions,
+        plainLanguageSummary: reviewForApproval.draft.plainLanguageSummary.trim(),
+        actions: reviewForApproval.draft.actions,
         summaryProvenance: evidence,
         reviewerUid: reviewerUid.trim(),
         reviewedAt,
@@ -289,13 +355,58 @@ function createNewsStore({ reviewQueue, leases }) {
         approvalEvidence: evidence,
         recordUpdatedAt: new Date().toISOString(),
       };
-      itemsBySourceKey.set(item.sourceKey, item);
-      await reviewQueue.update(reviewId, {
+      const nextReview = {
+        ...reviewForApproval,
         status: "consumed",
         consumedBy: reviewerUid.trim(),
         consumedAt: reviewedAt,
         approvalNewsItemId: id,
-      });
+        updatedAt: reviewedAt,
+      };
+      const audit = decisionAudit({ review, decision: "approve", reviewerUid: reviewerUid.trim(), reviewedAt });
+      assertNewAudit(auditItems, audit);
+      itemsBySourceKey.set(item.sourceKey, item);
+      reviewItems.set(reviewId, nextReview);
+      auditItems.set(audit.id, audit);
+      return item;
+    },
+    async reject(id, { reviewerUid, reviewedAt, reviewId } = {}) {
+      const current = [...itemsBySourceKey.values()].find((item) => item.id === id);
+      const review = reviewItems.get(reviewId);
+      if (!current || !review || review.newsItemId !== id) {
+        throw new Error("News rejection requires a matching review record.");
+      }
+      if (typeof reviewerUid !== "string" || !reviewerUid.trim() || typeof reviewedAt !== "string" || !reviewedAt) {
+        throw new Error("News rejection requires reviewer metadata.");
+      }
+      if (review.status !== "pending" || review.editorialState !== "review-required"
+        || review.contentHash !== current.contentHash || review.revisionId !== current.currentRevisionId) {
+        throw new Error("News rejection requires a pending review for the current content revision.");
+      }
+      const item = {
+        ...current,
+        editorialState: "rejected",
+        plainLanguageSummary: "",
+        summaryProvenance: null,
+        actions: [],
+        recordUpdatedAt: reviewedAt,
+      };
+      delete item.reviewerUid;
+      delete item.reviewedAt;
+      delete item.reviewId;
+      delete item.approvalEvidence;
+      const nextReview = {
+        ...review,
+        status: "rejected",
+        rejectedBy: reviewerUid.trim(),
+        rejectedAt: reviewedAt,
+        updatedAt: reviewedAt,
+      };
+      const audit = decisionAudit({ review, decision: "reject", reviewerUid: reviewerUid.trim(), reviewedAt });
+      assertNewAudit(auditItems, audit);
+      itemsBySourceKey.set(item.sourceKey, item);
+      reviewItems.set(reviewId, nextReview);
+      auditItems.set(audit.id, audit);
       return item;
     },
     async revisions(id) {
@@ -432,7 +543,30 @@ export function createDemoStore() {
   const leases = createLeaseStore();
   const sourceItems = new Map();
   const runItems = new Map();
-  const reviewQueue = createGlobalCollection({ leases });
+  const reviewItems = new Map();
+  const auditItems = new Map();
+  const reviewQueue = createGlobalCollection({ leases, items: reviewItems });
+  reviewQueue.resolve = async (id, { decision, reviewerUid, reviewedAt } = {}) => {
+    const review = reviewItems.get(id);
+    if (!review || review.type !== "source-suggestion" || review.status !== "pending"
+      || !["reject", "resolve"].includes(decision)
+      || typeof reviewerUid !== "string" || !reviewerUid.trim()
+      || typeof reviewedAt !== "string" || !reviewedAt) {
+      throw new Error("Source suggestion decision is invalid.");
+    }
+    const next = {
+      ...review,
+      status: decision === "reject" ? "rejected" : "resolved",
+      decidedBy: reviewerUid.trim(),
+      decidedAt: reviewedAt,
+      updatedAt: reviewedAt,
+    };
+    const audit = decisionAudit({ review, decision, reviewerUid: reviewerUid.trim(), reviewedAt });
+    assertNewAudit(auditItems, audit);
+    reviewItems.set(id, next);
+    auditItems.set(audit.id, audit);
+    return next;
+  };
   const newsSources = createGlobalCollection({ leases, items: sourceItems });
   const newsRuns = createGlobalCollection({ leases, items: runItems });
   return {
@@ -456,7 +590,7 @@ export function createDemoStore() {
     resources: createCollection(),
     conversations: createCollection(),
     ragChunks: createRagChunkCollection(),
-    news: createNewsStore({ reviewQueue, leases }),
+    news: createNewsStore({ reviewItems, auditItems, leases }),
     newsSources,
     newsRuns,
     newsSyncState: {
@@ -474,6 +608,7 @@ export function createDemoStore() {
       },
     },
     reviewQueue,
+    reviewAudit: readOnlyGlobalCollection(auditItems),
     leases,
     newsPreferences: createNewsPreferencesStore(),
     savedNews: createCollection(),

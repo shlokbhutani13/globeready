@@ -1,5 +1,6 @@
 import { Router } from "express";
-import { createNewsSummarizer } from "../news/summarizer.js";
+import { assertStrictApprovalDraft, expectedSnapshotPath, validateApprovalDraft } from "../news/approval-policy.js";
+import { canonicalOfficialHostname, canonicalOfficialUrl } from "../news/official-url.js";
 
 const sourceFields = new Set([
   "id", "publisher", "adapter", "url", "allowedHosts", "acceptedContentTypes",
@@ -16,10 +17,7 @@ function error(response, status, code, message) {
 }
 
 function safeHostname(value) {
-  if (typeof value !== "string" || value.length > 253 || value !== value.toLowerCase()
-    || !/^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/u.test(value)
-    || !(value.endsWith(".gov") || value.endsWith(".edu"))) return false;
-  try { return new URL(`https://${value}/`).hostname === value; } catch { return false; }
+  try { return canonicalOfficialHostname(value) === value; } catch { return false; }
 }
 
 function validSourceBoundary(source) {
@@ -56,9 +54,7 @@ function sourceInput(body, { patch = false } = {}) {
   }
   if (Object.hasOwn(body, "url")) {
     let url;
-    try { url = new URL(body.url); } catch { return null; }
-    if (url.protocol !== "https:" || url.username || url.password || url.port || url.hash
-      || !safeHostname(url.hostname.toLowerCase()) || url.href !== body.url) return null;
+    try { url = canonicalOfficialUrl(body.url, { allowSearch: true }); } catch { return null; }
     next.url = url.href;
   }
   if (Object.hasOwn(body, "allowedHosts")) {
@@ -86,10 +82,6 @@ function sourceInput(body, { patch = false } = {}) {
   return !patch && (!validSourceBoundary(result) || (result.enabled === true && result.verified !== true))
     ? null
     : result;
-}
-
-async function appendAudit(store, input) {
-  return store.reviewQueue.create({ type: "review-decision-audit", ...input });
 }
 
 function approvalConflict(response, message = "The review cannot be approved in its current state.") {
@@ -160,39 +152,71 @@ export function adminNewsRouter(store, {
     response.json({ data: await newsSync.syncSource(request.params.id, { dryRun: request.body.dryRun }) });
   });
   router.get("/review", async (_request, response) => {
-    const items = (await store.reviewQueue.listGlobal()).filter(({ type }) => type !== "review-decision-audit");
+    const items = await store.reviewQueue.listGlobal();
     response.json({ data: { items } });
   });
   router.patch("/review/:id", adminMutationLimiter, async (request, response) => {
     if (!documentIdPattern.test(request.params.id)) return error(response, 404, "review_not_found", "Review was not found.");
     if (!request.body || typeof request.body !== "object" || Array.isArray(request.body)
-      || Object.keys(request.body).length !== 1 || !["approve", "reject"].includes(request.body.decision)) {
-      return error(response, 422, "invalid_review_decision", "Choose approve or reject.");
+      || Object.keys(request.body).length !== 1 || !["approve", "reject", "resolve"].includes(request.body.decision)) {
+      return error(response, 422, "invalid_review_decision", "Choose approve, reject, or resolve.");
     }
     const review = await store.reviewQueue.get(request.params.id);
-    if (!review || review.type === "review-decision-audit") return error(response, 404, "review_not_found", "Review was not found.");
-    if (review.status !== "pending" || review.editorialState !== "review-required" || !review.newsItemId) {
+    if (!review) return error(response, 404, "review_not_found", "Review was not found.");
+    const reviewedAt = new Date(clock()).toISOString();
+    if (review.type === "source-suggestion") {
+      if (!["reject", "resolve"].includes(request.body.decision) || review.status !== "pending") {
+        return approvalConflict(response, "The source suggestion cannot use that decision.");
+      }
+      try {
+        const decided = await store.reviewQueue.resolve(review.id, {
+          decision: request.body.decision,
+          reviewerUid: request.user.uid,
+          reviewedAt,
+        });
+        return response.json({ data: decided });
+      } catch {
+        return approvalConflict(response);
+      }
+    }
+    if (request.body.decision === "resolve" || !["pending", "validated"].includes(review.status)
+      || review.editorialState !== "review-required" || !review.newsItemId) {
       return approvalConflict(response);
     }
     const item = await store.news.get(review.newsItemId);
     if (!item || item.editorialState !== "review-required" || review.contentHash !== item.contentHash
       || review.revisionId !== item.currentRevisionId) return approvalConflict(response);
-    const reviewedAt = new Date(clock()).toISOString();
     if (request.body.decision === "reject") {
-      await store.reviewQueue.update(review.id, { status: "rejected", rejectedBy: request.user.uid, rejectedAt: reviewedAt });
-      await store.news.updateInternal(item.id, { editorialState: "rejected", plainLanguageSummary: "", actions: [] });
-      await appendAudit(store, {
-        decision: "reject", reviewerUid: request.user.uid, reviewedAt,
-        reviewId: review.id, newsItemId: item.id, contentHash: item.contentHash, revisionId: item.currentRevisionId,
-      });
-      return response.json({ data: { id: review.id, status: "rejected" } });
+      if (review.status !== "pending") return approvalConflict(response);
+      try {
+        await store.news.decideReview(item.id, {
+          decision: "reject",
+          reviewerUid: request.user.uid,
+          reviewedAt,
+          reviewId: review.id,
+        });
+        return response.json({ data: { id: review.id, status: "rejected" } });
+      } catch {
+        return approvalConflict(response);
+      }
     }
     const storedSource = await store.newsSources.get(item.sourceId);
     const registeredSource = registry.get(item.sourceId);
     const source = registeredWithState(registeredSource, storedSource);
-    if (!source?.verified || item.sourceVerified !== true || !Array.isArray(source.allowedHosts)
+    if (!source?.verified || source.enabled === false || source.verificationState === "verification-pending"
+      || item.sourceVerified !== true || review.sourceId !== item.sourceId || !Array.isArray(source.allowedHosts)
       || !snapshotStore?.readCommitted || !item.snapshotPath || !item.snapshotCommitId || !review.draft) {
       return approvalConflict(response);
+    }
+    let requiredSnapshotPath;
+    try {
+      requiredSnapshotPath = expectedSnapshotPath(item);
+      assertStrictApprovalDraft(review.draft);
+    } catch (caught) {
+      return approvalConflict(response, caught.message);
+    }
+    if (item.snapshotPath !== requiredSnapshotPath) {
+      return approvalConflict(response, "The committed source snapshot does not match the current item identity.");
     }
     let sourceText;
     try {
@@ -200,46 +224,44 @@ export function adminNewsRouter(store, {
     } catch {
       return approvalConflict(response, "The committed source snapshot could not be verified.");
     }
-    const validator = createNewsSummarizer({ generate: async () => JSON.stringify(review.draft) });
-    const validation = await validator.summarize({
-      title: item.title,
-      excerpt: item.sourceExcerpt,
-      normalizedText: sourceText,
-      publishedAt: item.publishedAt,
-      updatedAt: item.updatedAt,
-      effectiveAt: item.effectiveAt,
-      canonicalUrl: item.canonicalUrl,
-      officialPdfUrl: item.officialPdfUrl,
-    }, { verifiedDomains: source.allowedHosts });
-    if (!validation.ok) return approvalConflict(response, validation.error);
+    let draft;
+    try {
+      draft = validateApprovalDraft({
+        item,
+        review,
+        snapshot: {
+          sourceId: item.sourceId,
+          contentHash: item.contentHash,
+          path: item.snapshotPath,
+          commitId: item.snapshotCommitId,
+          text: sourceText,
+          verifiedDomains: source.allowedHosts,
+        },
+      });
+    } catch (caught) {
+      return approvalConflict(response, caught.message);
+    }
     const evidence = {
       contentHash: item.contentHash,
       revisionId: item.currentRevisionId,
+      sourceId: item.sourceId,
+      snapshotPath: item.snapshotPath,
       sourceVerified: true,
       snapshotCommitId: item.snapshotCommitId,
       validatedAt: reviewedAt,
     };
-    await store.reviewQueue.update(review.id, {
-      status: "validated",
-      draft: validation.draft,
-      validationEvidence: evidence,
-      validatedBy: request.user.uid,
-      validatedAt: reviewedAt,
-    });
     let approved;
     try {
-      approved = await store.news.approve(item.id, {
+      approved = await store.news.decideReview(item.id, {
+        decision: "approve",
         reviewerUid: request.user.uid,
         reviewedAt,
         reviewId: review.id,
+        validation: { draft, evidence },
       });
     } catch {
       return approvalConflict(response);
     }
-    await appendAudit(store, {
-      decision: "approve", reviewerUid: request.user.uid, reviewedAt,
-      reviewId: review.id, newsItemId: item.id, contentHash: item.contentHash, revisionId: item.currentRevisionId,
-    });
     response.json({ data: approved });
   });
   router.get("/health", async (_request, response) => {

@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import { createFirestoreStore } from "../src/firestore-store.js";
@@ -232,6 +233,8 @@ function validatedReview(item, overrides = {}) {
     validationEvidence: {
       contentHash: item.contentHash,
       revisionId: item.currentRevisionId,
+      sourceId: item.sourceId ?? null,
+      snapshotPath: item.snapshotPath ?? null,
       snapshotCommitId: item.snapshotCommitId ?? null,
       sourceVerified: true,
       validatedAt: "2026-09-16T11:59:00.000Z",
@@ -327,6 +330,12 @@ describe("Firestore news store", () => {
       consumedBy: "editor-1",
       consumedAt: "2026-09-16T12:00:00.000Z",
     });
+    expect(await store.reviewAudit.listGlobal()).toEqual([
+      expect.objectContaining({
+        decision: "approve", reviewId: review.id, newsItemId: item.id, reviewerUid: "editor-1",
+      }),
+    ]);
+    expect(firestore.writes.at(-1)).toMatchObject({ via: "transaction" });
 
     const writeCount = firestore.writes.length;
     await expect(store.news.approve(item.id, {
@@ -335,6 +344,141 @@ describe("Firestore news store", () => {
       reviewId: review.id,
     })).resolves.toEqual(approved);
     expect(firestore.writes).toHaveLength(writeCount);
+  });
+
+  test("atomically rejects current review content and writes an immutable audit document", async () => {
+    const firestore = new FakeFirestore();
+    const store = createFirestoreStore(firestore);
+    const { item } = await store.news.upsert("agency:rejected", published({
+      editorialState: "review-required", plainLanguageSummary: "Private draft",
+    }));
+    const review = await store.reviewQueue.create({
+      newsItemId: item.id, contentHash: item.contentHash, revisionId: item.currentRevisionId,
+      editorialState: "review-required", status: "pending", reason: "high-impact",
+    });
+    const before = firestore.transactionRuns;
+
+    const rejected = await store.news.decideReview(item.id, {
+      decision: "reject",
+      reviewerUid: "editor-1", reviewedAt: "2026-09-16T12:00:00.000Z", reviewId: review.id,
+    });
+
+    expect(firestore.transactionRuns).toBe(before + 1);
+    expect(rejected).toMatchObject({ editorialState: "rejected", plainLanguageSummary: "", actions: [] });
+    expect(await store.reviewQueue.get(review.id)).toMatchObject({ status: "rejected", rejectedBy: "editor-1" });
+    expect(await store.reviewAudit.listGlobal()).toEqual([
+      expect.objectContaining({ decision: "reject", reviewId: review.id, newsItemId: item.id }),
+    ]);
+    expect(store.reviewAudit).not.toHaveProperty("update");
+  });
+
+  test("atomically validates and approves a pending review with its audit", async () => {
+    const firestore = new FakeFirestore();
+    const store = createFirestoreStore(firestore);
+    const { item } = await store.news.upsert("agency:pending-approval", published({
+      sourceId: "agency", editorialState: "review-required",
+      snapshotPath: "news-source-snapshots/agency/hash-one.txt", snapshotCommitId: "commit-1",
+    }));
+    const review = await store.reviewQueue.create({
+      newsItemId: item.id, sourceId: item.sourceId, contentHash: item.contentHash,
+      revisionId: item.currentRevisionId, editorialState: "review-required", status: "pending",
+      reason: "editorial-review",
+    });
+    const evidence = {
+      contentHash: item.contentHash, revisionId: item.currentRevisionId, sourceId: item.sourceId,
+      snapshotPath: item.snapshotPath, snapshotCommitId: item.snapshotCommitId,
+      sourceVerified: true, validatedAt: "2026-09-16T12:00:00.000Z",
+    };
+    const before = firestore.transactionRuns;
+
+    const approved = await store.news.decideReview(item.id, {
+      decision: "approve", reviewerUid: "editor-1", reviewedAt: evidence.validatedAt,
+      reviewId: review.id,
+      validation: { draft: { plainLanguageSummary: "Reviewed summary", actions: [] }, evidence },
+    });
+
+    expect(firestore.transactionRuns).toBe(before + 1);
+    expect(approved).toMatchObject({ editorialState: "approved", plainLanguageSummary: "Reviewed summary" });
+    expect(await store.reviewQueue.get(review.id)).toMatchObject({
+      status: "consumed", validatedBy: "editor-1", consumedBy: "editor-1",
+    });
+    expect(await store.reviewAudit.listGlobal()).toEqual([
+      expect.objectContaining({ decision: "approve", reviewId: review.id }),
+    ]);
+  });
+
+  test("atomically resolves a source suggestion with its immutable audit", async () => {
+    const firestore = new FakeFirestore();
+    const store = createFirestoreStore(firestore);
+    const suggestion = await store.reviewQueue.create({
+      type: "source-suggestion",
+      canonicalUrl: "https://international.unc.edu/alerts",
+      status: "pending",
+      trusted: false,
+    });
+    const before = firestore.transactionRuns;
+
+    const resolved = await store.reviewQueue.resolve(suggestion.id, {
+      decision: "resolve", reviewerUid: "editor-1", reviewedAt: "2026-09-16T12:00:00.000Z",
+    });
+
+    expect(firestore.transactionRuns).toBe(before + 1);
+    expect(resolved).toMatchObject({ status: "resolved", decidedBy: "editor-1" });
+    expect(await store.reviewAudit.listGlobal()).toEqual([
+      expect.objectContaining({ decision: "resolve", reviewId: suggestion.id, reviewerUid: "editor-1" }),
+    ]);
+  });
+
+  test("rolls back approval when an immutable audit identity conflicts", async () => {
+    const firestore = new FakeFirestore();
+    const store = createFirestoreStore(firestore);
+    const { item } = await store.news.upsert("agency:audit-conflict", published({ editorialState: "review-required" }));
+    const review = await store.reviewQueue.create(validatedReview(item));
+    const auditId = createHash("sha256").update(`${review.id}\0approve`).digest("hex");
+    firestore.documents.set(`newsReviewAudits/${auditId}`, {
+      type: "malformed-audit",
+      decision: "approve",
+      reviewId: review.id,
+      newsItemId: item.id,
+      contentHash: review.contentHash,
+      revisionId: review.revisionId,
+      reviewerUid: "editor-1",
+      reviewedAt: "2026-09-16T12:00:00.000Z",
+    });
+
+    await expect(store.news.approve(item.id, {
+      reviewerUid: "editor-1", reviewedAt: "2026-09-16T12:00:00.000Z", reviewId: review.id,
+    })).rejects.toThrow(/audit/i);
+
+    expect(await store.news.get(item.id)).toMatchObject({ editorialState: "review-required" });
+    expect(await store.reviewQueue.get(review.id)).toMatchObject({ status: "validated" });
+  });
+
+  test("rejects approval evidence bound to another snapshot path or source", async () => {
+    const firestore = new FakeFirestore();
+    const store = createFirestoreStore(firestore);
+    const { item } = await store.news.upsert("agency:snapshot-mismatch", published({
+      sourceId: "agency",
+      editorialState: "review-required",
+      snapshotPath: "news-source-snapshots/agency/hash-one.txt",
+      snapshotCommitId: "commit-1",
+    }));
+    const review = await store.reviewQueue.create(validatedReview(item, {
+      validationEvidence: {
+        ...validatedReview(item).validationEvidence,
+        sourceId: "other-agency",
+        snapshotPath: "news-source-snapshots/other-agency/hash-one.txt",
+      },
+    }));
+
+    await expect(store.news.decideReview(item.id, {
+      decision: "approve",
+      reviewerUid: "editor-1",
+      reviewedAt: "2026-09-16T12:00:00.000Z",
+      reviewId: review.id,
+    })).rejects.toThrow(/validation evidence|snapshot/i);
+    expect(await store.news.get(item.id)).toMatchObject({ editorialState: "review-required" });
+    expect(await store.reviewAudit.listGlobal()).toEqual([]);
   });
 
   test("rejects stale, unvalidated, mismatched, and consumed review approvals", async () => {

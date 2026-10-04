@@ -2,6 +2,7 @@ import request from "supertest";
 import { beforeEach, describe, expect, test } from "vitest";
 
 import { createApp } from "../src/app.js";
+import { parseOfficialUrl } from "../src/news/official-url.js";
 import { createUserRateLimiter } from "../src/rate-limit.js";
 import { createDemoStore } from "../src/store.js";
 
@@ -25,6 +26,21 @@ function publishedItem(overrides = {}) {
     ...overrides,
   };
 }
+
+test("parses canonical official URLs with caller-supplied suffix and length bounds", () => {
+  expect(parseOfficialUrl("https://agency.example/notices", {
+    allowedSuffixes: [".example"],
+    maxLength: 100,
+  }).href).toBe("https://agency.example/notices");
+  expect(() => parseOfficialUrl("https://agency.example/notices", {
+    allowedSuffixes: [".gov"],
+    maxLength: 100,
+  })).toThrow(/official|suffix/i);
+  expect(() => parseOfficialUrl("https://agency.example/notices", {
+    allowedSuffixes: [".example"],
+    maxLength: 20,
+  })).toThrow(/length|invalid/i);
+});
 
 describe("authenticated news routes", () => {
   let store;
@@ -83,6 +99,19 @@ describe("authenticated news routes", () => {
     await demo("delete", `/api/news/${published.id}/save`).expect(204);
   });
 
+  test("projects detail responses through a closed allowlist", async () => {
+    const item = (await store.news.upsert("source:future-private", publishedItem({
+      futurePrivateField: "must never become public",
+      rawGeneratedDraft: { text: "private" },
+      plainLanguageSummary: "Unapproved generated summary",
+      actions: [{ label: "Unapproved generated action", sourceUrl: "https://example.gov" }],
+    }))).item;
+    const response = await demo("get", `/api/news/${item.id}`).expect(200);
+    expect(response.body.data).not.toHaveProperty("futurePrivateField");
+    expect(response.body.data).not.toHaveProperty("rawGeneratedDraft");
+    expect(response.body.data).toMatchObject({ plainLanguageSummary: "", actions: [] });
+  });
+
   test("validates preferences with a closed bounded schema", async () => {
     const saved = await demo("put", "/api/news/preferences").send({
       visaTypes: ["f-1", "j-1"],
@@ -124,6 +153,9 @@ describe("authenticated news routes", () => {
       url: "https://international.unc.edu/alerts",
       secondUrl: "https://registrar.unc.edu/",
     }).expect(422);
+    await demo("post", "/api/news/source-suggestions").send({ url: "https://-bad.edu/alerts" }).expect(422);
+    await demo("post", "/api/news/source-suggestions", "student-b")
+      .send({ url: `https://good.edu/${"x".repeat(2_000)}` }).expect(422);
   });
 
   test("rate-limits source suggestions separately", async () => {
@@ -183,6 +215,10 @@ describe("authenticated news routes", () => {
     await demo("put", "/api/profile").send({
       universityId: "unc",
       officialUniversityDomain: "evil.example",
+    }).expect(422);
+    await demo("put", "/api/profile").send({
+      universityId: "unc",
+      officialUniversityDomain: "-bad.edu",
     }).expect(422);
   });
 });

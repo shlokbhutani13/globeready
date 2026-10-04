@@ -378,6 +378,16 @@ export function createNewsSync({
 
   const sourceRegistry = new Map(sources.map((entry) => [entry.id, entry]));
 
+  function assertUsableSource(source, { storedOnly = false } = {}) {
+    if (source?.enabled === false || (storedOnly && source?.enabled !== true)) {
+      throw new Error(`News source is disabled pending verification: ${source?.pendingReason || source?.id || "unknown"}.`);
+    }
+    if (source.verified !== true || source.verificationState === "verification-pending") {
+      throw new Error(`News source is not verified: ${source?.id || "unknown"}.`);
+    }
+    return source;
+  }
+
   async function resolveSource(sourceId) {
     const registered = sourceRegistry.get(sourceId);
     if (registered) {
@@ -390,12 +400,11 @@ export function createNewsSync({
         ...(stored && Object.hasOwn(stored, "enabled") ? { enabled: stored.enabled } : {}),
         ...(stored && Object.hasOwn(stored, "cadenceHours") ? { cadenceHours: stored.cadenceHours } : {}),
       };
-      if (resolved.enabled === false) throw new Error(`News source is disabled pending verification: ${resolved.pendingReason || resolved.id}.`);
-      return resolved;
+      return assertUsableSource(resolved);
     }
     if (typeof store.newsSources?.get === "function") {
       const stored = await store.newsSources.get(sourceId);
-      if (stored) return stored;
+      if (stored) return assertUsableSource(stored, { storedOnly: true });
     }
     throw new Error(`Unknown news source: ${sourceId}.`);
   }

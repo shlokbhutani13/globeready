@@ -139,6 +139,106 @@ describe("demo news store", () => {
     expect(await store.news.listPublished({})).toEqual([
       expect.objectContaining({ title: "Reviewed notice", plainLanguageSummary: "Reviewed summary" }),
     ]);
+    expect(await store.reviewAudit.listGlobal()).toEqual([
+      expect.objectContaining({ decision: "approve", reviewId: review.id, newsItemId: item.id }),
+    ]);
+    expect(store.reviewAudit).not.toHaveProperty("update");
+    expect(store.reviewAudit).not.toHaveProperty("remove");
+  });
+
+  test("atomically rejects a current news review and appends immutable audit", async () => {
+    const store = createDemoStore();
+    const { item } = await store.news.upsert("agency:reject", {
+      title: "Rejected notice", contentHash: "one", editorialState: "review-required",
+      plainLanguageSummary: "Private draft", actions: [{ label: "Private" }],
+    });
+    const review = await store.reviewQueue.create({
+      newsItemId: item.id, contentHash: item.contentHash, revisionId: item.currentRevisionId,
+      editorialState: "review-required", status: "pending", reason: "high-impact",
+    });
+
+    const rejected = await store.news.decideReview(item.id, {
+      decision: "reject",
+      reviewerUid: "editor-1", reviewedAt: "2026-09-12T00:00:00.000Z", reviewId: review.id,
+    });
+
+    expect(rejected).toMatchObject({ editorialState: "rejected", plainLanguageSummary: "", actions: [] });
+    expect(await store.reviewQueue.get(review.id)).toMatchObject({ status: "rejected", rejectedBy: "editor-1" });
+    expect(await store.reviewAudit.listGlobal()).toEqual([
+      expect.objectContaining({ decision: "reject", reviewId: review.id, newsItemId: item.id }),
+    ]);
+  });
+
+  test("atomically validates and approves a pending review with its audit", async () => {
+    const store = createDemoStore();
+    const { item } = await store.news.upsert("agency:pending-approval", {
+      sourceId: "agency", title: "Current notice", contentHash: "hash-one",
+      editorialState: "review-required", snapshotPath: "news-source-snapshots/agency/hash-one.txt",
+      snapshotCommitId: "commit-1",
+    });
+    const review = await store.reviewQueue.create({
+      newsItemId: item.id, sourceId: item.sourceId, contentHash: item.contentHash,
+      revisionId: item.currentRevisionId, editorialState: "review-required", status: "pending",
+      reason: "editorial-review",
+    });
+    const evidence = {
+      contentHash: item.contentHash, revisionId: item.currentRevisionId, sourceId: item.sourceId,
+      snapshotPath: item.snapshotPath, snapshotCommitId: item.snapshotCommitId,
+      sourceVerified: true, validatedAt: "2026-09-12T00:00:00.000Z",
+    };
+
+    const approved = await store.news.decideReview(item.id, {
+      decision: "approve", reviewerUid: "editor-1", reviewedAt: evidence.validatedAt,
+      reviewId: review.id,
+      validation: { draft: { plainLanguageSummary: "Reviewed summary", actions: [] }, evidence },
+    });
+
+    expect(approved).toMatchObject({ editorialState: "approved", plainLanguageSummary: "Reviewed summary" });
+    expect(await store.reviewQueue.get(review.id)).toMatchObject({
+      status: "consumed", validatedBy: "editor-1", consumedBy: "editor-1",
+    });
+    expect(await store.reviewAudit.listGlobal()).toEqual([
+      expect.objectContaining({ decision: "approve", reviewId: review.id }),
+    ]);
+  });
+
+  test("rejects approval evidence bound to another snapshot path or source", async () => {
+    const store = createDemoStore();
+    const { item } = await store.news.upsert("agency:snapshot-mismatch", {
+      sourceId: "agency",
+      title: "Current notice",
+      contentHash: "hash-one",
+      editorialState: "review-required",
+      snapshotPath: "news-source-snapshots/agency/hash-one.txt",
+      snapshotCommitId: "commit-1",
+    });
+    const review = await store.reviewQueue.create({
+      newsItemId: item.id,
+      contentHash: item.contentHash,
+      revisionId: item.currentRevisionId,
+      editorialState: "review-required",
+      status: "validated",
+      reason: "editorial-review",
+      draft: { plainLanguageSummary: "Reviewed summary", actions: [] },
+      validationEvidence: {
+        contentHash: item.contentHash,
+        revisionId: item.currentRevisionId,
+        sourceId: "other-agency",
+        snapshotPath: "news-source-snapshots/other-agency/hash-one.txt",
+        snapshotCommitId: item.snapshotCommitId,
+        sourceVerified: true,
+        validatedAt: "2026-09-12T00:00:00.000Z",
+      },
+    });
+
+    await expect(store.news.decideReview(item.id, {
+      decision: "approve",
+      reviewerUid: "editor-1",
+      reviewedAt: "2026-09-12T00:00:00.000Z",
+      reviewId: review.id,
+    })).rejects.toThrow(/validation evidence|snapshot/i);
+    expect(await store.news.get(item.id)).toMatchObject({ editorialState: "review-required" });
+    expect(await store.reviewAudit.listGlobal()).toEqual([]);
   });
 
   test("keeps added user-scoped news collections isolated by uid", async () => {

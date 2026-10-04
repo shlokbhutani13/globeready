@@ -1,20 +1,16 @@
 import { createHash } from "node:crypto";
 import { Router } from "express";
+import { canonicalOfficialHostname } from "../news/official-url.js";
 import { cleanText, validDate } from "../validation.js";
 
 const universityIdPattern = /^[A-Za-z0-9][A-Za-z0-9:_-]{0,127}$/u;
 
 function officialUniversityDomain(value) {
   if (value === undefined || value === "") return "";
-  if (typeof value !== "string" || value !== value.trim() || value !== value.toLowerCase()
-    || value.length > 253 || !/^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/u.test(value)
-    || !value.endsWith(".edu")) return null;
   try {
-    const url = new URL(`https://${value}/`);
-    return url.hostname === value ? value : null;
-  } catch {
-    return null;
-  }
+    const hostname = canonicalOfficialHostname(value);
+    return hostname.endsWith(".edu") ? hostname : null;
+  } catch { return null; }
 }
 
 export function profileRouter(store) {

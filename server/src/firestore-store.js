@@ -57,6 +57,29 @@ function stableId(value) {
   return createHash("sha256").update(value).digest("hex");
 }
 
+function reviewAuditId(reviewId, decision) {
+  return stableId(`${reviewId}\0${decision}`);
+}
+
+function reviewAuditRecord(review, { decision, reviewerUid, reviewedAt, createdAt }) {
+  return withoutUndefined({
+    type: "review-decision-audit",
+    decision,
+    reviewerUid,
+    reviewedAt,
+    reviewId: review.id,
+    newsItemId: review.newsItemId ?? null,
+    contentHash: review.contentHash ?? null,
+    revisionId: review.revisionId ?? null,
+    createdAt,
+  });
+}
+
+function auditMatches(audit, expected) {
+  return audit && ["type", "decision", "reviewerUid", "reviewedAt", "reviewId", "newsItemId", "contentHash", "revisionId"]
+    .every((field) => (audit[field] ?? null) === (expected[field] ?? null));
+}
+
 function currentDate(clock) {
   const value = clock();
   const date = value instanceof Date ? new Date(value.valueOf()) : new Date(value);
@@ -162,6 +185,54 @@ function globalCollectionStore(firestore, name, clock) {
       if (!snapshot.exists) return false;
       await reference.delete();
       return true;
+    },
+  };
+}
+
+function readOnlyGlobalCollectionStore(firestore, name, clock) {
+  const collection = globalCollectionStore(firestore, name, clock);
+  return { listGlobal: collection.listGlobal, get: collection.get };
+}
+
+function reviewQueueStore(firestore, clock) {
+  const reviews = globalCollectionStore(firestore, "reviewQueue", clock);
+  return {
+    ...reviews,
+    async resolve(id, { decision, reviewerUid, reviewedAt } = {}) {
+      if (!["reject", "resolve"].includes(decision)
+        || typeof reviewerUid !== "string" || !reviewerUid.trim()
+        || typeof reviewedAt !== "string" || !reviewedAt) {
+        throw new Error("Source suggestion decision is invalid.");
+      }
+      const reference = firestore.collection("reviewQueue").doc(id);
+      const auditReference = firestore.collection("newsReviewAudits").doc(reviewAuditId(id, decision));
+      const result = await firestore.runTransaction(async (transaction) => {
+        const reviewSnapshot = await transaction.get(reference);
+        const auditSnapshot = await transaction.get(auditReference);
+        if (!reviewSnapshot.exists) throw new Error("Source suggestion was not found.");
+        const review = { id, ...reviewSnapshot.data() };
+        if (review.type !== "source-suggestion" || review.status !== "pending") {
+          throw new Error("Source suggestion decision is invalid.");
+        }
+        const now = currentDate(clock);
+        const audit = reviewAuditRecord(review, {
+          decision, reviewerUid: reviewerUid.trim(), reviewedAt, createdAt: now,
+        });
+        if (auditSnapshot.exists && !auditMatches(auditSnapshot.data(), audit)) {
+          throw new Error("Review decision audit already exists with different metadata.");
+        }
+        const next = withoutUndefined({
+          ...reviewSnapshot.data(),
+          status: decision === "reject" ? "rejected" : "resolved",
+          decidedBy: reviewerUid.trim(),
+          decidedAt: reviewedAt,
+          updatedAt: now,
+        });
+        transaction.set(reference, next);
+        if (!auditSnapshot.exists) transaction.set(auditReference, audit);
+        return next;
+      });
+      return atApiBoundary({ id, ...result });
     },
   };
 }
@@ -582,7 +653,12 @@ function newsItemStore(firestore, clock) {
       });
       return { ...result, item: atApiBoundary(result.item) };
     },
-    async approve(id, { reviewerUid, reviewedAt, reviewId } = {}) {
+    async decideReview(id, { decision, ...metadata } = {}) {
+      if (decision === "approve") return this.approve(id, metadata);
+      if (decision === "reject") return this.reject(id, metadata);
+      throw new Error("News review decision must be approve or reject.");
+    },
+    async approve(id, { reviewerUid, reviewedAt, reviewId, validation } = {}) {
       if (typeof reviewerUid !== "string" || !reviewerUid.trim()
         || typeof reviewedAt !== "string" || !reviewedAt
         || typeof reviewId !== "string" || !reviewId) {
@@ -590,34 +666,57 @@ function newsItemStore(firestore, clock) {
       }
       const references = newsReferences(firestore, id);
       const reviewReference = firestore.collection("reviewQueue").doc(reviewId);
+      const auditReference = firestore.collection("newsReviewAudits").doc(reviewAuditId(reviewId, "approve"));
       const item = await firestore.runTransaction(async (transaction) => {
         const currentSnapshot = await transaction.get(references.privateReference);
         const reviewSnapshot = await transaction.get(reviewReference);
+        const auditSnapshot = await transaction.get(auditReference);
         if (!currentSnapshot.exists || !reviewSnapshot.exists || reviewSnapshot.data().newsItemId !== id) {
           throw new Error("News approval requires a matching review record.");
         }
         const current = currentSnapshot.data();
         const review = reviewSnapshot.data();
+        const audit = reviewAuditRecord({ id: reviewId, ...review }, {
+          decision: "approve", reviewerUid: reviewerUid.trim(), reviewedAt, createdAt: currentDate(clock),
+        });
         if (review.status === "consumed") {
           if (current.editorialState === "approved" && current.reviewId === reviewId
-            && review.consumedBy === reviewerUid.trim() && review.consumedAt === reviewedAt) return current;
+            && review.consumedBy === reviewerUid.trim() && review.consumedAt === reviewedAt
+            && auditSnapshot.exists && auditMatches(auditSnapshot.data(), audit)) return current;
           throw new Error("News approval cannot reuse a consumed review.");
         }
-        if (review.status !== "validated" || review.editorialState !== "review-required"
-          || typeof review.reason !== "string" || !review.reason.trim()) {
+        const inlineValidation = review.status === "pending" && Boolean(validation);
+        const reviewForApproval = inlineValidation
+          ? withoutUndefined({
+            ...review,
+            status: "validated",
+            draft: validation.draft,
+            validationEvidence: validation.evidence,
+            validatedBy: reviewerUid.trim(),
+            validatedAt: reviewedAt,
+          })
+          : review;
+        if ((inlineValidation && current.editorialState !== "review-required")
+          || reviewForApproval.status !== "validated"
+          || reviewForApproval.editorialState !== "review-required"
+          || typeof reviewForApproval.reason !== "string" || !reviewForApproval.reason.trim()) {
           throw new Error("News approval requires a validated review with a reason.");
         }
-        if (review.contentHash !== current.contentHash || review.revisionId !== current.currentRevisionId) {
+        if (reviewForApproval.contentHash !== current.contentHash
+          || reviewForApproval.revisionId !== current.currentRevisionId) {
           throw new Error("News approval review does not match the current content revision.");
         }
-        const evidence = review.validationEvidence;
+        const evidence = reviewForApproval.validationEvidence;
         if (!evidence || evidence.contentHash !== current.contentHash
           || evidence.revisionId !== current.currentRevisionId || evidence.sourceVerified !== true
+          || (evidence.sourceId ?? null) !== (current.sourceId ?? null)
+          || (evidence.snapshotPath ?? null) !== (current.snapshotPath ?? null)
           || typeof evidence.validatedAt !== "string" || !evidence.validatedAt
+          || (inlineValidation && evidence.validatedAt !== reviewedAt)
           || evidence.snapshotCommitId !== (current.snapshotCommitId ?? null)) {
           throw new Error("News approval requires validation evidence for the current content revision.");
         }
-        const draft = review.draft;
+        const draft = reviewForApproval.draft;
         if (!draft || typeof draft.plainLanguageSummary !== "string" || !Array.isArray(draft.actions)) {
           throw new Error("News approval requires a stored reviewed draft.");
         }
@@ -637,13 +736,69 @@ function newsItemStore(firestore, clock) {
         transaction.set(references.privateReference, next);
         transaction.set(references.publicReference, publicNewsDocument(next));
         transaction.set(reviewReference, withoutUndefined({
-          ...review,
+          ...reviewForApproval,
           status: "consumed",
           consumedBy: reviewerUid.trim(),
           consumedAt: reviewedAt,
           approvalNewsItemId: id,
           updatedAt: currentDate(clock),
         }));
+        if (auditSnapshot.exists) {
+          if (!auditMatches(auditSnapshot.data(), audit)) {
+            throw new Error("Review decision audit already exists with different metadata.");
+          }
+        } else {
+          transaction.set(auditReference, audit);
+        }
+        return next;
+      });
+      return atApiBoundary(item);
+    },
+    async reject(id, { reviewerUid, reviewedAt, reviewId } = {}) {
+      if (typeof reviewerUid !== "string" || !reviewerUid.trim()
+        || typeof reviewedAt !== "string" || !reviewedAt
+        || typeof reviewId !== "string" || !reviewId) {
+        throw new Error("News rejection requires reviewer metadata.");
+      }
+      const references = newsReferences(firestore, id);
+      const reviewReference = firestore.collection("reviewQueue").doc(reviewId);
+      const auditReference = firestore.collection("newsReviewAudits").doc(reviewAuditId(reviewId, "reject"));
+      const item = await firestore.runTransaction(async (transaction) => {
+        const currentSnapshot = await transaction.get(references.privateReference);
+        const reviewSnapshot = await transaction.get(reviewReference);
+        const auditSnapshot = await transaction.get(auditReference);
+        if (!currentSnapshot.exists || !reviewSnapshot.exists || reviewSnapshot.data().newsItemId !== id) {
+          throw new Error("News rejection requires a matching review record.");
+        }
+        const current = currentSnapshot.data();
+        const review = reviewSnapshot.data();
+        if (review.status !== "pending" || review.editorialState !== "review-required"
+          || review.contentHash !== current.contentHash || review.revisionId !== current.currentRevisionId) {
+          throw new Error("News rejection requires a pending review for the current content revision.");
+        }
+        const now = currentDate(clock);
+        const next = withoutApproval({
+          ...current,
+          id,
+          editorialState: "rejected",
+          recordUpdatedAt: now,
+        });
+        const audit = reviewAuditRecord({ id: reviewId, ...review }, {
+          decision: "reject", reviewerUid: reviewerUid.trim(), reviewedAt, createdAt: now,
+        });
+        if (auditSnapshot.exists && !auditMatches(auditSnapshot.data(), audit)) {
+          throw new Error("Review decision audit already exists with different metadata.");
+        }
+        transaction.set(references.privateReference, next);
+        transaction.set(references.publicReference, publicNewsDocument(next));
+        transaction.set(reviewReference, withoutUndefined({
+          ...review,
+          status: "rejected",
+          rejectedBy: reviewerUid.trim(),
+          rejectedAt: reviewedAt,
+          updatedAt: now,
+        }));
+        if (!auditSnapshot.exists) transaction.set(auditReference, audit);
         return next;
       });
       return atApiBoundary(item);
@@ -812,7 +967,8 @@ export function createFirestoreStore(firestore, { clock = () => new Date() } = {
     newsSources,
     newsRuns,
     newsSyncState: newsSyncStateStore(firestore, clock),
-    reviewQueue: globalCollectionStore(firestore, "reviewQueue", clock),
+    reviewQueue: reviewQueueStore(firestore, clock),
+    reviewAudit: readOnlyGlobalCollectionStore(firestore, "newsReviewAudits", clock),
     leases,
     newsPreferences: newsPreferencesStore(firestore, clock),
     savedNews: userCollectionStore(firestore, "savedNews", clock),

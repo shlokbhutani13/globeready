@@ -322,6 +322,16 @@ function reviewFailure(error) {
   };
 }
 
+export function validateSummaryDraft(value, {
+  candidate,
+  verifiedDomains = [],
+  rawDraft = value,
+} = {}) {
+  const draft = validateDraft(value);
+  validateSourceBounds(draft, candidate, verifiedDomains, rawDraft);
+  return draft;
+}
+
 export function createNewsSummarizer({ generate } = {}) {
   if (typeof generate !== "function") throw new Error("News summarizer requires a generate function.");
 
@@ -347,8 +357,7 @@ export function createNewsSummarizer({ generate } = {}) {
           if (error instanceof SyntaxError) throw new Error("Generated response is not valid JSON.");
           throw error;
         }
-        const draft = validateDraft(parsed);
-        validateSourceBounds(draft, candidate, verifiedDomains, parsed);
+        const draft = validateSummaryDraft(parsed, { candidate, verifiedDomains, rawDraft: parsed });
         return {
           ok: true,
           reviewRequired: true,

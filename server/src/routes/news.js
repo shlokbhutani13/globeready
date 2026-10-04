@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { canonicalOfficialUrl } from "../news/official-url.js";
 import { isPublished, publicNewsItem } from "../news/schema.js";
 
 const topics = new Set([
@@ -95,12 +96,8 @@ function parsePreferences(body) {
 function canonicalSuggestion(body) {
   if (!body || typeof body !== "object" || Array.isArray(body)
     || Object.keys(body).some((key) => !["url", "universityId"].includes(key))) return null;
-  if (typeof body.url !== "string" || body.url.length > 2_000 || body.url.trim() !== body.url) return null;
   let url;
-  try { url = new URL(body.url); } catch { return null; }
-  const hostname = url.hostname.toLowerCase();
-  if (url.protocol !== "https:" || url.username || url.password || url.port || url.hash || url.search
-    || !(hostname.endsWith(".gov") || hostname.endsWith(".edu")) || url.href !== body.url) return null;
+  try { url = canonicalOfficialUrl(body.url); } catch { return null; }
   if (body.universityId !== undefined && (typeof body.universityId !== "string" || !idPattern.test(body.universityId))) return null;
   return { canonicalUrl: url.href, ...(body.universityId ? { universityId: body.universityId } : {}) };
 }

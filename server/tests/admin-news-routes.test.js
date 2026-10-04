@@ -2,6 +2,7 @@ import request from "supertest";
 import { describe, expect, test, vi } from "vitest";
 
 import { createApp } from "../src/app.js";
+import { validateApprovalDraft } from "../src/news/approval-policy.js";
 import { createUserRateLimiter } from "../src/rate-limit.js";
 import { createDemoStore } from "../src/store.js";
 
@@ -12,6 +13,36 @@ function liveAuth(claims) {
 function baseApp(options = {}) {
   return createApp({ store: createDemoStore(), assistant: null, ...options });
 }
+
+test("validates approval drafts against an exact snapshot identity", () => {
+  const contentHash = "a".repeat(64);
+  const path = `news-source-snapshots/official/${contentHash}.txt`;
+  const item = {
+    id: "item-1", sourceId: "official", contentHash, currentRevisionId: "revision-1",
+    editorialState: "review-required", snapshotPath: path, snapshotCommitId: "commit-1",
+    sourceVerified: true, canonicalUrl: "https://www.uscis.gov/notice", title: "Official notice",
+  };
+  const review = {
+    id: "review-1", newsItemId: item.id, sourceId: item.sourceId, contentHash,
+    revisionId: item.currentRevisionId, editorialState: "review-required", status: "pending",
+    draft: {
+      plainLanguageSummary: "Instructions remain available.", urgency: "high",
+      impactAreas: ["status"], visaTypes: ["f-1"], topics: ["status"],
+      actions: [{ label: "Review", sourceUrl: item.canonicalUrl }],
+    },
+  };
+  const snapshot = {
+    sourceId: item.sourceId, contentHash, path, commitId: item.snapshotCommitId,
+    text: "Instructions remain available.", verifiedDomains: ["www.uscis.gov"],
+  };
+
+  expect(validateApprovalDraft({ item, review, snapshot })).toEqual(review.draft);
+  expect(() => validateApprovalDraft({
+    item,
+    review,
+    snapshot: { ...snapshot, path: `news-source-snapshots/other/${contentHash}.txt` },
+  })).toThrow(/snapshot|identity/i);
+});
 
 describe("admin authorization", () => {
   test("accepts an admin claim or an exact configured UID", async () => {
@@ -136,7 +167,7 @@ describe("admin news routes", () => {
       canonicalUrl: "https://www.uscis.gov/notice",
       contentHash: "a".repeat(64),
       sourceVerified: true,
-      snapshotPath: "news-source-snapshots/official/a.txt",
+      snapshotPath: `news-source-snapshots/official/${"a".repeat(64)}.txt`,
       snapshotCommitId: "commit-1",
       editorialState: "review-required",
     })).item;
@@ -177,9 +208,8 @@ describe("admin news routes", () => {
       path: item.snapshotPath,
       commitId: item.snapshotCommitId,
     });
-    const records = await store.reviewQueue.listGlobal();
+    const records = await store.reviewAudit.listGlobal();
     expect(records).toContainEqual(expect.objectContaining({
-      type: "review-decision-audit",
       decision: "approve",
       reviewerUid: "user-1",
       newsItemId: item.id,
@@ -201,7 +231,7 @@ describe("admin news routes", () => {
       canonicalUrl: "https://www.uscis.gov/notice",
       contentHash: "a".repeat(64),
       sourceVerified: true,
-      snapshotPath: "news-source-snapshots/official/a.txt",
+      snapshotPath: `news-source-snapshots/official/${"a".repeat(64)}.txt`,
       snapshotCommitId: "commit-1",
       editorialState: "review-required",
     })).item;
@@ -237,6 +267,7 @@ describe("admin news routes", () => {
     const cases = [
       { name: "stale", review: { contentHash: "b".repeat(64) } },
       { name: "unsafe URL", draft: { actions: [{ label: "Open", sourceUrl: "https://evil.example/" }] } },
+      { name: "explicit port", draft: { actions: [{ label: "Open", sourceUrl: "https://www.uscis.gov:443/notice" }] } },
       { name: "unsupported date", draft: { plainLanguageSummary: "The deadline is 2027-01-01." } },
       { name: "missing snapshot", item: { snapshotCommitId: null } },
       { name: "consumed review", review: { status: "consumed" } },
@@ -255,7 +286,7 @@ describe("admin news routes", () => {
         contentHash: "a".repeat(64),
         currentRevisionId: "revision-1",
         sourceVerified: true,
-        snapshotPath: "news-source-snapshots/official/a.txt",
+        snapshotPath: `news-source-snapshots/official/${"a".repeat(64)}.txt`,
         snapshotCommitId: "commit-1",
         editorialState: "review-required",
         ...(scenario.item || {}),
@@ -292,6 +323,101 @@ describe("admin news routes", () => {
     }
   });
 
+  test("rejects entity-obfuscated URI syntax and relative-time claims even when source text contains them", async () => {
+    for (const plainLanguageSummary of [
+      "Open h&colon;&sol;&sol;evil.example for details.",
+      "Open https：／／evil.example for details.",
+      "Open ftp://evil.example for details.",
+      "Open https://www.uscis.gov/notice, then ftp://evil.example for details.",
+      "The deadline is tomorrow.",
+      "The deadline is two business days from now.",
+      "The deadline is the following day.",
+    ]) {
+      const store = createDemoStore();
+      await store.newsSources.upsert("official", { verified: true, allowedHosts: ["www.uscis.gov"] });
+      const item = (await store.news.upsert(`official:${plainLanguageSummary}`, {
+        sourceId: "official",
+        title: "Current notice",
+        publisher: "USCIS",
+        sourceExcerpt: "The deadline is tomorrow.",
+        normalizedText: "The deadline is tomorrow.",
+        canonicalUrl: "https://www.uscis.gov/notice",
+        contentHash: "a".repeat(64),
+        sourceVerified: true,
+        snapshotPath: `news-source-snapshots/official/${"a".repeat(64)}.txt`,
+        snapshotCommitId: "commit-1",
+        editorialState: "review-required",
+      })).item;
+      const review = await store.reviewQueue.create({
+        newsItemId: item.id,
+        sourceId: "official",
+        contentHash: item.contentHash,
+        revisionId: item.currentRevisionId,
+        editorialState: "review-required",
+        status: "pending",
+        reason: "high-impact",
+        draft: {
+          plainLanguageSummary,
+          urgency: "high",
+          impactAreas: ["employment"],
+          visaTypes: ["f-1"],
+          topics: ["employment"],
+          actions: [{ label: "Review", sourceUrl: "https://www.uscis.gov/notice" }],
+        },
+      });
+      const app = createApp({
+        store,
+        auth: liveAuth({ admin: true }),
+        assistant: null,
+        snapshotStore: { readCommitted: vi.fn(async () => "The deadline is tomorrow.") },
+      });
+      await request(app).patch(`/api/admin/news/review/${review.id}`)
+        .set("authorization", "Bearer token").send({ decision: "approve" }).expect(409);
+      expect((await store.news.get(item.id)).editorialState).toBe("review-required");
+    }
+  });
+
+  test("binds the committed snapshot path to the current source ID and content hash", async () => {
+    for (const snapshotPath of [
+      `news-source-snapshots/other/${"a".repeat(64)}.txt`,
+      `news-source-snapshots/official/${"b".repeat(64)}.txt`,
+    ]) {
+      const store = createDemoStore();
+      await store.newsSources.upsert("official", { verified: true, allowedHosts: ["www.uscis.gov"] });
+      const item = (await store.news.upsert(`official:${snapshotPath}`, {
+        sourceId: "official",
+        title: "Current notice",
+        publisher: "USCIS",
+        sourceExcerpt: "Instructions remain available.",
+        normalizedText: "Instructions remain available.",
+        canonicalUrl: "https://www.uscis.gov/notice",
+        contentHash: "a".repeat(64),
+        sourceVerified: true,
+        snapshotPath,
+        snapshotCommitId: "commit-1",
+        editorialState: "review-required",
+      })).item;
+      const review = await store.reviewQueue.create({
+        newsItemId: item.id, sourceId: "official", contentHash: item.contentHash,
+        revisionId: item.currentRevisionId, editorialState: "review-required", status: "pending",
+        reason: "high-impact",
+        draft: {
+          plainLanguageSummary: "Instructions remain available.", urgency: "high",
+          impactAreas: ["status"], visaTypes: ["f-1"], topics: ["status"],
+          actions: [{ label: "Review", sourceUrl: "https://www.uscis.gov/notice" }],
+        },
+      });
+      const readCommitted = vi.fn(async () => "Instructions remain available.");
+      const app = createApp({
+        store, auth: liveAuth({ admin: true }), assistant: null,
+        snapshotStore: { readCommitted },
+      });
+      await request(app).patch(`/api/admin/news/review/${review.id}`)
+        .set("authorization", "Bearer token").send({ decision: "approve" }).expect(409);
+      expect(readCommitted).not.toHaveBeenCalled();
+    }
+  });
+
   test("rejects a pending review without publishing its draft and audits the decision", async () => {
     const store = createDemoStore();
     const item = (await store.news.upsert("official:rejected", {
@@ -314,6 +440,31 @@ describe("admin news routes", () => {
       .set("authorization", "Bearer token").send({ decision: "reject" }).expect(200);
     expect(await store.news.listPublished({})).toEqual([]);
     expect(await store.reviewQueue.get(review.id)).toMatchObject({ status: "rejected" });
+  });
+
+  test("rejects or resolves source suggestions without entering news approval", async () => {
+    for (const decision of ["reject", "resolve"]) {
+      const store = createDemoStore();
+      const suggestion = await store.reviewQueue.create({
+        type: "source-suggestion",
+        canonicalUrl: "https://international.unc.edu/alerts",
+        submittedBy: "student-a",
+        trusted: false,
+        status: "pending",
+      });
+      const approve = vi.spyOn(store.news, "approve");
+      const app = createApp({ store, auth: liveAuth({ admin: true }), assistant: null });
+      await request(app).patch(`/api/admin/news/review/${suggestion.id}`)
+        .set("authorization", "Bearer token").send({ decision }).expect(200);
+      expect(await store.reviewQueue.get(suggestion.id)).toMatchObject({
+        status: decision === "reject" ? "rejected" : "resolved",
+      });
+      expect(approve).not.toHaveBeenCalled();
+      expect(await store.reviewAudit.listGlobal()).toContainEqual(expect.objectContaining({
+        reviewId: suggestion.id,
+        decision,
+      }));
+    }
   });
 });
 

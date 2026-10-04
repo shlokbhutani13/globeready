@@ -20,6 +20,9 @@ service cloud.firestore {
     match /reviewQueue/{document=**} {
       allow read, write: if false;
     }
+    match /newsReviewAudits/{document=**} {
+      allow read, write: if false;
+    }
     match /newsSources/{document=**} {
       allow read, write: if false;
     }
