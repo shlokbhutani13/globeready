@@ -73,7 +73,7 @@ export function subscribeNews(filters, onData, onError, { intervalMs = 120_000 }
   const load = async () => {
     try {
       const data = await apiRequest(`/api/news${query_ ? `?${query_}` : ""}`);
-      if (!cancelled) onData(data.items || [], { nextCursor: data.nextCursor || null });
+      if (!cancelled) onData(data.items || [], { nextCursor: data.nextCursor || null, sourceHealth: data.sourceHealth || null });
     } catch (error) {
       if (!cancelled) onError?.(error);
     }

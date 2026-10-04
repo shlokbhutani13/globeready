@@ -5,7 +5,7 @@
 - Firebase email/password and Google authentication
 - User-scoped profiles, tasks, saved resources, and document metadata
 - Firebase Storage upload and deletion behind an explicit deployment switch
-- Private PDF chunking, Gemini embeddings, scoped retrieval, and cited answers
+- Private PDF and image text extraction, scoped term retrieval, and cited answers
 - Deterministic trusted-resource guidance when live AI or relevant document context is unavailable
 - Official student resource library
 - Responsive desktop and mobile interface
@@ -23,7 +23,8 @@
 
 ## Later
 
-- Email and push reminders
+- Email delivery for reminders and digests (preferences are stored; no email is sent at launch)
+- Browser push notifications and vector-based retrieval, if they are revisited after launch
 - More supported universities and countries
 - Accessibility audit against WCAG 2.2 AA
 - Shared rate limiting for multi-instance API deployments

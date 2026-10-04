@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { mergedSources, universityCoverage } from "../news/coverage.js";
+import { mergedSources, sourceHealth, universityCoverage } from "../news/coverage.js";
 import { canonicalOfficialUrl } from "../news/official-url.js";
 import { isPublished, publicNewsItem } from "../news/schema.js";
 
@@ -129,7 +129,14 @@ export function newsRouter(store, {
     try { filters = parseFilters(request.query); } catch (error) { return invalid(response, error.message); }
     let results;
     try { results = await store.news.listPublished(filters); } catch { return invalid(response, "News cursor is invalid."); }
-    response.json({ data: { items: [...results].slice(0, filters.limit), nextCursor: results.cursor || null } });
+    const stored = await store.newsSources.listGlobal();
+    response.json({
+      data: {
+        items: [...results].slice(0, filters.limit),
+        nextCursor: results.cursor || null,
+        sourceHealth: sourceHealth(mergedSources(registeredSources, stored)),
+      },
+    });
   });
   router.get("/preferences", async (request, response) => {
     response.json({ data: await store.newsPreferences.get(request.user.uid) });

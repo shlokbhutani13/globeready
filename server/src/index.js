@@ -5,6 +5,7 @@ import { createAssistant } from "./assistant.js";
 import { createFirebaseAdmin } from "./firebase-admin.js";
 import { createFirestoreStore } from "./firestore-store.js";
 import { createGeminiAssistant } from "./gemini.js";
+import { createLocalOcr } from "./ocr.js";
 import { createFeedAdapter } from "./news/adapters/feed.js";
 import { createIndexPageAdapter } from "./news/adapters/index-page.js";
 import { createUniversitySitemapAdapter } from "./news/adapters/university-sitemap.js";
@@ -22,6 +23,7 @@ const assistant = createGeminiAssistant({
   bucket: firebase?.bucket,
   store,
   fallback,
+  ocr: process.env.DOCUMENT_OCR_ENABLED === "false" ? null : createLocalOcr(),
 });
 const snapshotStore = firebase?.bucket ? createSnapshotReader({ bucket: firebase.bucket }) : null;
 const newsSync = createNewsSync({

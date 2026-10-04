@@ -19,7 +19,7 @@ export default function NewsPage({
   items = [], loading = false, error = "", onRetry,
   filters = {}, onFilterChange,
   savedIds = new Set(), onToggleSave,
-  coverage = null, profile = {},
+  coverage = null, sourceHealth = null, profile = {},
   preferences = {}, onUpdatePreferences,
 }) {
   const [showPreferences, setShowPreferences] = useState(false);
@@ -43,6 +43,13 @@ export default function NewsPage({
           {showPreferences ? "Hide preferences" : "Edit preferences"}
         </button>
       </header>
+
+      {sourceHealth?.state === "delayed" && (
+        <div className="panel" style={{ marginBottom: 18 }} role="status">
+          <SourceStatus state="delayed" />
+          <small className="muted">Delayed sources: {sourceHealth.delayedPublishers.join(", ")}. Updates from these publishers may be missing or late.</small>
+        </div>
+      )}
 
       {profile.university && coverage && (
         <div className="panel" style={{ marginBottom: 18 }}>

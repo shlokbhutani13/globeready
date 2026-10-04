@@ -1,7 +1,13 @@
 import { Router } from "express";
-import { accountDeletionPhrase, deleteAccount, exportAccount, isRecentSignIn } from "../account.js";
+import {
+  accountDeletionPhrase, defaultRecentLoginWindowMs, deleteAccount, exportAccount, isRecentSignIn,
+} from "../account.js";
 
-export function accountRouter(store, { account = {}, clock = () => new Date() } = {}) {
+export function accountRouter(store, {
+  account = {},
+  clock = () => new Date(),
+  recentLoginWindowMs = defaultRecentLoginWindowMs,
+} = {}) {
   const router = Router();
   router.get("/export", async (request, response) => {
     const data = await exportAccount({ store, uid: request.user.uid, now: clock() });
@@ -14,7 +20,7 @@ export function accountRouter(store, { account = {}, clock = () => new Date() } 
         error: { code: "confirmation_required", message: `Type "${accountDeletionPhrase}" to confirm.` },
       });
     }
-    if (!request.user.demo && !isRecentSignIn(request.user.authTime, clock().getTime())) {
+    if (!request.user.demo && !isRecentSignIn(request.user.authTime, clock().getTime(), recentLoginWindowMs)) {
       return response.status(403).json({
         error: { code: "recent_login_required", message: "Sign out, sign back in, and try again to delete your account." },
       });

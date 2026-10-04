@@ -1,7 +1,10 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { describe, expect, test } from "vitest";
 
 import { DocumentExtractionError, extractDocument, maxDocumentBytes } from "../src/document-extraction.js";
 
+const fixture = (name) => fileURLToPath(new URL(`./fixtures/documents/${name}`, import.meta.url));
 const pdfBytes = Buffer.from("%PDF-1.4 fake");
 const parsePdf = async () => [
   { page: 1, text: "Student name and university." },
@@ -52,9 +55,9 @@ describe("extractDocument", () => {
     expect(error.retryable).toBe(true);
   });
 
-  test("uses an injected OCR adapter for images without inventing a page number", async () => {
+  test("uses an injected OCR adapter for a real JPEG without inventing a page number", async () => {
     const result = await extractDocument({
-      bytes: Buffer.from([0xff, 0xd8]),
+      bytes: new Uint8Array(readFileSync(fixture("passport.jpg"))),
       mimeType: "image/jpeg",
       ocr: async () => "Passport number and expiry date.",
     });

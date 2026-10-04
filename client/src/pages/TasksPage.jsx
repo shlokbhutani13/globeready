@@ -77,7 +77,7 @@ export default function TasksPage({ tasks, onAdd, onToggle, onDelete }) {
             <button className="icon-button" aria-label="Next month" onClick={() => setMonthDate(new Date(Date.UTC(monthDate.getUTCFullYear(), monthDate.getUTCMonth() + 1, 1)))}><ChevronRight size={16} /></button>
           </div>
         </div>
-        <div className="calendar-grid" role="grid">
+        <div className="calendar-grid" role="group" aria-label="Calendar of task due dates">
           {calendarDays.map((day, index) => day === null
             ? <span key={`blank-${index}`} className="calendar-day blank" />
             : (

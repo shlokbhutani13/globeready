@@ -8,7 +8,7 @@
     "start": "node src/index.js",
     "dev": "node --watch src/index.js",
     "test": "vitest run",
-    "test:rules": "firebase emulators:exec --only firestore --project globeready-test \"vitest run tests/firestore-rules-emulator.test.js tests/firestore-account-emulator.test.js\"",
+    "test:rules": "firebase emulators:exec --only firestore,auth,storage --project globeready-test \"vitest run tests/firestore-rules-emulator.test.js tests/firestore-account-emulator.test.js tests/account-emulator.test.js\"",
     "lint": "node --check src/index.js && node --check src/app.js"
   },
   "keywords": [],
@@ -16,13 +16,15 @@
   "license": "MIT",
   "dependencies": {
     "@google/genai": "^1.32.0",
+    "@tesseract.js-data/eng": "^1.0.0",
     "cheerio": "^1.2.0",
     "cors": "^2.8.6",
     "dotenv": "^17.4.0",
     "express": "^5.2.1",
     "fast-xml-parser": "^5.11.1",
     "firebase-admin": "^14.1.0",
-    "pdf-parse": "^2.4.5"
+    "pdf-parse": "^2.4.5",
+    "tesseract.js": "^7.0.0"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^5.0.2",
@@ -36,5 +38,8 @@
     "@fastify/busboy": "3.2.2",
     "@grpc/grpc-js": "1.14.5",
     "brace-expansion": "2.1.7"
+  },
+  "engines": {
+    "node": ">=22.12.0"
   }
 }

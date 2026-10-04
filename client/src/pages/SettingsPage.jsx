@@ -34,16 +34,17 @@ export default function SettingsPage({ live = true, preferences = {}, onUpdatePr
 
       <section className="panel settings-section">
         <div className="panel-title"><h2>Email and notifications</h2></div>
+        <p className="muted">GlobeReady does not send email yet. Reminders appear in your notification inbox. Your email choices are saved so they apply once email delivery is available.</p>
         <label className="settings-check">
           <input
             type="checkbox"
             checked={Boolean(preferences.emailRemindersEnabled)}
             onChange={(event) => onUpdatePreferences({ emailRemindersEnabled: event.target.checked })}
           />
-          Email reminders for tasks and deadlines
+          Save my preference for email reminders (not sent yet)
         </label>
         <label className="settings-field">
-          Digest frequency
+          Digest frequency (saved, not sent yet)
           <select value={preferences.digestFrequency || "weekly"} onChange={(event) => onUpdatePreferences({ digestFrequency: event.target.value })}>
             <option value="daily">Daily</option>
             <option value="weekly">Weekly</option>

@@ -131,3 +131,25 @@ describe("NewsPage", () => {
     expect(screen.getByText(/general information/i)).toBeInTheDocument();
   });
 });
+
+describe("delayed source disclosure", () => {
+  test("names the delayed publisher and never presents the feed as complete", () => {
+    render(<NewsPage items={[item()]} sourceHealth={{ state: "delayed", delayedPublishers: ["UNC ISSS"], lastCheckedAt: null }} />);
+    expect(screen.getByText(/source check delayed/i)).toBeInTheDocument();
+    expect(screen.getByText(/UNC ISSS/)).toBeInTheDocument();
+    expect(screen.getByText(/does not mean nothing has changed/i)).toBeInTheDocument();
+  });
+
+  test("shows no delay banner when every check is current", () => {
+    render(<NewsPage items={[item()]} sourceHealth={{ state: "current", delayedPublishers: [] }} />);
+    expect(screen.queryByText(/source check delayed/i)).not.toBeInTheDocument();
+  });
+});
+
+describe("university coverage never implies verification it does not have", () => {
+  test("a pending student-submitted source reads as pending, never as covered", () => {
+    render(<NewsPage items={[]} profile={{ university: "Example University" }} coverage={{ state: "verification-pending", sources: [{ publisher: "Example University", verified: false, enabled: false }] }} />);
+    expect(screen.getByText("Verification pending")).toBeInTheDocument();
+    expect(screen.queryByText(/^Covered$/)).not.toBeInTheDocument();
+  });
+});

@@ -43,6 +43,7 @@ export function createApp({
   clock = () => new Date(),
   reminders = createReminderService({ store, clock }),
   account = {},
+  recentLoginWindowMs,
 } = {}) {
   const app = express();
   const allowedOrigin = process.env.CLIENT_URL || "http://localhost:5173";
@@ -71,7 +72,7 @@ export function createApp({
     newsQueryLimiter,
     registeredSources: registeredNewsSources,
   }));
-  app.use("/api/account", authenticate, accountRouter(store, { account, clock }));
+  app.use("/api/account", authenticate, accountRouter(store, { account, clock, recentLoginWindowMs }));
   app.post("/api/notifications/sync", authenticate, async (request, response) => {
     response.json({ data: await reminders.sync(request.user.uid) });
   });

@@ -1,20 +1,14 @@
 import { PDFParse } from "pdf-parse";
+import { DocumentExtractionError } from "./extraction-errors.js";
+import { assertReasonableImage } from "./image-limits.js";
+
+export { DocumentExtractionError };
 
 export const maxDocumentBytes = 10 * 1024 * 1024;
+export const maxPdfPages = 100;
 const pdfType = "application/pdf";
 const imageTypes = new Set(["image/png", "image/jpeg"]);
 export const allowedExtractionTypes = new Set([pdfType, ...imageTypes]);
-
-export class DocumentExtractionError extends Error {
-  constructor(code, safeMessage, { retryable = false, status = 422 } = {}) {
-    super(safeMessage);
-    this.name = "DocumentExtractionError";
-    this.code = code;
-    this.safeMessage = safeMessage;
-    this.retryable = retryable;
-    this.status = status;
-  }
-}
 
 export function assertSupportedDocument({ mimeType, size }) {
   if (!allowedExtractionTypes.has(mimeType)) {
@@ -29,9 +23,21 @@ async function parsePdfPages(bytes) {
   const parser = new PDFParse({ data: bytes });
   try {
     const result = await parser.getText();
+    if (result.pages.length > maxPdfPages) {
+      throw new DocumentExtractionError(
+        "pdf_too_many_pages",
+        `This PDF has more than ${maxPdfPages} pages. Upload the pages that matter.`,
+      );
+    }
     return result.pages.map((page) => ({ page: page.num, text: page.text }));
+  } catch (error) {
+    if (error instanceof DocumentExtractionError) throw error;
+    throw new DocumentExtractionError(
+      "pdf_unreadable",
+      "This PDF could not be read. It may be damaged or password-protected.",
+    );
   } finally {
-    await parser.destroy();
+    await parser.destroy().catch(() => {});
   }
 }
 
@@ -52,6 +58,7 @@ export async function extractDocument({ bytes, mimeType, ocr = null, parsePdf = 
         { retryable: true, status: 503 },
       );
     }
+    assertReasonableImage(bytes, mimeType);
     pages = [{ page: null, text: await ocr({ bytes, mimeType }) }];
   }
 

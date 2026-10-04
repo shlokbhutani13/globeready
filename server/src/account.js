@@ -1,4 +1,4 @@
-const recentLoginWindowMs = 5 * 60_000;
+export const defaultRecentLoginWindowMs = 5 * 60_000;
 export const accountDeletionPhrase = "DELETE MY ACCOUNT";
 
 function pick(record, fields) {
@@ -18,10 +18,10 @@ const notificationFields = ["id", "type", "title", "body", "dueDate", "read", "c
 const resourceFields = ["id", "title", "url", "category", "source", "createdAt"];
 const messageFields = ["role", "text", "documentCitations", "sources", "evidence", "referral", "createdAt"];
 
-export function isRecentSignIn(authTimeSeconds, now) {
+export function isRecentSignIn(authTimeSeconds, now, windowMs = defaultRecentLoginWindowMs) {
   if (typeof authTimeSeconds !== "number" || !Number.isFinite(authTimeSeconds)) return false;
   const age = now - authTimeSeconds * 1000;
-  return age >= -60_000 && age <= recentLoginWindowMs;
+  return age >= -60_000 && age <= windowMs;
 }
 
 export async function exportAccount({ store, uid, now }) {

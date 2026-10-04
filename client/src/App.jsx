@@ -14,6 +14,7 @@ import NotificationsPage from "./pages/NotificationsPage";
 import NewsAdminPage from "./pages/NewsAdminPage";
 import { useAuth } from "./lib/auth-context";
 import { apiDownload, apiRequest } from "./lib/api";
+import { deleteAccountWithReauth } from "./lib/account-deletion";
 import { storageAvailable } from "./lib/firebase";
 import {
   createTask, removeDocument, removeTask, saveResource, subscribeStudentData,
@@ -56,6 +57,7 @@ export default function App() {
   const [newsPreferences, setNewsPreferences] = useState({});
   const [notifications, setNotifications] = useState([]);
   const [coverage, setCoverage] = useState(null);
+  const [sourceHealth, setSourceHealth] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
@@ -81,7 +83,7 @@ export default function App() {
 
     const stopNews = subscribeNews(
       newsFilters,
-      (items) => { setNewsItems(items); setNewsLoading(false); setNewsError(""); },
+      (items, meta) => { setNewsItems(items); setSourceHealth(meta.sourceHealth); setNewsLoading(false); setNewsError(""); },
       (error) => { setNewsLoading(false); setNewsError(error?.message || "Could not load updates."); },
     );
     const stopSavedNews = subscribeSavedNews(auth.user.uid, setSavedNews, () => {});
@@ -188,7 +190,11 @@ export default function App() {
       .catch((error) => setAppError(error.message));
   };
   const deleteAccount = async () => {
-    await apiRequest("/api/account", { method: "DELETE", body: JSON.stringify({ confirmation: "DELETE MY ACCOUNT" }) });
+    await deleteAccountWithReauth({
+      removeAccount: () => apiRequest("/api/account", { method: "DELETE", body: JSON.stringify({ confirmation: "DELETE MY ACCOUNT" }) }),
+      hasGoogleProvider: auth.hasGoogleProvider,
+      reauthenticateGoogle: auth.reauthenticateGoogle,
+    });
     await auth.signOutUser().catch(() => {});
     setDemo(false);
   };
@@ -244,6 +250,7 @@ export default function App() {
               savedIds={savedNewsIds}
               onToggleSave={toggleSaveNews}
               coverage={coverage}
+              sourceHealth={sourceHealth}
               profile={profile}
               preferences={newsPreferences}
               onUpdatePreferences={updatePreferences}

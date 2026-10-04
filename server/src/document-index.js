@@ -62,9 +62,11 @@ export function createDocumentIndexer({
       assertPrivateStoragePath(uid, document.storagePath);
       try {
         const extracted = await extractText({ uid, document, bucket });
-        const pages = Array.isArray(extracted)
-          ? extracted
-          : [{ page: null, text: extracted }];
+        const pages = Array.isArray(extracted?.pages)
+          ? extracted.pages
+          : Array.isArray(extracted)
+            ? extracted
+            : [{ page: null, text: extracted }];
         const chunks = pages
           .flatMap(({ page, text }) => chunkText(text).map((chunk) => ({ ...chunk, page })))
           .map((chunk, index) => ({ ...chunk, index }));

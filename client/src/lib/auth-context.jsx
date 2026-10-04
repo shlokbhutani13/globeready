@@ -3,6 +3,7 @@ import {
   GoogleAuthProvider,
   createUserWithEmailAndPassword,
   onAuthStateChanged,
+  reauthenticateWithPopup,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signInWithPopup,
@@ -34,6 +35,8 @@ export function AuthProvider({ children }) {
     signInEmail: (email, password) => signInWithEmailAndPassword(auth, email, password),
     signUpEmail: (email, password) => createUserWithEmailAndPassword(auth, email, password),
     signInGoogle: () => signInWithPopup(auth, new GoogleAuthProvider()),
+    hasGoogleProvider: () => Boolean(auth?.currentUser?.providerData?.some((provider) => provider.providerId === "google.com")),
+    reauthenticateGoogle: () => reauthenticateWithPopup(auth.currentUser, new GoogleAuthProvider()),
     resetPassword: (email) => sendPasswordResetEmail(auth, email),
     signOutUser: () => signOut(auth),
   }), [user, loading]);

@@ -34,3 +34,18 @@ export function universityCoverage(sources, universityId) {
     })),
   };
 }
+
+export function sourceHealth(sources) {
+  const active = (Array.isArray(sources) ? sources : []).filter((source) => source.verified === true && source.enabled === true);
+  const checked = active.filter((source) => typeof source.lastCheckedAt === "string");
+  const delayed = active.filter((source) => (Number(source.consecutiveFailures) || 0) > 0 || source.lastRunStatus === "failed");
+  const lastCheckedAt = checked.map((source) => source.lastCheckedAt).sort().at(-1) || null;
+  if (delayed.length > 0) {
+    return {
+      state: "delayed",
+      lastCheckedAt,
+      delayedPublishers: [...new Set(delayed.map((source) => String(source.publisher || "Official source").slice(0, 200)))],
+    };
+  }
+  return { state: checked.length ? "current" : "not-checked", lastCheckedAt, delayedPublishers: [] };
+}
