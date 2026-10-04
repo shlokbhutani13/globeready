@@ -14,7 +14,7 @@ Every remaining issue belongs to exactly one class.
 | Class | Count | Meaning |
 | --- | --- | --- |
 | BLOCKER | **0** | A repository or code problem that must be fixed before provisioning. None remain open. |
-| PROVISIONING REQUIRED | 14 | Needs real cloud resources, accounts, or money. |
+| PROVISIONING REQUIRED | 15 | Needs real cloud resources, accounts, or money. |
 | LIVE VERIFICATION REQUIRED | 12 | Implemented, but only a deployed environment can prove it. |
 | INTENTIONAL V1 LIMITATION | 11 | Known and accepted for the first release. |
 | FUTURE SCALE WORK | 9 | Not needed for the first deployment; needed at materially larger use. |
@@ -41,6 +41,8 @@ publication that could not run in production. One intermittent test failure was 
 12. A log collector and alerts for `severity` errors and `audit.*` events.
 13. A scheduler for source synchronization. It needs approval; no scheduler is provided.
 14. Gemini API key with a spending limit (optional, needs approval). Also a published AI-processing notice.
+15. Firebase App Check (optional but recommended): enforce it for Firestore, Storage, and the API so that only the
+    released client can use the backend. It needs a registered web app and an attestation provider.
 
 ### Live verification required
 
