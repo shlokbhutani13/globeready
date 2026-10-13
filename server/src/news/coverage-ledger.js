@@ -1,5 +1,6 @@
 const defaultCadenceHours = 12;
 const hourMilliseconds = 60 * 60_000;
+import { onboardingChecklistComplete } from "./source-onboarding.js";
 
 function validDate(value) {
   if (typeof value !== "string") return null;
@@ -72,6 +73,8 @@ export function buildCoverageLedger({ sources = [], runs = [], now = new Date() 
       consecutiveFailures: latestRun?.status === "success" ? 0 : Number(latestRun?.consecutiveFailures) || (latestRun ? 1 : 0),
       latestRunStatus: text(latestRun?.status) || null,
       latestErrorCode: text(latestRun?.errorCode) || null,
+      onboardingState: text(source?.onboarding?.state) || null,
+      checklistComplete: onboardingChecklistComplete(source?.onboarding),
     };
   }).sort((left, right) => left.id.localeCompare(right.id));
 
@@ -95,6 +98,7 @@ const publicFields = [
 ];
 const adminFields = [
   ...publicFields, "lastAttemptAt", "consecutiveFailures", "latestRunStatus", "latestErrorCode",
+  "onboardingState", "checklistComplete",
 ];
 
 function project(ledger, fields) {

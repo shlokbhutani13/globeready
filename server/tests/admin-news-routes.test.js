@@ -72,6 +72,59 @@ describe("admin authorization", () => {
 });
 
 describe("admin news routes", () => {
+  test("moves a university source through verified onboarding and refuses ordinary users", async () => {
+    const store = createDemoStore();
+    await store.newsSources.upsert("example-u", {
+      publisher: "Example University", sourceType: "university", universityId: "example-u",
+      verified: false, enabled: false, onboarding: { state: "proposed" },
+      url: "https://international.example.edu/news.xml",
+      allowedHosts: ["international.example.edu"], adapter: "feed",
+    });
+    const options = { store, assistant: null, clock: () => new Date("2026-10-13T12:00:00.000Z") };
+    const ordinary = createApp({ ...options, auth: liveAuth({ uid: "ordinary" }) });
+    await request(ordinary).patch("/api/admin/news/sources/example-u/onboarding")
+      .set("authorization", "Bearer token").send({ state: "verifying" }).expect(403);
+
+    const app = createApp({ ...options, auth: liveAuth({ uid: "admin-1", admin: true }) });
+    const admin = (body) => request(app).patch("/api/admin/news/sources/example-u/onboarding")
+      .set("authorization", "Bearer token").send(body);
+    await admin({ state: "verifying" }).expect(200);
+    await admin({
+      state: "verified-disabled",
+      officialDomain: "international.example.edu",
+      sourceUrl: "https://international.example.edu/news.xml",
+      adapter: "feed",
+      robotsResult: "allowed",
+      parserContractVersion: "fixture-v1",
+      cadenceHours: 24,
+      topics: ["status"],
+    }).expect(200);
+    const enabled = await admin({ state: "enabled" }).expect(200);
+    expect(enabled.body.data).toMatchObject({ verified: true, enabled: true, onboarding: { state: "enabled" } });
+
+    const coverage = await request(app).get("/api/admin/news/coverage")
+      .set("authorization", "Bearer token").expect(200);
+    expect(coverage.body.data.entries).toContainEqual(expect.objectContaining({
+      id: "example-u", onboardingState: "enabled", checklistComplete: true,
+    }));
+  });
+
+  test("refuses onboarding verification without the complete checklist", async () => {
+    const store = createDemoStore();
+    await store.newsSources.upsert("example-u", {
+      publisher: "Example University", sourceType: "university", universityId: "example-u",
+      verified: false, enabled: false, onboarding: { state: "verifying" },
+      url: "https://international.example.edu/news.xml",
+      allowedHosts: ["international.example.edu"], adapter: "feed",
+    });
+    const app = createApp({ store, auth: liveAuth({ admin: true }), assistant: null });
+    const response = await request(app).patch("/api/admin/news/sources/example-u/onboarding")
+      .set("authorization", "Bearer token")
+      .send({ state: "verified-disabled", officialDomain: "international.example.edu" })
+      .expect(422);
+    expect(response.body.error.code).toBe("invalid_source_onboarding");
+  });
+
   test("returns expanded safe coverage only to administrators", async () => {
     const store = createDemoStore();
     await store.newsSources.upsert("official", {

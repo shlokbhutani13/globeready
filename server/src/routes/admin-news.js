@@ -3,6 +3,7 @@ import { assertStrictApprovalDraft, expectedSnapshotPath, validateApprovalDraft 
 import { adminCoverageLedger, buildCoverageLedger } from "../news/coverage-ledger.js";
 import { mergedSources } from "../news/coverage.js";
 import { canonicalOfficialHostname, canonicalOfficialUrl } from "../news/official-url.js";
+import { validateOnboardingTransition } from "../news/source-onboarding.js";
 
 const sourceFields = new Set([
   "id", "publisher", "adapter", "url", "allowedHosts", "acceptedContentTypes",
@@ -130,6 +131,44 @@ export function adminNewsRouter(store, {
     const { id, ...fields } = input;
     const result = await store.newsSources.upsert(id, fields);
     response.status(201).json({ data: result.item });
+  });
+  router.patch("/sources/:id/onboarding", adminMutationLimiter, async (request, response) => {
+    if (!sourceIdPattern.test(request.params.id)) {
+      return error(response, 404, "news_source_not_found", "News source was not found.");
+    }
+    const registered = registry.get(request.params.id);
+    const stored = await store.newsSources.get(request.params.id);
+    const current = registeredWithState(registered, stored);
+    if (!current) return error(response, 404, "news_source_not_found", "News source was not found.");
+    if (current.sourceType !== "university" && !current.universityId) {
+      return error(response, 422, "invalid_source_onboarding", "Only university sources use onboarding.");
+    }
+    let onboarding;
+    try {
+      onboarding = validateOnboardingTransition(current.onboarding || { state: "proposed" }, {
+        ...request.body,
+        ...(["verified-disabled", "rejected"].includes(request.body?.state)
+          ? { decisionAt: clock().toISOString(), decisionBy: request.user.uid }
+          : {}),
+      });
+    } catch (cause) {
+      return error(response, 422, "invalid_source_onboarding", cause.message);
+    }
+    const stateFlags = {
+      proposed: { verified: false, enabled: false },
+      verifying: { verified: false, enabled: false },
+      "verified-disabled": { verified: true, enabled: false },
+      enabled: { verified: true, enabled: true },
+      delayed: { verified: true, enabled: true },
+      rejected: { verified: false, enabled: false },
+    }[onboarding.state];
+    const result = await store.newsSources.upsert(request.params.id, {
+      onboarding,
+      ...stateFlags,
+      ...(onboarding.cadenceHours ? { cadenceHours: onboarding.cadenceHours } : {}),
+      ...(onboarding.topics ? { topics: onboarding.topics } : {}),
+    });
+    response.json({ data: { ...current, ...result.item } });
   });
   router.patch("/sources/:id", adminMutationLimiter, async (request, response) => {
     if (!sourceIdPattern.test(request.params.id)) return error(response, 404, "news_source_not_found", "News source was not found.");

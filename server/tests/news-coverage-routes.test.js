@@ -55,6 +55,23 @@ describe("GET /api/news/university-coverage", () => {
 });
 
 describe("GET /api/news/coverage", () => {
+  test("shows only a pending state and safe reason for university onboarding", async () => {
+    const store = createDemoStore();
+    await store.newsSources.upsert("pending-u", {
+      publisher: "Pending University", sourceType: "university", universityId: "pending-u",
+      verified: false, enabled: false,
+      onboarding: { state: "verifying", officialDomain: "private.edu", parserContractVersion: "secret-v1" },
+      pendingReason: "Verification is in progress.",
+    });
+    const app = createApp({ store, auth: null, assistant: null });
+    const response = await request(app).get("/api/news/coverage")
+      .set("x-demo-user", "student-a").expect(200);
+    expect(response.body.data.entries).toContainEqual(expect.objectContaining({
+      id: "pending-u", status: "pending", safeReason: "Verification is in progress.",
+    }));
+    expect(JSON.stringify(response.body.data)).not.toMatch(/private\.edu|secret-v1|verifying/);
+  });
+
   test("requires authentication and returns only the safe coverage projection", async () => {
     const store = createDemoStore();
     await store.newsSources.upsert("custom-u", {
