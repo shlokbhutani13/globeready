@@ -94,6 +94,10 @@ export function saveNews(itemId) {
   return apiRequest(`/api/news/${itemId}/save`, { method: "POST" });
 }
 
+export function fetchNewsItem(itemId) {
+  return apiRequest(`/api/news/${encodeURIComponent(itemId)}`);
+}
+
 export function unsaveNews(itemId) {
   return apiRequest(`/api/news/${itemId}/save`, { method: "DELETE" });
 }

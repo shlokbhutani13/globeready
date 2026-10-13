@@ -12,6 +12,7 @@ import SettingsPage from "./pages/SettingsPage";
 import NewsPage from "./pages/NewsPage";
 import NotificationsPage from "./pages/NotificationsPage";
 import NewsAdminPage from "./pages/NewsAdminPage";
+import NewsDetailPage from "./pages/NewsDetailPage";
 import { useAuth } from "./lib/auth-context";
 import { apiDownload, apiRequest } from "./lib/api";
 import { deleteAccountWithReauth } from "./lib/account-deletion";
@@ -295,6 +296,7 @@ export default function App() {
               onUpdatePreferences={updatePreferences}
             />
           )} />
+          <Route path="news/:id" element={<NewsDetailPage items={newsItems} />} />
           <Route path="documents" element={<DocumentsPage consent={live ? consent : undefined} onSaveConsent={saveConsentChoice} documents={documents} uploadProgress={uploadProgress} storageAvailable={!live || storageAvailable} onAdd={addDocument} onDelete={deleteDocument} onAnalyze={analyzeDocument} />} />
           <Route path="tasks" element={<TasksPage tasks={tasks} onAdd={addTask} onToggle={changeTask} onDelete={deleteTask} />} />
           <Route path="guides" element={<GuidesPage onSave={saveGuide} savedUrls={savedResources.map((resource) => resource.url)} />} />

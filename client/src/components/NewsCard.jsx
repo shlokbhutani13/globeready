@@ -39,6 +39,7 @@ export default function NewsCard({ item, saved = false, onToggleSave, compact = 
         {item.effectiveAt && <span>Effective {item.effectiveAt}</span>}
         {item.publishedAt && <span>Published {item.publishedAt}</span>}
       </div>
+      {item.id && <a href={`/news/${item.id}`}>Read details</a>}
       {item.canonicalUrl && (
         <a href={item.canonicalUrl} target="_blank" rel="noreferrer">
           Read the official source <ExternalLink size={13} />
