@@ -4,6 +4,7 @@ import { classifyCandidate } from "./classifier.js";
 import { createFederalRegisterAdapter } from "./adapters/federal-register.js";
 import { defaultNewsSources } from "./default-sources.js";
 import { documentTypes, legalStates, normalizeNewsCandidate } from "./schema.js";
+import { validateNewsImage } from "./image-policy.js";
 import { SNAPSHOT_COMMIT_PROTOCOL } from "./snapshots.js";
 import { canonicalSourceHostname } from "./url-policy.js";
 
@@ -490,6 +491,7 @@ export function createNewsSync({
     let classification;
     try {
       normalized = normalizeNewsCandidate(candidate, sourceInput);
+      normalized.image = validateNewsImage(candidate.image, sourceInput);
       if (!normalized.title || !normalized.canonicalUrl || !normalized.sourceKey) {
         throw new Error("News candidate is missing a title, canonical URL, or source key.");
       }
