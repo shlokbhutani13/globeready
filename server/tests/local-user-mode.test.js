@@ -65,6 +65,15 @@ describe("local-user configuration and tooling", () => {
     expect(output).toMatch(/only in LOCAL_USER_MODE=true/);
   });
 
+  test("local sample news demonstrates visual summaries and detailed explanations", () => {
+    const seed = readFileSync(`${serverDir}/scripts/seed-local-user.mjs`, "utf8");
+    expect(seed).toMatch(/whyItMatters/);
+    expect(seed).toMatch(/detailSections/);
+    expect(seed).toMatch(/shortSummary/);
+    expect(seed).toMatch(/searchText/);
+    expect(seed).toMatch(/development data, not current news/);
+  });
+
   test("the client local-user environment file contains placeholders only", () => {
     const env = readFileSync(`${root}/client/.env.local-user`, "utf8");
     expect(env).toMatch(/VITE_LOCAL_USER_MODE=true/);

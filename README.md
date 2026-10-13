@@ -13,7 +13,7 @@ GlobeReady provides general information, not legal, immigration, tax, health, or
 
 ## What the launch includes
 
-- **Updates:** verified federal and administrator-onboarded university updates with official links, lifecycle labels, saved items, exact coverage/freshness states, and in-app daily or weekly digest records. Disabled, delayed, failing, pending, and never-checked sources are identified explicitly.
+- **Updates:** a visual top-story reader plus a searchable weekly, monthly, yearly, and custom-range archive; verified story details, official links, safe image fallbacks, saved items, lifecycle labels, and on-demand cited AI explanations. The Federal Register is the only live source enabled by default; USCIS, SEVP, State Department, and other registered sources remain visibly pending until their extraction contracts are verified. Local-user mode seeds clearly labeled development stories so the experience can be tested without external network access.
 - **My Plan:** tasks with due dates and priorities, a month calendar, and in-app reminders with a notification inbox.
 - **Documents and Assistant:** text-based PDFs with page-referenced text, and PNG/JPEG photos of printed text read with local OCR. Scanned or image-only PDFs, handwriting, and malformed or blank files are not read; each gets a clear message and keeps the upload. Document questions return citations, say when the evidence is missing, and route high-risk questions to a DSO or professional. Conversations are kept per student.
 - **Account:** profile, university, time zone, digest and email-preference settings (email delivery is deliberately disabled), a JSON data export, and account deletion.

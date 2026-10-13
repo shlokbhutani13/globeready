@@ -74,7 +74,7 @@ for (const sample of samples) {
     title: sample.title,
     publisher: "GlobeReady local sample data",
     canonicalUrl: `https://example.com/globeready-local-sample/${sample.key.split(":")[1]}`,
-    contentHash: sampleHash(sample.key),
+    contentHash: sampleHash(`${sample.key}:visual-news-v2`),
     sourceVerified: true,
     editorialState: "published-source-only",
     legalState: sample.legalState,
@@ -86,6 +86,14 @@ for (const sample of samples) {
     excerpt: sample.excerpt,
     sourceExcerpt: sample.excerpt,
     normalizedText: sample.excerpt,
+    searchText: `${sample.title} ${sample.excerpt}`.toLowerCase(),
+    shortSummary: sample.excerpt,
+    whyItMatters: "This labeled sample demonstrates how GlobeReady highlights relevance without presenting development data as real news.",
+    detailSections: [
+      { heading: "What this demonstrates", body: "A detailed verified update would explain what changed, who may be affected, important dates, and practical next steps." },
+      { heading: "Source status", body: "This is development data, not current news. Production stories must link to an approved official source." },
+    ],
+    verifiedAt: "2026-10-01T12:00:00.000Z",
     classifierExplanation: "Synthetic local sample.",
   });
 }
