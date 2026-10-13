@@ -21,9 +21,9 @@ export default function LoginPage({ onDemo, auth, localUser = false, demoAvailab
       <section className="login-story">
         <div className="logo light"><span><Globe2 size={21} /></span> GlobeReady</div>
         <div className="login-copy">
-          <span className="eyebrow">Your international student command center</span>
-          <h1>Arrive prepared.<br />Stay on track.</h1>
-          <p>Documents, deadlines, trusted guides, and clear answers in one calm workspace.</p>
+          <span className="eyebrow">International student workspace</span>
+          <h1>Everything important,<br />in one clear place.</h1>
+          <p>Keep documents, deadlines, verified updates, and reliable answers organized throughout your student journey.</p>
           <div className="login-benefits">
             <span><FileLock2 /> Secure document vault</span>
             <span><BookOpenCheck /> Trusted student guidance</span>

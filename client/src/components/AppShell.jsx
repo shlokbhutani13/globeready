@@ -17,8 +17,12 @@ export default function AppShell({ onSignOut, isAdmin = false }) {
   return (
     <div className="app-shell">
       <aside className="sidebar">
-        <div className="logo"><span><Globe2 size={21} /></span> GlobeReady</div>
-        <nav>
+        <div className="sidebar-brand">
+          <div className="logo"><span><Globe2 size={19} /></span> GlobeReady</div>
+          <small>Student workspace</small>
+        </div>
+        <span className="workspace-label">Workspace</span>
+        <nav aria-label="Workspace navigation">
           {navigation.map(([to, label, Icon]) => (
             <NavLink key={to} to={to} end={to === "/"}>
               <Icon size={18} />
@@ -26,7 +30,7 @@ export default function AppShell({ onSignOut, isAdmin = false }) {
             </NavLink>
           ))}
         </nav>
-        <div className="sidebar-footer">
+        <div className="sidebar-footer" aria-label="Account navigation">
           <NavLink to="/profile"><UserRound size={17} /> Profile</NavLink>
           <NavLink to="/settings"><Settings size={17} /> Settings</NavLink>
           <button onClick={onSignOut}><LogOut size={17} /> Sign out</button>
