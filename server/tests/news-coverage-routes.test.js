@@ -53,3 +53,54 @@ describe("GET /api/news/university-coverage", () => {
     expect(response.body.data.state).toBe("no-verified-source");
   });
 });
+
+describe("GET /api/news/coverage", () => {
+  test("requires authentication and returns only the safe coverage projection", async () => {
+    const store = createDemoStore();
+    await store.newsSources.upsert("custom-u", {
+      publisher: "Custom University",
+      authority: "university",
+      jurisdiction: "US",
+      topics: ["campus-life"],
+      universityId: "custom-u",
+      verified: true,
+      enabled: true,
+      cadenceHours: 24,
+      url: "https://custom.edu/sitemap.xml",
+      allowedHosts: ["custom.edu"],
+      adapter: "university-sitemap",
+      privateNotes: "never expose",
+    });
+    await store.newsRuns.create({
+      sourceId: "custom-u",
+      status: "success",
+      endedAt: "2026-10-13T10:00:00.000Z",
+      responseValidators: { etag: "private" },
+    });
+    const app = createApp({
+      store,
+      auth: null,
+      assistant: null,
+      clock: () => new Date("2026-10-13T12:00:00.000Z"),
+    });
+
+    await request(app).get("/api/news/coverage").expect(401);
+    const response = await request(app).get("/api/news/coverage")
+      .set("x-demo-user", "student-a")
+      .expect(200);
+
+    expect(response.body.data.entries).toContainEqual({
+      id: "custom-u",
+      publisher: "Custom University",
+      authority: "university",
+      jurisdiction: "US",
+      topics: ["campus-life"],
+      universityId: "custom-u",
+      status: "active",
+      cadenceHours: 24,
+      lastSuccessAt: "2026-10-13T10:00:00.000Z",
+      safeReason: null,
+    });
+    expect(JSON.stringify(response.body.data)).not.toMatch(/sitemap|allowedHosts|adapter|never expose|etag/);
+  });
+});

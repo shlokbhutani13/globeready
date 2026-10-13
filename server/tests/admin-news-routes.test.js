@@ -72,6 +72,34 @@ describe("admin authorization", () => {
 });
 
 describe("admin news routes", () => {
+  test("returns expanded safe coverage only to administrators", async () => {
+    const store = createDemoStore();
+    await store.newsSources.upsert("official", {
+      publisher: "Official Publisher", authority: "federal", jurisdiction: "US",
+      topics: ["status"], verified: true, enabled: true, cadenceHours: 12,
+      url: "https://official.gov/news", allowedHosts: ["official.gov"], adapter: "feed",
+      selector: ".private", privateNotes: "hidden",
+    });
+    await store.newsRuns.create({
+      sourceId: "official", status: "failed", endedAt: "2026-10-13T11:00:00.000Z",
+      errorCode: "FETCH", responseValidators: { etag: "private" },
+    });
+    const app = createApp({
+      store,
+      auth: liveAuth({ admin: true }),
+      assistant: null,
+      clock: () => new Date("2026-10-13T12:00:00.000Z"),
+    });
+
+    const response = await request(app).get("/api/admin/news/coverage")
+      .set("authorization", "Bearer token")
+      .expect(200);
+    expect(response.body.data.entries).toContainEqual(expect.objectContaining({
+      id: "official", status: "failing", latestRunStatus: "failed", consecutiveFailures: 1,
+    }));
+    expect(JSON.stringify(response.body.data)).not.toMatch(/\.private|hidden|etag/);
+  });
+
   test("rate-limits admin mutations separately from health reads", async () => {
     const app = createApp({
       store: createDemoStore(),

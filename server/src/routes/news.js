@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { mergedSources, sourceHealth, universityCoverage } from "../news/coverage.js";
+import { buildCoverageLedger, publicCoverageLedger } from "../news/coverage-ledger.js";
 import { canonicalOfficialUrl } from "../news/official-url.js";
 import { isPublished, publicNewsItem } from "../news/schema.js";
 
@@ -116,6 +117,18 @@ export function newsRouter(store, {
   clock = () => new Date(),
 } = {}) {
   const router = Router();
+  router.get("/coverage", newsQueryLimiter, async (_request, response) => {
+    const [stored, runs] = await Promise.all([
+      store.newsSources.listGlobal(),
+      store.newsRuns.listGlobal(),
+    ]);
+    const ledger = buildCoverageLedger({
+      sources: mergedSources(registeredSources, stored),
+      runs,
+      now: clock(),
+    });
+    response.json({ data: publicCoverageLedger(ledger) });
+  });
   router.get("/university-coverage", newsQueryLimiter, async (request, response) => {
     const universityId = request.query.universityId;
     if (Object.keys(request.query).some((key) => key !== "universityId")

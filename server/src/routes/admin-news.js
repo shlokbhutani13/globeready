@@ -1,5 +1,7 @@
 import { Router } from "express";
 import { assertStrictApprovalDraft, expectedSnapshotPath, validateApprovalDraft } from "../news/approval-policy.js";
+import { adminCoverageLedger, buildCoverageLedger } from "../news/coverage-ledger.js";
+import { mergedSources } from "../news/coverage.js";
 import { canonicalOfficialHostname, canonicalOfficialUrl } from "../news/official-url.js";
 
 const sourceFields = new Set([
@@ -98,6 +100,18 @@ export function adminNewsRouter(store, {
 } = {}) {
   const router = Router();
   const registry = new Map(registeredSources.map((source) => [source.id, source]));
+  router.get("/coverage", async (_request, response) => {
+    const [stored, runs] = await Promise.all([
+      store.newsSources.listGlobal(),
+      store.newsRuns.listGlobal(),
+    ]);
+    const ledger = buildCoverageLedger({
+      sources: mergedSources(registeredSources, stored),
+      runs,
+      now: clock(),
+    });
+    response.json({ data: adminCoverageLedger(ledger) });
+  });
   router.get("/sources", async (_request, response) => {
     const stored = await store.newsSources.listGlobal();
     const byId = new Map(stored.map((source) => [source.id, source]));
