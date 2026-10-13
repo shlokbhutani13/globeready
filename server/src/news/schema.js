@@ -42,6 +42,7 @@ export const publicNewsFields = new Set([
   "sourceExcerpt", "plainLanguageSummary", "actions", "urgency", "relevance", "highImpact",
   "topics", "visaTypes", "nationalities", "universityIds", "journeyStages", "relatedIds",
   "supersedesIds", "supersededByIds", "firstSeenAt", "lastSeenAt", "createdAt", "recordUpdatedAt",
+  "lifecycleState", "replacementItemId",
 ]);
 
 function cleanText(value, max = 500) {
