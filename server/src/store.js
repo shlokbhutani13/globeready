@@ -564,6 +564,7 @@ export function createDemoStore({ seedConsent = [] } = {}) {
   const runItems = new Map();
   const reviewItems = new Map();
   const auditItems = new Map();
+  const operationItems = new Map();
   const reviewQueue = createGlobalCollection({ leases, items: reviewItems });
   reviewQueue.resolve = async (id, { decision, reviewerUid, reviewedAt } = {}) => {
     const review = reviewItems.get(id);
@@ -588,6 +589,7 @@ export function createDemoStore({ seedConsent = [] } = {}) {
   };
   const newsSources = createGlobalCollection({ leases, items: sourceItems });
   const newsRuns = createGlobalCollection({ leases, items: runItems });
+  const newsOperations = createGlobalCollection({ leases, items: operationItems });
   const tasks = createCollection();
   const documents = createCollection();
   const resources = createCollection();
@@ -626,6 +628,7 @@ export function createDemoStore({ seedConsent = [] } = {}) {
     news: createNewsStore({ reviewItems, auditItems, leases }),
     newsSources,
     newsRuns,
+    newsOperations,
     newsSyncState: {
       async commit(sourceId, sourceInput, runInput, { fence } = {}) {
         await assertFence(leases, fence);

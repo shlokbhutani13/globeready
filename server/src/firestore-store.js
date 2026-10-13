@@ -950,6 +950,7 @@ function snapshotReference(firestore, path) {
 
 export function createFirestoreSnapshotStore(firestore, { clock = () => new Date(), retentionDays = 90 } = {}) {
   const dayMilliseconds = 86_400_000;
+  const collection = firestore.collection("newsSourceSnapshots");
   return {
     isPrivate: true,
     supportsFencing: true,
@@ -1012,6 +1013,25 @@ export function createFirestoreSnapshotStore(firestore, { clock = () => new Date
       }
       return current.content;
     },
+    async listExpired(before, limit = 20) {
+      const cutoff = new Date(before);
+      if (Number.isNaN(cutoff.valueOf()) || !Number.isInteger(limit) || limit < 1 || limit > 20) {
+        throw new Error("Expired snapshot query is invalid.");
+      }
+      const snapshot = await collection.where("expiresAt", "<", cutoff).limit(limit).get();
+      return snapshot.docs.map(documentValue).filter((item) => snapshotPathPattern.test(item.path));
+    },
+    async deleteExpired(path) {
+      if (typeof path !== "string" || !snapshotPathPattern.test(path)) return false;
+      const reference = snapshotReference(firestore, path);
+      return firestore.runTransaction(async (transaction) => {
+        const snapshot = await transaction.get(reference);
+        const current = snapshot.exists ? snapshot.data() : null;
+        if (!current || current.path !== path || new Date(current.expiresAt).valueOf() >= currentDate(clock).valueOf()) return false;
+        transaction.delete(reference);
+        return true;
+      });
+    },
   };
 }
 
@@ -1026,6 +1046,7 @@ export function createFirestoreStore(firestore, { clock = () => new Date() } = {
   const leases = leaseStore(firestore, clock);
   const newsSources = globalCollectionStore(firestore, "newsSources", clock);
   const newsRuns = globalCollectionStore(firestore, "newsRuns", clock);
+  const newsOperations = globalCollectionStore(firestore, "newsOperations", clock);
   return {
     profiles: {
       async get(uid) {
@@ -1055,6 +1076,7 @@ export function createFirestoreStore(firestore, { clock = () => new Date() } = {
     news: newsItemStore(firestore, clock),
     newsSources,
     newsRuns,
+    newsOperations,
     newsSyncState: newsSyncStateStore(firestore, clock),
     reviewQueue: reviewQueueStore(firestore, clock),
     reviewAudit: readOnlyGlobalCollectionStore(firestore, "newsReviewAudits", clock),

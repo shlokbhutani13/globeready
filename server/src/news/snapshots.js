@@ -222,6 +222,41 @@ export function createSnapshotStore({
 
     readCommitted: reader.readCommitted,
 
+    async listExpired(before, limit = 20) {
+      const cutoff = new Date(before);
+      if (Number.isNaN(cutoff.valueOf()) || !Number.isInteger(limit) || limit < 1 || limit > 20) {
+        throw new Error("Expired snapshot query is invalid.");
+      }
+      const [files] = await bucket.getFiles({ prefix: snapshotPrefix });
+      const expired = [];
+      for (const file of files) {
+        if (expired.length >= limit) break;
+        const [metadata] = await file.getMetadata();
+        const identity = metadataHash(file, metadata);
+        const expiresAt = Date.parse(metadata?.metadata?.expiresAt || "");
+        if (identity.valid && Number.isFinite(expiresAt) && expiresAt < cutoff.valueOf()) {
+          expired.push({ path: file.name, expiresAt: new Date(expiresAt).toISOString() });
+        }
+      }
+      return expired;
+    },
+
+    async deleteExpired(path) {
+      if (typeof path !== "string" || !path.startsWith(snapshotPrefix)) return false;
+      const file = bucket.file(path);
+      try {
+        const [metadata] = await file.getMetadata();
+        const identity = metadataHash(file, metadata);
+        const expiresAt = Date.parse(metadata?.metadata?.expiresAt || "");
+        if (!identity.valid || !Number.isFinite(expiresAt) || expiresAt >= nowFrom(clock).valueOf()) return false;
+        await file.delete();
+        return true;
+      } catch (error) {
+        if (isNotFound(error)) return false;
+        throw error;
+      }
+    },
+
     async removeExpired({ retainHashes = new Set() } = {}) {
       const retainedHashes = retainHashes instanceof Set
         ? retainHashes
