@@ -291,7 +291,7 @@ describe("Firestore news store", () => {
     expect(publicDocument).not.toHaveProperty("contentHash");
     expect(publicDocument).not.toHaveProperty("classifierExplanation");
     expect(publicDocument).not.toHaveProperty("snapshotPath");
-    expect(publicDocument).not.toHaveProperty("searchText");
+    expect(publicDocument.searchText).toBe("private search index");
     expect(firestore.writes.every(({ data }) => data === undefined || JSON.stringify(data) !== undefined)).toBe(true);
   });
 
@@ -775,6 +775,27 @@ describe("Firestore news store", () => {
     expect(firstPage.cursor).toEqual(expect.any(String));
     expect(secondPage.map(({ title }) => title)).toEqual(["Medium"]);
     expect(secondPage.cursor).toBeNull();
+  });
+
+  test("searches verified text across the filtered Firestore result set before paginating", async () => {
+    const store = createFirestoreStore(new FakeFirestore());
+    for (const [key, title, urgency] of [
+      ["noise-one", "Unrelated urgent notice", "critical"],
+      ["noise-two", "Another unrelated notice", "urgent"],
+      ["match", "Optional practical training update", "low"],
+    ]) {
+      await store.news.upsert(`agency:${key}`, published({
+        title,
+        contentHash: key,
+        urgency,
+        searchText: title.toLocaleLowerCase(),
+      }));
+    }
+
+    const page = await store.news.listPublished({ q: "practical training", limit: 1 });
+
+    expect(page.map(({ title }) => title)).toEqual(["Optional practical training update"]);
+    expect(page.cursor).toBeNull();
   });
 
   test("uses bounded query shapes and rejects semantically tampered cursors", async () => {

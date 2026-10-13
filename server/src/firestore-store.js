@@ -19,7 +19,7 @@ const publicNewsFields = new Set([
   "relevance", "highImpact", "topics", "visaTypes", "nationalities", "universityIds",
   "journeyStages", "relatedIds", "supersedesIds", "supersededByIds", "firstSeenAt",
   "lastSeenAt", "createdAt", "recordUpdatedAt", "urgencyRank", "audienceKeys",
-  "shortSummary", "whyItMatters", "detailSections", "image", "verifiedAt",
+  "shortSummary", "whyItMatters", "detailSections", "image", "verifiedAt", "searchText",
 ]);
 const publishedStates = ["published-source-only", "approved"];
 const newsOrder = "urgencyRank:desc,publishedAt:desc,id:asc";
@@ -849,15 +849,26 @@ function newsItemStore(firestore, clock) {
         query = query.where("universityIds", "array-contains", filters.universityId);
       }
       query = query.orderBy("urgencyRank", "desc").orderBy("publishedAt", "desc").orderBy("id", "asc");
-      if (cursor) {
-        query = query.startAfter(
-          cursor.position.urgencyRank,
-          cursor.position.publishedAt,
-          cursor.position.id,
-        );
+      const after = cursor?.position;
+      const positioned = (base, position) => position
+        ? base.startAfter(position.urgencyRank, position.publishedAt, position.id)
+        : base;
+      let results;
+      if (filters.q) {
+        results = [];
+        let position = after;
+        while (results.length < limit + 1) {
+          const snapshot = await positioned(query, position).limit(50).get();
+          const candidates = snapshot.docs.map(documentValue).filter(isPublished);
+          results.push(...candidates.filter((item) => String(item.searchText || "").toLocaleLowerCase().includes(filters.q)));
+          const last = candidates.at(-1);
+          if (snapshot.docs.length < 50 || !last) break;
+          position = { urgencyRank: last.urgencyRank, publishedAt: last.publishedAt, id: last.id };
+        }
+      } else {
+        const snapshot = await positioned(query, after).limit(limit + 1).get();
+        results = snapshot.docs.map(documentValue).filter(isPublished);
       }
-      const snapshot = await query.limit(limit + 1).get();
-      const results = snapshot.docs.map(documentValue).filter(isPublished);
       const page = results.slice(0, limit);
       const nextCursor = results.length > limit ? encodeCursor(page.at(-1), filters) : null;
       return pageResult(page, nextCursor);

@@ -223,4 +223,3 @@
 - [ ] **Step 6: Run responsive browser verification** for login, home orientation, top stories, archive filtering, detail, explanation failure/success fixtures, keyboard focus, mobile layout, and broken images.
 - [ ] **Step 7: Confirm local-user services remain running and no cloud/deployment resources were created.**
 - [ ] **Step 8: Commit** with `test: verify news and orientation experience`.
-
