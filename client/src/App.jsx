@@ -64,6 +64,11 @@ export default function App() {
   const [sourceHealth, setSourceHealth] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [consent, setConsent] = useState(null);
+  const guideKey = `globeready:getting-started:${auth.user?.uid || "demo"}`;
+  const [showGettingStarted, setShowGettingStarted] = useState(() => localStorage.getItem("globeready:getting-started:demo") !== "dismissed");
+
+  useEffect(() => { setShowGettingStarted(localStorage.getItem(guideKey) !== "dismissed"); }, [guideKey]);
+  const dismissGettingStarted = () => { localStorage.setItem(guideKey, "dismissed"); setShowGettingStarted(false); };
 
   // Reminders are created by the API when a task is due. The check runs at sign-in, every 15 minutes, when the
   // window regains focus, and after the task list changes, so a task that becomes due mid-session is reminded
@@ -276,7 +281,7 @@ export default function App() {
       {appError && <div className="app-error" role="alert"><span>{appError}</span><button onClick={() => setAppError("")}>Dismiss</button></div>}
       <Routes>
         <Route element={<AppShell onSignOut={signOut} isAdmin={isAdmin} unreadNotifications={unreadNotifications} />}>
-          <Route index element={<DashboardPage profile={profile} tasks={tasks} topNews={topNews} unreadNotifications={unreadNotifications} onToggleTask={changeTask} />} />
+          <Route index element={<DashboardPage profile={profile} tasks={tasks} topNews={topNews} unreadNotifications={unreadNotifications} onToggleTask={changeTask} showGettingStarted={showGettingStarted} onDismissGettingStarted={dismissGettingStarted} />} />
           <Route path="news" element={(
             <NewsPage
               items={newsItems}
@@ -312,6 +317,7 @@ export default function App() {
               onUpdatePreferences={updatePreferences}
               onExport={() => apiDownload("/api/account/export", "globeready-account-export.json").catch((error) => setAppError(error.message))}
               onDelete={deleteAccount}
+              onShowGettingStarted={() => setShowGettingStarted(true)}
             />
           )} />
           <Route path="admin/news" element={isAdmin ? <NewsAdminPage isAdmin={isAdmin} /> : <Navigate to="/" replace />} />

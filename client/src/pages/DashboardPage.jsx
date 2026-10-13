@@ -1,6 +1,7 @@
 import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Disclaimer from "../components/Disclaimer";
+import GettingStartedBoard from "../components/GettingStartedBoard";
 
 function greetingFor(date = new Date()) {
   const hour = date.getHours();
@@ -11,7 +12,7 @@ function greetingFor(date = new Date()) {
 
 // Home answers three questions: what changed, what is next, and what Ask can help with. Everything else
 // lives one tap deeper, so an empty day stays calm instead of filling with cards.
-export default function DashboardPage({ profile = {}, tasks = [], topNews = [], unreadNotifications = 0, onToggleTask }) {
+export default function DashboardPage({ profile = {}, tasks = [], topNews = [], unreadNotifications = 0, onToggleTask, showGettingStarted = false, onDismissGettingStarted }) {
   const navigate = useNavigate();
   const firstName = profile.fullName?.split(" ")[0] || "there";
   const openTasks = tasks.filter((task) => !task.completed);
@@ -24,6 +25,8 @@ export default function DashboardPage({ profile = {}, tasks = [], topNews = [], 
         <h1>{greetingFor()}, {firstName}.</h1>
         {profile.university && <p>{profile.university}</p>}
       </header>
+
+      {showGettingStarted && <GettingStartedBoard onDismiss={onDismissGettingStarted} />}
 
       {topUpdate && (
         <section className="home-section" aria-labelledby="home-update-title">
