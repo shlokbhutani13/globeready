@@ -40,3 +40,17 @@ test("deletes only the bounded expired snapshot batch", async () => {
   expect(store.snapshots.deleteExpired).toHaveBeenCalledTimes(1);
   expect(result.cleanup).toEqual({ deleted: 1 });
 });
+
+test("coalesces concurrent calls with the same operation ID", async () => {
+  const store = createDemoStore();
+  let release;
+  const blocked = new Promise((resolve) => { release = resolve; });
+  const syncSource = vi.fn(async () => { await blocked; return { status: "success" }; });
+  const operations = createNewsOperations({ sync: { syncSource }, store });
+  const first = operations.run({ operationId: "same", sourceIds: ["one"] });
+  const second = operations.run({ operationId: "same", sourceIds: ["one"] });
+  release();
+  const [firstResult, secondResult] = await Promise.all([first, second]);
+  expect(syncSource).toHaveBeenCalledTimes(1);
+  expect(secondResult).toEqual({ ...firstResult, replayed: true });
+});

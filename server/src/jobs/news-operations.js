@@ -17,6 +17,7 @@ export function createNewsOperations({
   if (!store?.newsOperations?.get || !store.newsOperations.upsert) {
     throw new Error("News operations require an idempotency store.");
   }
+  const inFlight = new Map();
 
   return {
     async run({ operationId, dryRun = true, sourceIds = [], limit = 20, cleanup = false } = {}) {
@@ -32,33 +33,43 @@ export function createNewsOperations({
       if (dryRun !== true && dryRun !== false) throw new Error("dryRun must be a boolean.");
       if (!dryRun && !writesEnabled) throw new Error("News operation writes are disabled.");
 
-      const existing = await store.newsOperations.get(operationId);
-      if (existing?.summary) return { ...existing.summary, replayed: true };
-
-      const sources = [];
-      for (const sourceId of sourceIds.slice(0, limit)) {
-        const result = await sync.syncSource(sourceId, { dryRun });
-        sources.push({ sourceId, status: result?.status || "unknown" });
+      if (inFlight.has(operationId)) {
+        return inFlight.get(operationId).then((summary) => ({ ...summary, replayed: true }));
       }
 
-      let deleted = 0;
-      if (cleanup && store.snapshots?.listExpired && store.snapshots?.deleteExpired) {
-        const expired = await store.snapshots.listExpired(isoNow(clock), limit);
-        for (const snapshot of expired.slice(0, limit)) {
-          if (await store.snapshots.deleteExpired(snapshot.path)) deleted += 1;
+      const execution = (async () => {
+        const existing = await store.newsOperations.get(operationId);
+        if (existing?.summary) return { ...existing.summary, replayed: true };
+        if (existing?.state === "running") throw new Error("This news operation is already running or requires operator review.");
+        const startedAt = isoNow(clock);
+        await store.newsOperations.upsert(operationId, { state: "running", startedAt, dryRun });
+
+        try {
+          const sources = [];
+          for (const sourceId of sourceIds.slice(0, limit)) {
+            const result = await sync.syncSource(sourceId, { dryRun });
+            sources.push({ sourceId, status: result?.status || "unknown" });
+          }
+
+          let deleted = 0;
+          if (cleanup && store.snapshots?.listExpired && store.snapshots?.deleteExpired) {
+            const expired = await store.snapshots.listExpired(isoNow(clock), limit);
+            for (const snapshot of expired.slice(0, limit)) {
+              if (await store.snapshots.deleteExpired(snapshot.path)) deleted += 1;
+            }
+          }
+
+          const summary = { operationId, dryRun, replayed: false, startedAt, sources, cleanup: { deleted } };
+          await store.newsOperations.upsert(operationId, { state: "complete", summary });
+          return summary;
+        } catch (error) {
+          await store.newsOperations.upsert(operationId, { state: "failed" });
+          throw error;
         }
-      }
-
-      const summary = {
-        operationId,
-        dryRun,
-        replayed: false,
-        startedAt: isoNow(clock),
-        sources,
-        cleanup: { deleted },
-      };
-      await store.newsOperations.upsert(operationId, { summary });
-      return summary;
+      })();
+      inFlight.set(operationId, execution);
+      execution.finally(() => inFlight.delete(operationId)).catch(() => {});
+      return execution;
     },
   };
 }
