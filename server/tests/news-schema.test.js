@@ -68,4 +68,85 @@ describe("news schema", () => {
     expect(isPublished(approved)).toBe(true);
     expect(isPublished({ editorialState: "review-required" })).toBe(false);
   });
+
+  test("normalizes bounded story presentation fields", () => {
+    const item = normalizeNewsCandidate({
+      externalId: "story-1",
+      canonicalUrl: "https://www.uscis.gov/news/story-1",
+      title: "  Filing guidance updated  ",
+      publishedAt: "2026-10-13T15:30:00-04:00",
+      verifiedAt: "2026-10-13T20:00:00Z",
+      shortSummary: ` ${"S".repeat(501)} `,
+      whyItMatters: "  Students may need to use the revised form.  ",
+      detailSections: [
+        { heading: " What changed ", body: " A revised edition was published. " },
+        { heading: "", body: "ignored" },
+      ],
+      image: {
+        url: "https://www.uscis.gov/sites/default/files/story.jpg",
+        alt: " USCIS building ",
+        sourceUrl: "https://www.uscis.gov/news/story-1",
+        attribution: " USCIS ",
+      },
+      excerpt: "Official source excerpt",
+      normalizedText: "  Filing GUIDANCE updated for students  ",
+    }, { id: "uscis", verified: true });
+
+    expect(item).toMatchObject({
+      publishedAt: "2026-10-13T19:30:00.000Z",
+      verifiedAt: "2026-10-13T20:00:00.000Z",
+      shortSummary: "S".repeat(500),
+      whyItMatters: "Students may need to use the revised form.",
+      detailSections: [{ heading: "What changed", body: "A revised edition was published." }],
+      image: {
+        url: "https://www.uscis.gov/sites/default/files/story.jpg",
+        alt: "USCIS building",
+        sourceUrl: "https://www.uscis.gov/news/story-1",
+        attribution: "USCIS",
+      },
+      searchText: "filing guidance updated filing guidance updated for students official source excerpt",
+    });
+  });
+
+  test("rejects malformed nested story fields and preserves legacy items", () => {
+    const item = normalizeNewsCandidate({
+      title: "Legacy notice",
+      canonicalUrl: "https://example.gov/notice",
+      publishedAt: "not-a-date",
+      verifiedAt: "2026-02-30",
+      detailSections: [{ heading: "Valid", body: "Body", extra: "private" }],
+      image: { url: "https://example.gov/image.jpg", alt: "Image", unexpected: true },
+    }, { id: "legacy", verified: true });
+
+    expect(item.publishedAt).toBeNull();
+    expect(item.verifiedAt).toBeNull();
+    expect(item.detailSections).toEqual([]);
+    expect(item.image).toBeNull();
+
+    expect(publicNewsItem({ id: "old", title: "Old", editorialState: "published-source-only" }))
+      .toEqual({ id: "old", title: "Old", editorialState: "published-source-only", plainLanguageSummary: "", actions: [] });
+  });
+
+  test("public projection includes only bounded story presentation fields", () => {
+    const projected = publicNewsItem({
+      id: "story-2",
+      editorialState: "approved",
+      shortSummary: "Short",
+      whyItMatters: "Relevant",
+      detailSections: [{ heading: "What changed", body: "Details" }],
+      image: { url: "https://example.gov/image.jpg", alt: "Official image" },
+      publishedAt: "2026-10-13",
+      verifiedAt: "2026-10-13T20:00:00.000Z",
+      searchText: "private search index",
+    });
+
+    expect(projected).toMatchObject({
+      shortSummary: "Short",
+      whyItMatters: "Relevant",
+      detailSections: [{ heading: "What changed", body: "Details" }],
+      image: { url: "https://example.gov/image.jpg", alt: "Official image" },
+      verifiedAt: "2026-10-13T20:00:00.000Z",
+    });
+    expect(projected).not.toHaveProperty("searchText");
+  });
 });

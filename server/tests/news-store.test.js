@@ -41,6 +41,12 @@ describe("demo news store", () => {
     const store = createDemoStore();
     await store.news.upsert("agency:low", {
       title: "Older notice",
+      shortSummary: "A concise verified summary.",
+      whyItMatters: "Students should review the updated date.",
+      detailSections: [{ heading: "What changed", body: "The date changed." }],
+      image: { url: "https://example.gov/news.jpg", alt: "Official briefing" },
+      verifiedAt: "2026-07-11T00:00:00.000Z",
+      searchText: "private search index",
       contentHash: "low",
       editorialState: "published-source-only",
       urgency: "low",
@@ -69,6 +75,14 @@ describe("demo news store", () => {
     ]);
     expect((await store.news.listPublished({}))[0]).not.toHaveProperty("classifierExplanation");
     expect((await store.news.listPublished({}))[1]).not.toHaveProperty("normalizedText");
+    expect((await store.news.listPublished({}))[1]).toMatchObject({
+      shortSummary: "A concise verified summary.",
+      whyItMatters: "Students should review the updated date.",
+      detailSections: [{ heading: "What changed", body: "The date changed." }],
+      image: { url: "https://example.gov/news.jpg", alt: "Official briefing" },
+      verifiedAt: "2026-07-11T00:00:00.000Z",
+    });
+    expect((await store.news.listPublished({}))[1]).not.toHaveProperty("searchText");
     expect((await store.news.listPublished({})).map((item) => item.title)).not.toContain("Draft notice");
   });
 

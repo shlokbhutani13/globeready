@@ -42,7 +42,8 @@ export const publicNewsFields = new Set([
   "sourceExcerpt", "plainLanguageSummary", "actions", "urgency", "relevance", "highImpact",
   "topics", "visaTypes", "nationalities", "universityIds", "journeyStages", "relatedIds",
   "supersedesIds", "supersededByIds", "firstSeenAt", "lastSeenAt", "createdAt", "recordUpdatedAt",
-  "lifecycleState", "replacementItemId",
+  "lifecycleState", "replacementItemId", "shortSummary", "whyItMatters", "detailSections", "image",
+  "verifiedAt",
 ]);
 
 function cleanText(value, max = 500) {
@@ -58,6 +59,47 @@ function cleanDate(value) {
     && date.getUTCDate() === day
     ? value
     : null;
+}
+
+function cleanTimestamp(value) {
+  const dateOnly = cleanDate(value);
+  if (dateOnly) return dateOnly;
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}T/.test(value)) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.valueOf()) ? null : date.toISOString();
+}
+
+function cleanDetailSections(value) {
+  if (!Array.isArray(value)) return [];
+  return value.slice(0, 12).flatMap((section) => {
+    if (!section || typeof section !== "object" || Array.isArray(section)
+      || Object.keys(section).some((key) => !["heading", "body"].includes(key))) return [];
+    const heading = cleanText(section.heading, 100);
+    const body = cleanText(section.body, 4_000);
+    return heading && body ? [{ heading, body }] : [];
+  });
+}
+
+function cleanImage(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)
+    || Object.keys(value).some((key) => !["url", "alt", "sourceUrl", "attribution"].includes(key))) return null;
+  const url = cleanText(value.url, 2_000);
+  const alt = cleanText(value.alt, 300);
+  if (!url || !alt) return null;
+  return {
+    url,
+    alt,
+    ...(cleanText(value.sourceUrl, 2_000) ? { sourceUrl: cleanText(value.sourceUrl, 2_000) } : {}),
+    ...(cleanText(value.attribution, 300) ? { attribution: cleanText(value.attribution, 300) } : {}),
+  };
+}
+
+function searchTextFor(candidate) {
+  return [candidate.title, candidate.normalizedText, candidate.excerpt]
+    .map((value) => cleanText(value, 100_000).toLocaleLowerCase().replace(/\s+/gu, " "))
+    .filter(Boolean)
+    .join(" ")
+    .slice(0, 100_000);
 }
 
 function documentTypeFor(sourceDocumentType) {
@@ -114,9 +156,9 @@ export function normalizeNewsCandidate(candidate = {}, source = {}) {
     sourceVerified: source.verified === true,
     title: cleanText(candidate.title),
     publisher: cleanText(candidate.publisher),
-    publishedAt: cleanDate(candidate.publishedAt),
-    updatedAt: cleanDate(candidate.updatedAt),
-    effectiveAt: cleanDate(candidate.effectiveAt),
+    publishedAt: cleanTimestamp(candidate.publishedAt),
+    updatedAt: cleanTimestamp(candidate.updatedAt),
+    effectiveAt: cleanTimestamp(candidate.effectiveAt),
     sourceDocumentType: cleanText(candidate.sourceDocumentType),
     sourceLegalState: cleanText(candidate.sourceLegalState, 100),
     documentType,
@@ -127,6 +169,12 @@ export function normalizeNewsCandidate(candidate = {}, source = {}) {
     excerpt,
     sourceExcerpt: excerpt,
     normalizedText: cleanText(candidate.normalizedText, 100_000),
+    searchText: searchTextFor(candidate),
+    shortSummary: cleanText(candidate.shortSummary, 500),
+    whyItMatters: cleanText(candidate.whyItMatters, 500),
+    detailSections: cleanDetailSections(candidate.detailSections),
+    image: cleanImage(candidate.image),
+    verifiedAt: cleanTimestamp(candidate.verifiedAt),
     plainLanguageSummary: "",
   };
 }

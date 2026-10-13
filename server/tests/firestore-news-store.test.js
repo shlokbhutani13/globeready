@@ -211,6 +211,12 @@ function published(overrides = {}) {
     visaTypes: ["F-1"],
     universityIds: ["unc"],
     normalizedText: "private source text",
+    searchText: "private search index",
+    shortSummary: "Official summary",
+    whyItMatters: "Students may be affected.",
+    detailSections: [{ heading: "What changed", body: "The official rule changed." }],
+    image: { url: "https://www.federalregister.gov/news.jpg", alt: "Official seal" },
+    verifiedAt: "2026-09-16T12:00:00.000Z",
     classifierExplanation: "private classifier audit",
     snapshotPath: "news-source-snapshots/source/hash-one.txt",
     actions: [{ label: "Generated action", url: "https://example.gov/draft" }],
@@ -275,11 +281,17 @@ describe("Firestore news store", () => {
       editorialState: "published-source-only",
       plainLanguageSummary: "",
       actions: [],
+      shortSummary: "Official summary",
+      whyItMatters: "Students may be affected.",
+      detailSections: [{ heading: "What changed", body: "The official rule changed." }],
+      image: { url: "https://www.federalregister.gov/news.jpg", alt: "Official seal" },
+      verifiedAt: "2026-09-16T12:00:00.000Z",
     });
     expect(publicDocument).not.toHaveProperty("normalizedText");
     expect(publicDocument).not.toHaveProperty("contentHash");
     expect(publicDocument).not.toHaveProperty("classifierExplanation");
     expect(publicDocument).not.toHaveProperty("snapshotPath");
+    expect(publicDocument).not.toHaveProperty("searchText");
     expect(firestore.writes.every(({ data }) => data === undefined || JSON.stringify(data) !== undefined)).toBe(true);
   });
 

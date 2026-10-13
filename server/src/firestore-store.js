@@ -19,6 +19,7 @@ const publicNewsFields = new Set([
   "relevance", "highImpact", "topics", "visaTypes", "nationalities", "universityIds",
   "journeyStages", "relatedIds", "supersedesIds", "supersededByIds", "firstSeenAt",
   "lastSeenAt", "createdAt", "recordUpdatedAt", "urgencyRank", "audienceKeys",
+  "shortSummary", "whyItMatters", "detailSections", "image", "verifiedAt",
 ]);
 const publishedStates = ["published-source-only", "approved"];
 const newsOrder = "urgencyRank:desc,publishedAt:desc,id:asc";
