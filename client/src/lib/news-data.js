@@ -67,6 +67,10 @@ export function subscribeNews(filters, onData, onError, { intervalMs = 120_000 }
   if (filters?.visaType) params.set("visaType", filters.visaType);
   if (filters?.legalState) params.set("legalState", filters.legalState);
   if (filters?.universityId) params.set("universityId", filters.universityId);
+  if (filters?.sourceId) params.set("sourceId", filters.sourceId);
+  if (filters?.q) params.set("q", filters.q);
+  if (filters?.from) params.set("from", filters.from);
+  if (filters?.to) params.set("to", filters.to);
   const query_ = params.toString();
 
   let cancelled = false;

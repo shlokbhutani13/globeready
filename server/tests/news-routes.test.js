@@ -71,6 +71,32 @@ describe("authenticated news routes", () => {
     expect(response.body.data).toHaveProperty("nextCursor");
   });
 
+  test("combines archive search, source, and inclusive publication dates", async () => {
+    await store.news.upsert("source:archive-1", publishedItem({
+      title: "Updated OPT filing window",
+      searchText: "updated opt filing window employment students",
+      publishedAt: "2026-09-12",
+    }));
+    await store.news.upsert("source:archive-2", publishedItem({
+      sourceId: "uscis",
+      title: "Travel reminder",
+      searchText: "travel reminder",
+      publishedAt: "2026-09-13",
+      contentHash: "b".repeat(64),
+    }));
+
+    const response = await demo("get", "/api/news?q=OPT%20filing&sourceId=federal-register&from=2026-09-12&to=2026-09-12")
+      .expect(200);
+    expect(response.body.data.items.map(({ title }) => title)).toEqual(["Updated OPT filing window"]);
+  });
+
+  test("rejects invalid archive searches and date ranges", async () => {
+    await demo("get", `/api/news?q=${"x".repeat(121)}`).expect(422);
+    await demo("get", "/api/news?from=2026-02-30").expect(422);
+    await demo("get", "/api/news?from=2026-10-01&to=2026-09-01").expect(422);
+    await demo("get", "/api/news?sourceId=bad%20source").expect(422);
+  });
+
   test("rejects unknown, malformed, and oversized filters", async () => {
     await demo("get", "/api/news?topic=employment&unknown=yes").expect(422);
     await demo("get", "/api/news?topic=not-a-topic").expect(422);

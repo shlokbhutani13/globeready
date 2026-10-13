@@ -433,6 +433,10 @@ function filterSignature(filters) {
     visaType: filters.visaType || null,
     universityId: filters.universityId || null,
     legalState: filters.legalState || null,
+    sourceId: filters.sourceId || null,
+    q: filters.q || null,
+    from: filters.from || null,
+    to: filters.to || null,
   });
 }
 
@@ -831,6 +835,9 @@ function newsItemStore(firestore, clock) {
       const cursor = decodeCursor(filters.cursor, filters);
       let query = firestore.collection("newsItems").where("editorialState", "in", publishedStates);
       if (filters.legalState) query = query.where("legalState", "==", filters.legalState);
+      if (filters.sourceId) query = query.where("sourceId", "==", filters.sourceId);
+      if (filters.from) query = query.where("publishedAt", ">=", filters.from);
+      if (filters.to) query = query.where("publishedAt", "<=", filters.to.length === 10 ? `${filters.to}T23:59:59.999Z` : filters.to);
       const audienceFilters = [filters.topic, filters.visaType, filters.universityId].filter(Boolean);
       if (audienceFilters.length > 1) {
         query = query.where("audienceKeys", "array-contains", audienceKey(filters));

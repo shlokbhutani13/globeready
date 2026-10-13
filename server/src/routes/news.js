@@ -22,7 +22,7 @@ const legalStates = new Set([
   "proposed", "final", "scheduled", "effective", "delayed", "enjoined",
   "superseded", "withdrawn", "expired", "informational",
 ]);
-const filterFields = new Set(["topic", "visaType", "universityId", "legalState", "limit", "cursor"]);
+const filterFields = new Set(["topic", "visaType", "universityId", "legalState", "sourceId", "q", "from", "to", "limit", "cursor"]);
 const preferenceFields = new Set([
   "visaTypes", "homeCountries", "universityIds", "topics", "digestFrequency", "pushEnabled", "emailRemindersEnabled",
 ]);
@@ -53,11 +53,23 @@ function parseFilters(query) {
   if (query.legalState !== undefined && !legalStates.has(query.legalState)) throw new Error("Unknown legal state.");
   if (query.universityId !== undefined && !idPattern.test(query.universityId)) throw new Error("Invalid university ID.");
   if (query.cursor !== undefined && (!oneString(query.cursor, 4_096))) throw new Error("Invalid news cursor.");
+  if (query.q !== undefined && (!oneString(query.q, 120) || query.q.trim() !== query.q)) throw new Error("Invalid news search.");
+  if (query.sourceId !== undefined && (!oneString(query.sourceId) || !/^[a-z0-9][a-z0-9_-]{0,127}$/u.test(query.sourceId))) throw new Error("Invalid news source.");
+  for (const field of ["from", "to"]) {
+    if (query[field] !== undefined && (!/^\d{4}-\d{2}-\d{2}$/u.test(query[field])
+      || Number.isNaN(new Date(`${query[field]}T00:00:00Z`).valueOf())
+      || new Date(`${query[field]}T00:00:00Z`).toISOString().slice(0, 10) !== query[field])) throw new Error("Invalid news date.");
+  }
+  if (query.from && query.to && query.from > query.to) throw new Error("Invalid news date range.");
   return {
     ...(query.topic ? { topic: query.topic } : {}),
     ...(query.visaType ? { visaType: query.visaType } : {}),
     ...(query.universityId ? { universityId: query.universityId } : {}),
     ...(query.legalState ? { legalState: query.legalState } : {}),
+    ...(query.sourceId ? { sourceId: query.sourceId } : {}),
+    ...(query.q ? { q: query.q.toLocaleLowerCase() } : {}),
+    ...(query.from ? { from: query.from } : {}),
+    ...(query.to ? { to: query.to } : {}),
     limit,
     ...(query.cursor ? { cursor: query.cursor } : {}),
   };

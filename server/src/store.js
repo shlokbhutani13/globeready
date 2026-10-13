@@ -155,6 +155,10 @@ function createNewsStore({ reviewItems, auditItems, leases }) {
     if (filters.topic && !item.topics?.includes(filters.topic)) return false;
     if (filters.visaType && !item.visaTypes?.includes(filters.visaType)) return false;
     if (filters.universityId && !item.universityIds?.includes(filters.universityId)) return false;
+    if (filters.sourceId && item.sourceId !== filters.sourceId) return false;
+    if (filters.from && String(item.publishedAt || "").slice(0, 10) < filters.from) return false;
+    if (filters.to && String(item.publishedAt || "").slice(0, 10) > filters.to) return false;
+    if (filters.q && !String(item.searchText || `${item.title || ""} ${item.excerpt || ""}`).toLocaleLowerCase().includes(filters.q)) return false;
     return !filters.legalState || item.legalState === filters.legalState;
   };
 
