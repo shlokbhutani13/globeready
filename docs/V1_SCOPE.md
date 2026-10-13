@@ -21,6 +21,7 @@ limited. It is the reference for launch decisions and for the release notes.
 - **Privacy choices.** Document reading and AI answers, each with its own recorded choice, changeable at any time.
 - **Account.** Export of the student's data as JSON, and account deletion.
 - **Administration.** Review of source suggestions and of proposed update summaries, for listed administrators.
+- **Coverage and digests.** Students can inspect per-source status and last success, see approved correction/supersession/withdrawal state, choose daily/weekly/off, and read generated digests in app. Email remains disabled until a provider is provisioned.
 
 ## Not included
 
@@ -31,6 +32,7 @@ limited. It is the reference for launch decisions and for the release notes.
 - Native mobile apps.
 - Calendar export.
 - Live university catalogues. A university's updates appear only after an administrator verifies its source.
+- Automatic discovery of every university. University sources follow a proposed → verifying → verified-disabled → enabled lifecycle and require an official domain, robots decision, parser contract, cadence, topics, and an administrator decision.
 - Sharing between students, and any social feature.
 - Payments of any kind.
 

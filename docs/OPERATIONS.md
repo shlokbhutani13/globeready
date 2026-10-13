@@ -109,6 +109,12 @@ names the port.
 - `.local/` is ignored by git and holds the emulator data, the credentials file (owner-only), logs, and process IDs.
 - `local-user:reset` deletes that data after you type `RESET`. Reset is the only supported way to start from empty.
 
+## Update operations without infrastructure
+
+`cd server && npm run news:operations -- --help` is credential-free. The runner is dry-run by default, accepts repeatable `--source=<id>`, caps `--limit` at 20, and can include bounded expired-snapshot cleanup. Mutation mode fails closed unless `NEWS_OPERATIONS_WRITES_ENABLED=true`; that flag alone does not provision credentials, a scheduler, or network access. Reuse an operation ID to receive the saved result instead of repeating work.
+
+Digest generation is an operator-side service, not a public mutation endpoint. It creates one in-app record per user/frequency/period. Email delivery is disabled until a separately reviewed provider is injected.
+
 ### Logs
 
 - `.local/logs/api.log`: API structured logs.

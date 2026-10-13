@@ -14,8 +14,9 @@ today from what needs a decision or a provisioned service. Where something is no
 | Assistant conversations, messages, citations | Firestore `users/{uid}/conversations` | Deletion of the account | None |
 | Consent record (choice, wording version, time of change) | Inside the profile | Account deletion | None |
 | Source suggestions from students | Firestore `reviewQueue` | Kept for review; the student's UID is removed on account deletion | None |
-| Official source text behind a published update | Firestore `newsSourceSnapshots` (server only) | Public official text, not student data | Expiry is recorded at 90 days, **but no sweep deletes it yet** (see section 6) |
+| Official source text behind a published update | Firestore `newsSourceSnapshots` (server only) | Public official text, not student data | Expiry is recorded at 90 days; a bounded cleanup operation exists, but it runs only after an operator provisions scheduling |
 | Published updates | Firestore `newsItems` | While the source is kept | None |
+| In-app update digests | Firestore `users/{uid}/newsDigests` | Student activity and preferences | Account deletion; provider delivery is disabled |
 | Rate-limit counters | API process memory | One window (1 minute or 1 hour) | Yes, by design |
 | Request logs | Log collector (not provisioned) | Set by the collector's retention setting | Provisioning decision |
 | Audit events (`audit.*`) | Log collector (not provisioned) | Set by the collector's retention setting | Provisioning decision |

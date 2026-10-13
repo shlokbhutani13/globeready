@@ -109,7 +109,7 @@ publication that could not run in production. One intermittent test failure was 
 
 1. Scanned or image-only PDFs are not read; handwriting is not supported.
 2. OCR reads printed English text only, on the API host.
-3. No email delivery and no browser push. Email preferences are stored only.
+3. No email delivery and no browser push. In-app digest records, daily/weekly/off preferences, safe rendering, and a disabled provider boundary are implemented; no email is sent.
 4. No vector embeddings. Retrieval is deterministic term matching over the student's own chunks.
 5. Generated answers require a Gemini key. Without it, answers show retrieved passages and say so.
 6. The rate limiter is per process. The deployment must run one instance (`RATE_LIMIT_SCOPE=single-instance`).
@@ -125,7 +125,7 @@ publication that could not run in production. One intermittent test failure was 
 ### Future scale work
 
 1. A shared rate-limit store, required before more than one API instance.
-2. A scheduled sweep of expired source snapshots (they carry an expiry field; nothing deletes them yet).
+2. Provision and approve a schedule for the implemented bounded expired-snapshot cleanup; no scheduler exists yet.
 3. A scheduled sweep of orphaned Storage objects (see limitation 8).
 4. Pagination or hard limits on the full task and document lists (today each list is returned whole).
 5. Per-student quotas for direct Firestore writes, and a limit on university connector creation from profile updates.

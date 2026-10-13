@@ -46,6 +46,7 @@ describeEmulator("Firestore authorization rules", () => {
   beforeAll(async () => {
     const rules = await readFile(new URL("../../firestore.rules", import.meta.url), "utf8");
     environment = await initializeTestEnvironment({ projectId, firestore: { rules } });
+    await environment.clearFirestore();
     await environment.withSecurityRulesDisabled(async (context) => {
       const database = context.firestore();
       await setDoc(doc(database, "newsItems", "public"), {
@@ -88,7 +89,7 @@ describeEmulator("Firestore authorization rules", () => {
   test("isolates every user-owned collection from other students", async () => {
     const alice = environment.authenticatedContext("alice").firestore();
     const bob = environment.authenticatedContext("bob").firestore();
-    for (const name of ["tasks", "savedResources", "notifications", "savedNews", "newsPreferences", "pushSubscriptions"]) {
+    for (const name of ["tasks", "savedResources", "notifications", "savedNews", "newsDigests", "newsPreferences", "pushSubscriptions"]) {
       await environment.withSecurityRulesDisabled(async (context) => {
         await setDoc(doc(context.firestore(), "users", "alice", name, "seeded"), validFor(name));
       });

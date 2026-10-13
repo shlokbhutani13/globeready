@@ -10,6 +10,8 @@ import { createDocumentIndexer } from "../src/document-index.js";
 import { createLocalOcr } from "../src/ocr.js";
 import { sanitizeModelAnswer } from "../src/gemini.js";
 import { createDemoStore } from "../src/store.js";
+import { createDisabledEmailDelivery } from "../src/email/delivery.js";
+import { createDigestService } from "../src/news/digest-service.js";
 
 const fixture = (name) => fileURLToPath(new URL(`./fixtures/documents/${name}`, import.meta.url));
 const fixtureBytes = (name) => new Uint8Array(readFileSync(fixture(name)));
@@ -144,6 +146,42 @@ describe("launch journeys across the real API, storage pipeline, and assistant",
       });
       const feed = await as("get", "/api/news", "student-b").expect(200);
       expect(feed.body.data.sourceHealth.state).toBe("delayed");
+    });
+
+    test("discloses exact source coverage and approved lifecycle state", async () => {
+      await store.newsSources.upsert("journey-active", {
+        publisher: "USCIS Journey", verified: true, enabled: true, cadenceHours: 12,
+      });
+      await store.newsRuns.upsert("journey-run", {
+        sourceId: "journey-active", status: "success", endedAt: new Date().toISOString(),
+      });
+      const coverage = await as("get", "/api/news/coverage", "student-c").expect(200);
+      expect(coverage.body.data.entries).toContainEqual(expect.objectContaining({
+        id: "journey-active", status: "active", publisher: "USCIS Journey",
+      }));
+      expect(JSON.stringify(coverage.body.data)).not.toMatch(/private-selector|snapshotPath|reviewerUid|secret-v1/i);
+
+      const lifecycle = (await store.news.upsert("source:lifecycle-journey", {
+        sourceId: "federal-register", title: "Corrected official notice", publisher: "Federal Register",
+        canonicalUrl: "https://www.federalregister.gov/documents/2", contentHash: "d".repeat(64),
+        sourceVerified: true, editorialState: "published-source-only", legalState: "final",
+        lifecycleState: "corrected", replacementItemId: "replacement-2", publishedAt: "2026-10-12",
+      })).item;
+      const detail = await as("get", `/api/news/${lifecycle.id}`, "student-c").expect(200);
+      expect(detail.body.data).toMatchObject({ lifecycleState: "corrected", replacementItemId: "replacement-2" });
+    });
+
+    test("keeps a disabled-email digest in app without claiming it was sent", async () => {
+      await store.newsPreferences.set("student-c", { digestFrequency: "weekly", emailRemindersEnabled: true });
+      const service = createDigestService({
+        store, delivery: createDisabledEmailDelivery(), clock: () => new Date("2026-10-13T12:00:00Z"),
+      });
+      await service.generateForUser("student-c", {
+        periodStart: "2026-10-06T00:00:00.000Z", periodEnd: "2026-10-13T00:00:00.000Z",
+      });
+      const history = await as("get", "/api/news/digests", "student-c").expect(200);
+      expect(history.body.data).toHaveLength(1);
+      expect(history.body.data[0].delivery).toMatchObject({ status: "disabled", providerMessageId: null });
     });
   });
 
@@ -282,6 +320,18 @@ describe("launch journeys across the real API, storage pipeline, and assistant",
       await as("get", "/api/admin/news/review", "student-b").expect(403);
       await as("patch", "/api/admin/news/review/nonexistent", "student-b").send({ decision: "approve" }).expect(403);
       await as("get", "/api/admin/news/review", "admin-1").expect(200);
+    });
+
+    test("shows university onboarding status and checklist only to an administrator", async () => {
+      await store.newsSources.upsert("journey-university", {
+        publisher: "Journey University", universityId: "journey-u", verified: false, enabled: false,
+        onboarding: { state: "verifying" }, pendingReason: "Verification in progress.",
+      });
+      await as("get", "/api/admin/news/coverage", "student-b").expect(403);
+      const response = await as("get", "/api/admin/news/coverage", "admin-1").expect(200);
+      expect(response.body.data.entries).toContainEqual(expect.objectContaining({
+        id: "journey-university", onboardingState: "verifying", checklistComplete: false,
+      }));
     });
   });
 });

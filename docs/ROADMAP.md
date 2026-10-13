@@ -14,7 +14,7 @@
 ## Next release
 
 - Scheduled source synchronization, once a scheduler is approved (see `docs/RELEASE_READINESS.md`)
-- Scheduled deletion of expired source snapshots
+- Provisioned scheduling for the implemented bounded source sync and expired-snapshot cleanup runner
 - Credentialed synthetic-document tests against the chosen deployment
 - Live verification of Google sign-in and the deletion path (`DEPLOYMENT.md`, section 9)
 - University-specific onboarding packs
@@ -23,7 +23,7 @@
 
 ## Later
 
-- Email delivery for reminders and digests (preferences are stored; no email is sent at launch)
+- An approved email provider for the existing safe digest renderer/outbox boundary (in-app digests work; no email is sent at launch)
 - Browser push notifications and vector-based retrieval, if they are revisited after launch
 - More supported universities and countries
 - Accessibility audit against WCAG 2.2 AA

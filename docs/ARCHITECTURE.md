@@ -10,7 +10,7 @@ in `docs/MODES.md`; the configuration contract is in `docs/CONFIGURATION.md`.
   re-authenticate before account deletion.
 - Firestore listeners keep the profile, tasks, documents, saved items, preferences, and notifications current for the
   signed-in student. Those reads and writes are governed by the rules.
-- Updates come from the API feed (`GET /api/news`). The feed shows a delayed-check banner when a verified source has
+- Updates come from the API feed (`GET /api/news`). Coverage comes from `GET /api/news/coverage`; its allowlisted projection distinguishes active, pending, disabled, delayed, failing, and never-checked sources. The feed shows a delayed-check banner when a verified source has
   failed or stopped checking.
 - Pages receive data and callbacks as props from `App.jsx`, which keeps them testable.
 - The API origin comes from `VITE_API_URL`. Production builds have no fallback and require https. The emulator wiring is
@@ -41,7 +41,7 @@ in `docs/MODES.md`; the configuration contract is in `docs/CONFIGURATION.md`.
   notification's read flag. Every other record is written by the API. The owner can read everything of their own.
 - Public update records (`newsItems`) are written through an explicit allowlist and are readable without private review
   data.
-- Private review state (`newsItemState`), reviews, audits, sources, runs, leases, and source snapshots
+- Private review state (`newsItemState`), reviews, audits, sources, runs, operation idempotency records, leases, and source snapshots
   (`newsSourceSnapshots`) are server-only.
 - Documents live in Cloud Storage under `users/{uid}/documents/{documentId}/{fileName}`. The path is validated by
   `server/src/storage-paths.js`, which mirrors `storage.rules`.
@@ -59,6 +59,8 @@ in `docs/MODES.md`; the configuration contract is in `docs/CONFIGURATION.md`.
    content hash, re-reads the committed snapshot, and validates the draft. A stale approval is refused with a conflict.
 5. Each run records its outcome. A source whose run fails, or whose last check is older than twice its cadence, is
    reported as **delayed**. Failure is never shown as "no update".
+6. The bounded local operations runner defaults to dry run, records an idempotency key, caps work at 20 sources or snapshots, and refuses writes unless explicitly enabled.
+7. Digest generation writes a user-scoped in-app record first. The provider-neutral email boundary returns `disabled`; no message is represented as sent without a provider message ID.
 
 Not yet operational: any scheduled run. No scheduler is provisioned, so synchronization is invoked manually until one is approved.
 
