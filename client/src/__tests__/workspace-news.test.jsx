@@ -117,8 +117,19 @@ describe("NewsPage", () => {
 
   test("renders every item it is given", () => {
     render(<NewsPage items={[item({ id: "a" }), item({ id: "b", title: "Second update" })]} />);
-    expect(screen.getByText("USCIS updates I-20 guidance")).toBeInTheDocument();
-    expect(screen.getByText("Second update")).toBeInTheDocument();
+    expect(screen.getAllByText("USCIS updates I-20 guidance")).not.toHaveLength(0);
+    expect(screen.getAllByText("Second update")).not.toHaveLength(0);
+  });
+
+  test("offers archive search and common time filters", () => {
+    const onFilterChange = vi.fn();
+    render(<NewsPage items={[item()]} filters={{}} onFilterChange={onFilterChange} />);
+    fireEvent.change(screen.getByRole("searchbox", { name: /search updates/i }), { target: { value: "OPT" } });
+    expect(onFilterChange).toHaveBeenCalledWith(expect.objectContaining({ q: "OPT" }));
+    fireEvent.click(screen.getByRole("button", { name: /this month/i }));
+    expect(onFilterChange).toHaveBeenCalledWith(expect.objectContaining({ from: expect.any(String), to: expect.any(String) }));
+    expect(screen.getByRole("heading", { name: /top stories/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /all news/i })).toBeInTheDocument();
   });
 
   test("shows the student's university coverage status", () => {

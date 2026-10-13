@@ -1,11 +1,13 @@
 import React, { useState } from "react";
 import { RefreshCcw } from "lucide-react";
-import NewsCard from "../components/NewsCard";
 import SourceStatus from "../components/SourceStatus";
 import Disclaimer from "../components/Disclaimer";
 import { rankNewsItems } from "../lib/news-data";
 import CoverageLedger from "../components/CoverageLedger";
 import DigestSettings from "../components/DigestSettings";
+import TopStoriesReader from "../components/TopStoriesReader";
+import NewsToolbar from "../components/NewsToolbar";
+import NewsArchive from "../components/NewsArchive";
 
 export const topicOptions = [
   "general", "status", "forms-fees", "employment", "travel-entry",
@@ -23,6 +25,7 @@ export default function NewsPage({
   savedIds = new Set(), onToggleSave,
   coverage = null, coverageLedger = null, sourceHealth = null, profile = {},
   preferences = {}, digests = [], onUpdatePreferences,
+  onLoadMore, hasMore = false,
 }) {
   const [showPreferences, setShowPreferences] = useState(false);
   const ranked = rankNewsItems(items, profile);
@@ -45,6 +48,8 @@ export default function NewsPage({
           {showPreferences ? "Hide preferences" : "Edit preferences"}
         </button>
       </header>
+
+      <NewsToolbar filters={filters} onChange={onFilterChange} />
 
       {sourceHealth?.state === "delayed" && (
         <div className="panel" style={{ marginBottom: 18 }} role="status">
@@ -82,7 +87,7 @@ export default function NewsPage({
         </section>
       )}
 
-      <div className="filter-row" role="group" aria-label="Filter updates">
+      <div className="filter-row news-state-filters" role="group" aria-label="Filter updates">
         <button type="button" className={!filters.legalState ? "active" : ""} onClick={() => onFilterChange?.({ ...filters, legalState: undefined })}>All</button>
         {legalStateOptions.map((state) => (
           <button
@@ -113,11 +118,10 @@ export default function NewsPage({
       )}
 
       {!loading && !error && ranked.length > 0 && (
-        <div className="news-grid">
-          {ranked.map((item) => (
-            <NewsCard key={item.id} item={item} saved={savedIds.has(item.id)} onToggleSave={onToggleSave} />
-          ))}
-        </div>
+        <>
+          <section className="top-stories-section"><div className="section-heading"><div><span className="eyebrow">Quick briefing</span><h2>Top stories</h2></div></div><TopStoriesReader items={ranked.slice(0, 6)} onToggleSave={onToggleSave} /></section>
+          <NewsArchive items={ranked} savedIds={savedIds} onToggleSave={onToggleSave} onLoadMore={onLoadMore} hasMore={hasMore} />
+        </>
       )}
 
       <Disclaimer compact />

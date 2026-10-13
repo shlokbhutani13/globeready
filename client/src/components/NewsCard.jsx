@@ -1,6 +1,7 @@
 import React from "react";
 import { Bookmark, BookmarkCheck, ExternalLink } from "lucide-react";
 import UpdateLifecycle from "./UpdateLifecycle";
+import { newsImageFor } from "../lib/news-images";
 
 const legalStateCopy = {
   proposed: "Proposed", final: "Final", scheduled: "Scheduled", effective: "Effective",
@@ -16,6 +17,7 @@ export default function NewsCard({ item, saved = false, onToggleSave, compact = 
 
   return (
     <article className={`news-card ${compact ? "compact" : ""}`}>
+      {!compact && <img className="news-card-image" src={newsImageFor(item).url} alt={newsImageFor(item).alt} />}
       <div className="news-card-top">
         <span className={`legal-state ${item.legalState || "informational"}`}>{legalLabel}</span>
         {!item.sourceVerified && <span className="legal-state pending">Unverified source</span>}
