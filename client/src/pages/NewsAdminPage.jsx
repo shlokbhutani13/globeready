@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { Check, ShieldAlert, X } from "lucide-react";
 import { apiRequest } from "../lib/api";
+import CoverageLedger from "../components/CoverageLedger";
 
 export default function NewsAdminPage({ isAdmin = false }) {
   const [sources, setSources] = useState([]);
   const [reviewQueue, setReviewQueue] = useState([]);
   const [health, setHealth] = useState(null);
+  const [coverage, setCoverage] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -24,6 +26,7 @@ export default function NewsAdminPage({ isAdmin = false }) {
       })
       .catch((caught) => setError(caught.message))
       .finally(() => setLoading(false));
+    apiRequest("/api/admin/news/coverage").then(setCoverage).catch(() => setCoverage(null));
   };
 
   useEffect(() => {
@@ -81,6 +84,7 @@ export default function NewsAdminPage({ isAdmin = false }) {
 
       {!loading && (
         <>
+          <CoverageLedger ledger={coverage} admin />
           {health && (
             <section className="metric-grid" style={{ marginBottom: 18 }}>
               <div className="metric-card"><div><span className="metric-label">Registered sources</span><strong>{health.sourceCount}</strong></div></div>

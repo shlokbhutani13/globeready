@@ -4,6 +4,8 @@ import NewsCard from "../components/NewsCard";
 import SourceStatus from "../components/SourceStatus";
 import Disclaimer from "../components/Disclaimer";
 import { rankNewsItems } from "../lib/news-data";
+import CoverageLedger from "../components/CoverageLedger";
+import DigestSettings from "../components/DigestSettings";
 
 export const topicOptions = [
   "general", "status", "forms-fees", "employment", "travel-entry",
@@ -19,8 +21,8 @@ export default function NewsPage({
   items = [], loading = false, error = "", onRetry,
   filters = {}, onFilterChange,
   savedIds = new Set(), onToggleSave,
-  coverage = null, sourceHealth = null, profile = {},
-  preferences = {}, onUpdatePreferences,
+  coverage = null, coverageLedger = null, sourceHealth = null, profile = {},
+  preferences = {}, digests = [], onUpdatePreferences,
 }) {
   const [showPreferences, setShowPreferences] = useState(false);
   const ranked = rankNewsItems(items, profile);
@@ -37,7 +39,7 @@ export default function NewsPage({
         <div>
           <span className="eyebrow">Nationwide updates</span>
           <h1>Updates for you</h1>
-          <p>Every verified update affecting international students, ranked for your profile. Nothing is hidden.</p>
+          <p>Verified updates currently available from monitored sources, ranked for your profile. The complete available feed stays visible.</p>
         </div>
         <button className="button secondary" onClick={() => setShowPreferences((value) => !value)}>
           {showPreferences ? "Hide preferences" : "Edit preferences"}
@@ -57,6 +59,10 @@ export default function NewsPage({
           <SourceStatus state={coverage.state} />
         </div>
       )}
+
+      <CoverageLedger ledger={coverageLedger} />
+
+      <DigestSettings preferences={preferences} digests={digests} onChange={onUpdatePreferences} />
 
       {showPreferences && (
         <section className="panel" style={{ marginBottom: 18 }}>

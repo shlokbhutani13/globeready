@@ -22,7 +22,7 @@ import {
   toggleTask, uploadDocument,
 } from "./lib/student-data";
 import {
-  fetchUniversityCoverage, markAllNotificationsRead, markNotificationRead, rankNewsItems,
+  fetchCoverageLedger, fetchNewsDigests, fetchUniversityCoverage, markAllNotificationsRead, markNotificationRead, rankNewsItems,
   saveNews, subscribeNews, subscribeNewsPreferences, subscribeNotifications, subscribeSavedNews,
   syncNotifications, universityIdFor, unsaveNews, updateNewsPreferences,
 } from "./lib/news-data";
@@ -58,6 +58,8 @@ export default function App() {
   const [newsPreferences, setNewsPreferences] = useState({});
   const [notifications, setNotifications] = useState([]);
   const [coverage, setCoverage] = useState(null);
+  const [coverageLedger, setCoverageLedger] = useState(null);
+  const [newsDigests, setNewsDigests] = useState([]);
   const [sourceHealth, setSourceHealth] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [consent, setConsent] = useState(null);
@@ -99,6 +101,8 @@ export default function App() {
     setSavedNews([]);
     setNewsPreferences({});
     setNotifications([]);
+    setCoverageLedger(null);
+    setNewsDigests([]);
     setIsAdmin(false);
 
     const unsubscribers = subscribeStudentData(auth.user.uid, {
@@ -119,6 +123,8 @@ export default function App() {
     const stopNotifications = subscribeNotifications(auth.user.uid, setNotifications, () => {});
 
     apiRequest("/api/admin/news/health").then(() => setIsAdmin(true)).catch(() => setIsAdmin(false));
+    fetchCoverageLedger().then(setCoverageLedger).catch(() => setCoverageLedger(null));
+    fetchNewsDigests().then((items) => setNewsDigests(Array.isArray(items) ? items : [])).catch(() => setNewsDigests([]));
 
     return () => {
       unsubscribers.forEach((unsubscribe) => unsubscribe());
@@ -281,9 +287,11 @@ export default function App() {
               savedIds={savedNewsIds}
               onToggleSave={toggleSaveNews}
               coverage={coverage}
+              coverageLedger={coverageLedger}
               sourceHealth={sourceHealth}
               profile={profile}
               preferences={newsPreferences}
+              digests={newsDigests}
               onUpdatePreferences={updatePreferences}
             />
           )} />

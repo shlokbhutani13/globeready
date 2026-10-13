@@ -1,5 +1,6 @@
 import React from "react";
 import { Bookmark, BookmarkCheck, ExternalLink } from "lucide-react";
+import UpdateLifecycle from "./UpdateLifecycle";
 
 const legalStateCopy = {
   proposed: "Proposed", final: "Final", scheduled: "Scheduled", effective: "Effective",
@@ -30,6 +31,7 @@ export default function NewsCard({ item, saved = false, onToggleSave, compact = 
       </div>
       <h3>{item.title || "Untitled update"}</h3>
       <p className="news-card-publisher">{item.publisher}</p>
+      <UpdateLifecycle item={item} />
       {!compact && summary && <p className="news-card-summary">{summary}</p>}
       <div className="news-card-meta">
         {item.effectiveAt && <span>Effective {item.effectiveAt}</span>}

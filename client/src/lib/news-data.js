@@ -103,6 +103,14 @@ export function fetchUniversityCoverage(universityId) {
   return apiRequest(`/api/news/university-coverage?universityId=${encodeURIComponent(universityId)}`);
 }
 
+export function fetchCoverageLedger() {
+  return apiRequest("/api/news/coverage");
+}
+
+export function fetchNewsDigests() {
+  return apiRequest("/api/news/digests");
+}
+
 export function subscribeNewsPreferences(uid, handler, onError) {
   return onSnapshot(
     doc(db, "users", uid, "newsPreferences", "profile"),
