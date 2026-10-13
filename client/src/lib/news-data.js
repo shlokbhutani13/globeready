@@ -98,6 +98,10 @@ export function fetchNewsItem(itemId) {
   return apiRequest(`/api/news/${encodeURIComponent(itemId)}`);
 }
 
+export function explainNewsItem(itemId, question = "") {
+  return apiRequest(`/api/news/${encodeURIComponent(itemId)}/explain`, { method: "POST", body: JSON.stringify({ question }) });
+}
+
 export function unsaveNews(itemId) {
   return apiRequest(`/api/news/${itemId}/save`, { method: "DELETE" });
 }

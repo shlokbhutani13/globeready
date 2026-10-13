@@ -3,6 +3,8 @@ import { mergedSources, sourceHealth, universityCoverage } from "../news/coverag
 import { buildCoverageLedger, publicCoverageLedger } from "../news/coverage-ledger.js";
 import { canonicalOfficialUrl } from "../news/official-url.js";
 import { isPublished, publicNewsItem } from "../news/schema.js";
+import { explainPublishedNews } from "../news/explain-news.js";
+import { createAssistant } from "../assistant.js";
 
 const topics = new Set([
   "general", "status", "forms-fees", "employment", "travel-entry",
@@ -127,6 +129,8 @@ export function newsRouter(store, {
   newsQueryLimiter = pass,
   registeredSources = [],
   clock = () => new Date(),
+  assistant = createAssistant(),
+  aiLimiter = pass,
 } = {}) {
   const router = Router();
   router.get("/coverage", newsQueryLimiter, async (_request, response) => {
@@ -186,6 +190,19 @@ export function newsRouter(store, {
       trusted: false,
     });
     response.status(201).json({ data: item });
+  });
+  router.post("/:id/explain", aiLimiter, async (request, response) => {
+    if (!idPattern.test(request.params.id)) return response.status(404).json({ error: { code: "news_not_found" } });
+    const item = await store.news.get(request.params.id);
+    if (!isPublished(item)) return response.status(404).json({ error: { code: "news_not_found" } });
+    const question = request.body?.question;
+    if (question !== undefined && (typeof question !== "string" || question.trim().length > 500)) return invalid(response, "News explanation question is invalid.");
+    try {
+      const profile = await store.profiles.get(request.user.uid);
+      response.json({ data: await explainPublishedNews({ item, profile, question, provider: assistant }) });
+    } catch {
+      response.status(503).json({ error: { code: "news_explanation_unavailable", message: "AI explanation is temporarily unavailable. The verified story and official source remain available." } });
+    }
   });
   router.get("/:id", async (request, response) => {
     if (!idPattern.test(request.params.id)) return response.status(404).json({ error: { code: "news_not_found" } });

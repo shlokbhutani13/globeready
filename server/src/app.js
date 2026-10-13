@@ -122,6 +122,8 @@ export function createApp({
     newsQueryLimiter,
     registeredSources: registeredNewsSources,
     clock,
+    assistant: assistant || createAssistant(),
+    aiLimiter,
   }));
   app.use("/api/account", authenticate, accountRouter(store, {
     account,
