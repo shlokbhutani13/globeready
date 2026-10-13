@@ -134,6 +134,12 @@ describe("authenticated news routes", () => {
     await demo("put", "/api/news/preferences").send({ topics: Array(21).fill("general") }).expect(422);
   });
 
+  test("lists only the current user's in-app digests", async () => {
+    await store.newsDigests.upsert("student-a", "digest-1", { frequency: "weekly", delivery: { status: "disabled" } });
+    expect((await demo("get", "/api/news/digests").expect(200)).body.data).toHaveLength(1);
+    expect((await demo("get", "/api/news/digests", "student-b").expect(200)).body.data).toHaveLength(0);
+  });
+
   test("accepts one canonical official source suggestion without fetching it", async () => {
     const response = await demo("post", "/api/news/source-suggestions").send({
       url: "https://international.unc.edu/alerts",

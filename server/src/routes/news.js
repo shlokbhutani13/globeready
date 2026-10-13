@@ -160,6 +160,9 @@ export function newsRouter(store, {
     if (!input) return invalid(response, "News preferences are invalid.");
     response.json({ data: await store.newsPreferences.set(request.user.uid, input) });
   });
+  router.get("/digests", async (request, response) => {
+    response.json({ data: await store.newsDigests.list(request.user.uid) });
+  });
   router.post("/source-suggestions", sourceSuggestionLimiter, async (request, response) => {
     const suggestion = canonicalSuggestion(request.body);
     if (!suggestion) return invalid(response, "Submit one canonical HTTPS .gov or .edu URL.");

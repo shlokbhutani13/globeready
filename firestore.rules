@@ -65,6 +65,9 @@ service cloud.firestore {
     match /newsRuns/{document=**} {
       allow read, write: if false;
     }
+    match /newsOperations/{document=**} {
+      allow read, write: if false;
+    }
     match /newsLeases/{document=**} {
       allow read, write: if false;
     }
@@ -117,6 +120,10 @@ service cloud.firestore {
         allow write: if false;
       }
       match /savedNews/{document=**} {
+        allow read: if isOwner(uid);
+        allow write: if false;
+      }
+      match /newsDigests/{document=**} {
         allow read: if isOwner(uid);
         allow write: if false;
       }

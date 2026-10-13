@@ -252,6 +252,19 @@ function userCollectionStore(firestore, name, clock, { defaults = {} } = {}) {
       await reference(uid).doc(id).set(item);
       return atApiBoundary({ id, ...item });
     },
+    async upsert(uid, id, input) {
+      const document = reference(uid).doc(id);
+      const result = await firestore.runTransaction(async (transaction) => {
+        const existing = await transaction.get(document);
+        const item = withoutUndefined({
+          ...(existing.exists ? existing.data() : {}), ...(input || {}),
+          ...(existing.exists ? {} : { createdAt: currentDate(clock) }), updatedAt: currentDate(clock),
+        });
+        transaction.set(document, item);
+        return { item, created: !existing.exists };
+      });
+      return { ...result, item: atApiBoundary({ id, ...result.item }) };
+    },
     async update(uid, id, input) {
       const document = reference(uid).doc(id);
       const item = await firestore.runTransaction(async (transaction) => {
@@ -1085,6 +1098,7 @@ export function createFirestoreStore(firestore, { clock = () => new Date() } = {
     newsPreferences: newsPreferencesStore(firestore, clock),
     savedNews: userCollectionStore(firestore, "savedNews", clock),
     notifications: userCollectionStore(firestore, "notifications", clock, { defaults: { read: false } }),
+    newsDigests: userCollectionStore(firestore, "newsDigests", clock),
     conversationMessages: conversationMessageStore(firestore, clock),
     async purgeUser(uid) {
       await firestore.recursiveDelete(firestore.collection("users").doc(uid));

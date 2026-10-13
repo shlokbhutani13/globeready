@@ -21,6 +21,14 @@ function createCollection() {
       userItems(uid).set(item.id, item);
       return item;
     },
+    async upsert(uid, id, input) {
+      const items = userItems(uid);
+      const current = items.get(id);
+      const now = new Date().toISOString();
+      const item = current ? { ...current, ...input, id, updatedAt: now } : { id, ...input, createdAt: now, updatedAt: now };
+      items.set(id, item);
+      return { item, created: !current };
+    },
     async update(uid, id, input) {
       const current = userItems(uid).get(id);
       if (!current) return null;
@@ -598,8 +606,9 @@ export function createDemoStore({ seedConsent = [] } = {}) {
   const newsPreferences = createNewsPreferencesStore();
   const savedNews = createCollection();
   const notifications = createCollection();
+  const newsDigests = createCollection();
   const conversationMessages = createConversationMessageCollection();
-  const userScoped = [tasks, documents, resources, conversations, ragChunks, newsPreferences, savedNews, notifications, conversationMessages];
+  const userScoped = [tasks, documents, resources, conversations, ragChunks, newsPreferences, savedNews, notifications, newsDigests, conversationMessages];
   return {
     profiles: {
       async get(uid) {
@@ -649,6 +658,7 @@ export function createDemoStore({ seedConsent = [] } = {}) {
     newsPreferences,
     savedNews,
     notifications,
+    newsDigests,
     conversationMessages,
   };
 }

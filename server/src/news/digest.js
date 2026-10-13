@@ -9,10 +9,9 @@ function isUpcomingDeadline(item, now) {
   return diff >= 0 && diff <= deadlineWindowMs;
 }
 
-const sections = [
+const baseSections = [
   { title: "Urgent updates", match: (item) => urgentLevels.has(item.urgency) },
   { title: "Deadlines approaching", match: (item, now) => isUpcomingDeadline(item, now) },
-  { title: "Other verified updates", match: () => true },
 ];
 
 function summarize(item) {
@@ -31,6 +30,14 @@ export function buildDigest(items = [], now = new Date(), context = {}) {
   const asOf = now instanceof Date ? now : new Date(now);
   const frequency = context.digestFrequency || context.frequency || "weekly";
   const seen = new Set();
+  const universityIds = new Set(context.universityIds || []);
+  const savedItemIds = new Set(context.savedItemIds || []);
+  const sections = [
+    ...baseSections,
+    { title: "Your university", match: (item) => (item.universityIds || []).some((id) => universityIds.has(id)) },
+    { title: "Saved updates", match: (item) => savedItemIds.has(item.id) },
+    { title: "Other verified updates", match: () => true },
+  ];
   const grouped = sections.map((section) => ({ title: section.title, items: [] }));
 
   for (const item of Array.isArray(items) ? items : []) {
@@ -43,10 +50,13 @@ export function buildDigest(items = [], now = new Date(), context = {}) {
 
   for (const group of grouped) group.items = group.items.slice(0, 10);
 
+  const coverageWarnings = Array.isArray(context.coverageWarnings) ? context.coverageWarnings.slice(0, 10) : [];
   return {
     generatedAt: asOf.toISOString(),
     frequency,
     sections: grouped.filter((group) => group.items.length > 0),
     itemCount: seen.size,
+    completeFeedAvailable: true,
+    coverageWarnings,
   };
 }
