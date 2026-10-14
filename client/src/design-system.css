@@ -277,3 +277,8 @@ button, .button, [role="button"], select { min-height: var(--gr-target); }
 .saved-searches { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 .saved-searches li { display: inline-flex; align-items: center; gap: 4px; }
 .news-explainer h3 { margin: 12px 0 4px; font-size: 1rem; }
+
+/* Batch 4.3: next steps */
+.snooze-pick select { min-height: 44px; }
+.week-day h3 { margin: 0 0 6px; font-size: 1rem; }
+.week-day ul, .week-summary .panel ul { margin: 0; padding-left: 20px; }
