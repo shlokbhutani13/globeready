@@ -117,4 +117,45 @@ describe("zero-cost Firestore data adapter", () => {
     const { store } = harness({ fail: true });
     await expect(store.saveProfile({ fullName: "Maya" })).rejects.toThrow("quota exceeded");
   });
+
+  test("tracked dates accept only hand-entered, bounded values and can be edited or removed", async () => {
+    const { calls, store } = harness();
+    await store.createTrackedDate({ label: " Passport expires ", kind: "passport", date: "2028-03-01", remindDays: 90 });
+    expect(calls[0][1]).toBe("users/student-1/trackedDates");
+    expect(calls[0][2]).toMatchObject({ label: "Passport expires", kind: "passport", date: "2028-03-01", remindDays: 90, notes: "" });
+    await expect(store.createTrackedDate({ label: "x", kind: "passport", date: "03/01/2028" })).rejects.toThrow(/date/i);
+    await expect(store.createTrackedDate({ label: "x", kind: "bogus", date: "2028-03-01" })).rejects.toThrow(/type/i);
+    await expect(store.createTrackedDate({ label: "x", kind: "visa", date: "2028-03-01", remindDays: 400 })).rejects.toThrow(/remind/i);
+    await store.updateTrackedDate("d1", { label: "Visa", kind: "visa", date: "2027-01-01", remindDays: 30, createdAt: "KEEP" });
+    expect(calls.at(-1)[1]).toBe("users/student-1/trackedDates/d1");
+    expect(calls.at(-1)[2].createdAt).toBe("KEEP");
+    await store.removeTrackedDate("d1");
+    expect(calls.at(-1)).toEqual(["delete", "users/student-1/trackedDates/d1"]);
+  });
+
+  test("contacts need a name and a known role, and cap at 50 per account", async () => {
+    const { calls, store } = harness();
+    await store.createContact({ name: "Dr. Rao", role: "dso", phone: "+1 555 0100", email: "dso@school.edu" }, 3);
+    expect(calls[0][1]).toBe("users/student-1/contacts");
+    await expect(store.createContact({ name: "", role: "dso" }, 0)).rejects.toThrow(/name/i);
+    await expect(store.createContact({ name: "A", role: "boss" }, 0)).rejects.toThrow(/role/i);
+    await expect(store.createContact({ name: "A", role: "dso", email: "no-at-sign" }, 0)).rejects.toThrow(/email/i);
+    await expect(store.createContact({ name: "A", role: "dso" }, 50)).rejects.toThrow(/50 contacts/i);
+  });
+
+  test("planner progress stores bounded ids and custom items for journey and travel only", async () => {
+    const { calls, store } = harness();
+    await store.savePlanner("travel", { have: ["passport"], custom: [{ id: "c1", label: "Charger" }] });
+    expect(calls[0][1]).toBe("users/student-1/planner/travel");
+    expect(calls[0][2]).toMatchObject({ have: ["passport"], custom: [{ id: "c1", label: "Charger" }], updatedAt: "SERVER_TIME" });
+    await expect(store.savePlanner("other", { have: [], custom: [] })).rejects.toThrow(/planner/i);
+    await expect(store.savePlanner("travel", { have: Array.from({ length: 201 }, (_, i) => `i${i}`), custom: [] })).rejects.toThrow(/200/);
+    await expect(store.savePlanner("travel", { have: [], custom: new Array(41).fill({ id: "a", label: "b" }) })).rejects.toThrow(/40/);
+  });
+
+  test("interest topics are limited to known topics", () => {
+    expect(validProfileFields({ topics: ["employment", "employment", "travel-entry"] }).topics).toEqual(["employment", "travel-entry"]);
+    expect(() => validProfileFields({ topics: ["made-up"] })).toThrow(/topic/i);
+    expect(() => validProfileFields({ topics: "employment" })).toThrow(/topics/i);
+  });
 });

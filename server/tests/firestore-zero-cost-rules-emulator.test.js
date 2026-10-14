@@ -110,6 +110,54 @@ describeEmulator("zero-cost Firestore rules", () => {
     await assertSucceeds(deleteDoc(doc(maya, "users", "maya", "savedResources", "r1")));
   });
 
+  test("tracked dates are manual, bounded, editable, and private", async () => {
+    const maya = verified("maya");
+    const entry = (extra = {}) => ({ label: "Passport expires", kind: "passport", date: "2028-03-01", notes: "", remindDays: 90, createdAt: now(), updatedAt: now(), ...extra });
+    const ref = doc(maya, "users", "maya", "trackedDates", "d1");
+    await assertSucceeds(setDoc(ref, entry()));
+    await assertSucceeds(updateDoc(ref, { date: "2029-03-01", updatedAt: now() }));
+    await assertFails(updateDoc(ref, { createdAt: now(), updatedAt: now() }));
+    await assertFails(setDoc(doc(maya, "users", "maya", "trackedDates", "d2"), entry({ date: "soon" })));
+    await assertFails(setDoc(doc(maya, "users", "maya", "trackedDates", "d3"), entry({ kind: "secret" })));
+    await assertFails(setDoc(doc(maya, "users", "maya", "trackedDates", "d4"), entry({ remindDays: 366 })));
+    await assertFails(setDoc(doc(maya, "users", "maya", "trackedDates", "d5"), entry({ label: "" })));
+    await assertFails(setDoc(doc(maya, "users", "maya", "trackedDates", "d6"), entry({ extra: 1 })));
+    await assertFails(setDoc(doc(unverified("maya"), "users", "maya", "trackedDates", "d7"), entry()));
+    await assertFails(getDoc(doc(verified("bob"), "users", "maya", "trackedDates", "d1")));
+    await assertSucceeds(deleteDoc(ref));
+  });
+
+  test("contacts are private, bounded, and limited to known roles", async () => {
+    const maya = verified("maya");
+    const contact = (extra = {}) => ({ name: "Dr. Rao", role: "dso", phone: "+1 555 0100", email: "dso@school.edu", notes: "", createdAt: now(), updatedAt: now(), ...extra });
+    const ref = doc(maya, "users", "maya", "contacts", "c1");
+    await assertSucceeds(setDoc(ref, contact()));
+    await assertSucceeds(updateDoc(ref, { phone: "+1 555 0101", updatedAt: now() }));
+    await assertFails(setDoc(doc(maya, "users", "maya", "contacts", "c2"), contact({ role: "admin" })));
+    await assertFails(setDoc(doc(maya, "users", "maya", "contacts", "c3"), contact({ name: "" })));
+    await assertFails(setDoc(doc(maya, "users", "maya", "contacts", "c4"), contact({ phone: "1".repeat(41) })));
+    await assertFails(getDoc(doc(verified("bob"), "users", "maya", "contacts", "c1")));
+    await assertSucceeds(deleteDoc(ref));
+  });
+
+  test("planner progress documents are limited to the journey and travel lists", async () => {
+    const maya = verified("maya");
+    const planner = (extra = {}) => ({ have: ["passport"], custom: [{ id: "c1", label: "Charger" }], updatedAt: now(), ...extra });
+    await assertSucceeds(setDoc(doc(maya, "users", "maya", "planner", "travel"), planner()));
+    await assertSucceeds(setDoc(doc(maya, "users", "maya", "planner", "journey"), planner()));
+    await assertFails(setDoc(doc(maya, "users", "maya", "planner", "other"), planner()));
+    await assertFails(setDoc(doc(maya, "users", "maya", "planner", "travel"), planner({ have: Array.from({ length: 201 }, (_, i) => `i${i}`) })));
+    await assertFails(setDoc(doc(maya, "users", "maya", "planner", "travel"), planner({ extra: true })));
+    await assertFails(getDoc(doc(verified("bob"), "users", "maya", "planner", "travel")));
+  });
+
+  test("profile may carry a bounded list of interest topics", async () => {
+    const maya = verified("maya");
+    await assertSucceeds(setDoc(doc(maya, "users", "maya"), profile({ topics: ["employment", "travel-entry"] })));
+    await assertFails(setDoc(doc(maya, "users", "maya"), profile({ topics: Array.from({ length: 13 }, (_, i) => `t${i}`) })));
+    await assertFails(setDoc(doc(maya, "users", "maya"), profile({ topics: "employment" })));
+  });
+
   test("an owner can delete the whole inventory, even before verifying, and nobody else can", async () => {
     const maya = verified("maya");
     await assertSucceeds(setDoc(doc(maya, "users", "maya"), profile()));
