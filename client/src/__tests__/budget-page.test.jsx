@@ -41,6 +41,19 @@ describe("BudgetPage", () => {
     expect(within(months).getByRole("row", { name: /2026-11/u }).textContent).toContain("1,500.00");
     expect(within(months).getByRole("columnheader", { name: "Total (EUR)" })).toBeTruthy();
   });
+  it("lets the student replace the currency code by typing normally", () => {
+    const store = memory();
+    renderPage(store);
+    const input = screen.getByLabelText(/Currency/u);
+    fireEvent.change(input, { target: { value: "" } });
+    fireEvent.change(input, { target: { value: "e" } });
+    expect(input.value).toBe("E");
+    fireEvent.change(input, { target: { value: "eu" } });
+    fireEvent.change(input, { target: { value: "eur" } });
+    fireEvent.blur(input);
+    expect(input.value).toBe("EUR");
+    expect(loadBudget(store, "u", now).currency).toBe("EUR");
+  });
   it("explains a bad amount and keeps what was typed", () => {
     renderPage();
     addCost({ Name: "Rent", Amount: "$12" });

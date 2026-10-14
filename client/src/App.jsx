@@ -230,13 +230,7 @@ export default function App() {
     fetchUniversityCoverage(universityId).then(setCoverage).catch(() => setCoverage(null));
   }, [auth.user, profile.university]);
 
-  if (auth.loading) return <div className="app-loading">Preparing GlobeReady…</div>;
-  if (!auth.user && !demo) return <LoginPage onDemo={() => setDemo(true)} auth={auth} localUser={localUserMode} demoAvailable={demoMode} zeroCost={zeroCostPublicMode} />;
-  // The zero-cost rules accept writes only from verified email addresses (Google accounts arrive verified).
-  if (auth.user && zeroCostPublicMode && !auth.emailVerified) return <VerifyEmailPage auth={auth} />;
-
   const live = Boolean(auth.user);
-  const zeroCostStore = live && zeroCostPublicMode ? createZeroCostDataStore({ firestore: db, uid: auth.user.uid }) : null;
   const [lifeVersion, setLifeVersion] = useState(0);
   useEffect(() => {
     const bump = () => setLifeVersion((value) => value + 1);
@@ -250,6 +244,13 @@ export default function App() {
     const steps = buildNextSteps({ tasks, dates: watchedDates, journeyHave: records.planner.journey.have, profile, now: reminderClock, extra: lifeExtra }).filter((step) => step.kind !== "suggestion");
     return splitSnoozed(steps, loadSnoozes(localStorage, auth.user?.uid || "", reminderClock)).active.length;
   }, [zeroCostPublicMode, live, tasks, watchedDates, records.planner, profile, reminderClock, lifeExtra, lifeVersion, auth.user?.uid]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (auth.loading) return <div className="app-loading">Preparing GlobeReady…</div>;
+  if (!auth.user && !demo) return <LoginPage onDemo={() => setDemo(true)} auth={auth} localUser={localUserMode} demoAvailable={demoMode} zeroCost={zeroCostPublicMode} />;
+  // The zero-cost rules accept writes only from verified email addresses (Google accounts arrive verified).
+  if (auth.user && zeroCostPublicMode && !auth.emailVerified) return <VerifyEmailPage auth={auth} />;
+
+  const zeroCostStore = live && zeroCostPublicMode ? createZeroCostDataStore({ firestore: db, uid: auth.user.uid }) : null;
   const keyDateUpcoming = zeroCostPublicMode ? upcomingDates(watchedDates, reminderClock) : [];
   // Tasks created from a template, always through the same validated path as a task typed by hand.
   const addTasksFromItems = async (items, { dueDate } = {}) => {

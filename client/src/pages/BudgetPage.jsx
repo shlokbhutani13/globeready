@@ -15,6 +15,7 @@ const blank = { label: "", category: "housing", kind: "recurring", frequency: "m
 
 export default function BudgetPage({ storageScope = "", storage = typeof localStorage === "undefined" ? undefined : localStorage, now = new Date(), download = downloadText }) {
   const [budget, setBudget] = useState(() => loadBudget(storage, storageScope, now));
+  const [currencyDraft, setCurrencyDraft] = useState(() => budget.currency);
   const [form, setForm] = useState(blank);
   const [editing, setEditing] = useState(null);
   const [error, setError] = useState("");
@@ -49,7 +50,13 @@ export default function BudgetPage({ storageScope = "", storage = typeof localSt
 
       <section className="panel" aria-label="Plan settings">
         <div className="form-grid">
-          <label className="field">Currency (a label only)<input value={budget.currency} maxLength={3} onChange={(event) => guarded(() => commit(setCurrency(budget, event.target.value)))} aria-describedby="currency-hint" /><span className="hint" id="currency-hint">Three letters, such as USD. Enter every amount in this currency.</span></label>
+          <label className="field">Currency (a label only)<input value={currencyDraft} maxLength={3} onChange={(event) => {
+            const value = event.target.value.toUpperCase().replace(/[^A-Z]/gu, "").slice(0, 3);
+            setCurrencyDraft(value);
+            if (value.length === 3) guarded(() => commit(setCurrency(budget, value)));
+          }} onBlur={() => {
+            if (currencyDraft.length !== 3) { setError("Use a three-letter currency code, such as USD or EUR."); setCurrencyDraft(budget.currency); }
+          }} aria-describedby="currency-hint" /><span className="hint" id="currency-hint">Three letters, such as USD. Enter every amount in this currency.</span></label>
           <label className="field">First month of the plan<input type="month" value={budget.startMonth} onChange={(event) => { if (event.target.value) guarded(() => commit(setStartMonth(budget, event.target.value))); }} /></label>
         </div>
       </section>
