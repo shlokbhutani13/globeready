@@ -10,6 +10,8 @@ const storyFields = [
   "urgency", "topics", "visaTypes", "nationalities", "universityIds", "journeyStages", "lifecycleState", "replacementItemId",
 ];
 const coverageFields = ["id", "name", "status", "officialUrl", "scope", "lastVerifiedAt", "cadenceHours"];
+// "active" sources are reviewed for the static feed; "planned" ones are listed for transparency but not monitored.
+const coverageStatuses = new Set(["active", "planned"]);
 const publishedStates = new Set(["approved", "published-source-only"]);
 const maxStories = 250;
 const maxBytes = 1_000_000;
@@ -57,6 +59,13 @@ export function buildPublicArtifacts({ items = [], coverage = [], generatedAt = 
 
   const entries = (Array.isArray(coverage) ? coverage : []).slice(0, 250).map((entry) => {
     if (entry.officialUrl && !officialUrl(entry.officialUrl)) throw new Error("Coverage URLs must be official HTTPS .gov or .edu URLs.");
+    if (!coverageStatuses.has(entry.status)) throw new Error(`Coverage status must be one of: ${[...coverageStatuses].join(", ")}.`);
+    if (entry.status !== "active" && (entry.lastVerifiedAt || entry.cadenceHours)) {
+      throw new Error(`Coverage entry "${entry.id}" is not monitored, so it cannot carry a review date or cadence.`);
+    }
+    if (entry.status === "active" && !Number.isFinite(Date.parse(entry.lastVerifiedAt))) {
+      throw new Error(`Active coverage entry "${entry.id}" needs the ISO date it was last reviewed.`);
+    }
     return pick(entry, coverageFields);
   }).sort((left, right) => String(left.id).localeCompare(String(right.id)));
 
@@ -68,6 +77,21 @@ export function buildPublicArtifacts({ items = [], coverage = [], generatedAt = 
   return { news, coverage: coverageArtifact };
 }
 
+// Turns a Federal Register search response into review candidates. The output has no timestamps and omits stories
+// already in the reviewed input, so the weekly pull request changes only when there is something new to review.
+export function buildProposals(payload, reviewedIds = new Set()) {
+  return (Array.isArray(payload?.results) ? payload.results : []).slice(0, 100)
+    .map((item) => ({
+      sourceId: "federal-register", externalId: String(item.document_number || ""),
+      title: String(item.title || "").slice(0, 500), canonicalUrl: String(item.html_url || ""),
+      officialPdfUrl: String(item.pdf_url || ""), publishedAt: item.publication_date || null,
+      documentType: String(item.type || "notice").toLowerCase(), sourceExcerpt: String(item.abstract || "").slice(0, 500),
+      reviewState: "needs-human-review",
+    }))
+    .filter((item) => item.externalId && officialUrl(item.canonicalUrl) && !reviewedIds.has(`federal-register-${item.externalId}`))
+    .sort((left, right) => String(right.publishedAt || "").localeCompare(String(left.publishedAt || "")) || left.externalId.localeCompare(right.externalId));
+}
+
 async function main() {
   const args = process.argv.slice(2);
   const valueAfter = (flag) => {
@@ -75,6 +99,7 @@ async function main() {
     return index >= 0 ? args[index + 1] : undefined;
   };
   const inputPath = valueAfter("--input");
+  const reviewedPath = valueAfter("--reviewed");
   const discoverPath = valueAfter("--discover-output");
   const newsPath = valueAfter("--news-output") || "../client/public/data/news.json";
   const coveragePath = valueAfter("--coverage-output") || "../client/public/data/coverage.json";
@@ -83,19 +108,18 @@ async function main() {
     url.searchParams.set("per_page", "100");
     url.searchParams.set("order", "newest");
     url.searchParams.set("conditions[term]", "F-1 OR international student OR exchange visitor");
-    const response = await fetch(url, { headers: { accept: "application/json", "user-agent": "GlobeReady-public-review/1.0" } });
+    const response = await fetch(url, {
+      headers: { accept: "application/json", "user-agent": "GlobeReady-public-review/1.0" },
+      signal: AbortSignal.timeout(30_000),
+    });
     if (!response.ok) throw new Error(`Federal Register discovery failed (${response.status}).`);
-    const payload = await response.json();
-    const proposals = (Array.isArray(payload.results) ? payload.results : []).slice(0, 100).map((item) => ({
-      sourceId: "federal-register", externalId: String(item.document_number || ""),
-      title: String(item.title || "").slice(0, 500), canonicalUrl: String(item.html_url || ""),
-      officialPdfUrl: String(item.pdf_url || ""), publishedAt: item.publication_date || null,
-      documentType: String(item.type || "notice").toLowerCase(), sourceExcerpt: String(item.abstract || "").slice(0, 500),
-      reviewState: "needs-human-review",
-    })).sort((left, right) => String(right.publishedAt || "").localeCompare(String(left.publishedAt || "")) || left.externalId.localeCompare(right.externalId));
+    const text = await response.text();
+    if (text.length > 5_000_000) throw new Error("Federal Register discovery response is unexpectedly large.");
+    const reviewed = reviewedPath ? JSON.parse(await readFile(resolve(reviewedPath), "utf8")) : { items: [] };
+    const proposals = buildProposals(JSON.parse(text), new Set((reviewed.items || []).map((item) => item.id)));
     const target = resolve(discoverPath);
     await mkdir(dirname(target), { recursive: true });
-    await writeFile(target, `${JSON.stringify({ generatedAt: new Date().toISOString(), proposals }, null, 2)}\n`);
+    await writeFile(target, `${JSON.stringify({ source: "federal-register", proposals }, null, 2)}\n`);
   }
   if (!inputPath) {
     if (discoverPath) return;
