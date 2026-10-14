@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { newsImageFor } from "../lib/news-images";
 
-export default function TopStoriesReader({ items = [], onToggleSave }) {
+export default function TopStoriesReader({ items = [], savedIds = new Set(), onToggleSave }) {
   const [index, setIndex] = useState(0);
   if (!items.length) return null;
   const move = (delta) => setIndex((current) => (current + delta + items.length) % items.length);
@@ -22,7 +22,7 @@ export default function TopStoriesReader({ items = [], onToggleSave }) {
         <button type="button" aria-label="Previous story" onClick={() => move(-1)}><ChevronLeft /></button>
         <span>{index + 1} of {items.length}</span>
         <button type="button" aria-label="Next story" onClick={() => move(1)}><ChevronRight /></button>
-        {onToggleSave && <button className="button secondary" onClick={() => onToggleSave(item)}>Save</button>}
+        {onToggleSave && <button type="button" className="button secondary" aria-pressed={savedIds.has(item.id)} aria-label={savedIds.has(item.id) ? `Unsave ${item.title}` : `Save ${item.title}`} onClick={() => onToggleSave(item)}>{savedIds.has(item.id) ? "Saved" : "Save"}</button>}
       </div>
     </div>
   </section>;

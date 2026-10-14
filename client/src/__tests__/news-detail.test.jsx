@@ -38,3 +38,12 @@ describe("static-mode detail loading", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("Could not load updates.");
   });
 });
+
+test("free-beta detail page shows a source-based At a glance panel and no AI wording", () => {
+  const story = { id: "fr", title: "Rule", legalState: "scheduled", documentType: "final-rule", publishedAt: "2026-07-17", effectiveAt: "2026-10-20", docketNumber: "ICEB-1" };
+  render(<MemoryRouter initialEntries={["/news/fr"]}><Routes><Route path="news/:id" element={<NewsDetailPage localMode items={[story]} />} /></Routes></MemoryRouter>);
+  expect(screen.getByRole("heading", { name: "At a glance" })).toBeInTheDocument();
+  expect(screen.getByText(/set to take effect on a future date/i)).toBeInTheDocument();
+  expect(screen.getByText("Final rule")).toBeInTheDocument();
+  expect(screen.queryByText(/AI/)).not.toBeInTheDocument();
+});

@@ -1,7 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import React from "react";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 import TopStoriesReader from "../components/TopStoriesReader";
 
 afterEach(cleanup);
@@ -25,4 +25,15 @@ describe("TopStoriesReader", () => {
     render(<TopStoriesReader items={[{ id: "old", title: "Legacy story", publisher: "Official source" }]} />);
     expect(screen.getByRole("img")).toHaveAccessibleName(/general update illustration/i);
   });
+});
+
+test("the Save button shows and toggles the saved state", async () => {
+  const { default: Reader } = await import("../components/TopStoriesReader");
+  const toggle = vi.fn();
+  const items = [{ id: "a", title: "Story A" }];
+  const { rerender } = render(<Reader items={items} savedIds={new Set()} onToggleSave={toggle} />);
+  fireEvent.click(screen.getByRole("button", { name: "Save Story A" }));
+  expect(toggle).toHaveBeenCalledWith(items[0]);
+  rerender(<Reader items={items} savedIds={new Set(["a"])} onToggleSave={toggle} />);
+  expect(screen.getByRole("button", { name: "Unsave Story A" })).toHaveAttribute("aria-pressed", "true");
 });
