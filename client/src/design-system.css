@@ -282,3 +282,15 @@ button, .button, [role="button"], select { min-height: var(--gr-target); }
 .snooze-pick select { min-height: 44px; }
 .week-day h3 { margin: 0 0 6px; font-size: 1rem; }
 .week-day ul, .week-summary .panel ul { margin: 0; padding-left: 20px; }
+
+/* Batch 4.4: university workspace and appointment summary */
+.question-group { border: 1px solid var(--border, #d0d5dd); border-radius: 8px; padding: 12px; margin: 0 0 12px; }
+.question-group legend { font-weight: 600; padding: 0 6px; }
+.question-row { display: grid; gap: 6px; padding: 6px 0; }
+.summary-preview h4 { margin: 12px 0 4px; }
+.print-only { display: none; }
+@media print {
+  body * { visibility: hidden; }
+  .summary-print, .summary-print * { visibility: visible; }
+  .summary-print { display: block; position: absolute; left: 0; top: 0; width: 100%; padding: 24px; color: #000; background: #fff; }
+}
