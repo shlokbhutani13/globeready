@@ -51,7 +51,7 @@ export default function DocumentsPage({
   return (
     <div className="page">
       <header className="page-header"><div><span className="eyebrow">Private document vault</span><h1>Your important documents</h1><p>Keep immigration, insurance, housing, and university records organized.</p></div><button className="button primary" disabled={!documentInputAvailable} onClick={() => input.current?.click()}><FilePlus2 size={17} /> Add document</button></header>
-      {consent !== undefined && <ConsentPanel consent={consent} onSave={onSaveConsent} compact />}
+      {consent !== undefined && <ConsentPanel consent={consent} onSave={onSaveConsent} compact aiAvailable={!localProcessing} />}
       <input ref={input} hidden disabled={!documentInputAvailable} type="file" accept=".pdf,.png,.jpg,.jpeg" onChange={(event) => choose(event.target.files?.[0])} />
       <section className={`upload-zone${documentInputAvailable ? "" : " disabled"}`} onClick={() => documentInputAvailable && input.current?.click()}><span><UploadCloud size={27} /></span><div><h2>{documentInputAvailable ? localProcessing ? "Process a document on this device" : "Upload a document" : gated ? "Turn on document reading to upload" : "Document uploads unavailable"}</h2><p>{documentInputAvailable ? localProcessing ? "PDF, PNG, or JPEG, up to 10 MB. The original file never leaves this device and is not backed up." : "Text-based PDFs, or PNG/JPEG photos of printed text, up to 10 MB. Scanned PDFs and handwriting cannot be read." : "Document uploads need Storage to be enabled for this deployment."}</p></div><LockKeyhole size={19} /></section>
       {error && <div className="inline-error">{error}</div>}
@@ -62,12 +62,13 @@ export default function DocumentsPage({
           const isDemo = document.storageMode?.includes("demo");
           const isIndexing = document.analysisStatus === "indexing";
           const actionLabel = !readable ? "Unsupported type"
+            : localProcessing && document.analysisStatus === "indexed" ? "Ready for Ask"
             : isDemo ? "Demo explanation"
             : isIndexing ? "Indexing…"
             : document.analysisStatus === "indexed" ? "Re-index"
             : document.analysisStatus === "index_failed" ? "Retry indexing"
             : "Index & explain";
-          return <div className="document-row" key={document.id}><span className="file-icon"><FileText size={18} /></span><div><strong>{document.name}</strong><small>{document.category} · {document.storageMode || "Firebase Storage"}</small>{readable && <small className={`document-status ${document.analysisStatus || "not-indexed"}`}>{indexingLabel(document)}</small>}{document.analysisStatus === "index_failed" && document.analysisError?.message && <small className="document-error" role="status">{document.analysisError.message}</small>}{document.analysis?.summary && <small>{document.analysis.summary}</small>}{document.analysis?.chunkCount && <small>Indexed for Assistant · {document.analysis.chunkCount} sections</small>}</div><button className="analyze-button" disabled={!readable || isIndexing} onClick={() => onAnalyze(document)}>{actionLabel}</button><button aria-label={`Delete ${document.name}`} onClick={() => onDelete(document)}><Trash2 size={16} /></button></div>;
+          return <div className="document-row" key={document.id}><span className="file-icon"><FileText size={18} /></span><div><strong>{document.name}</strong><small>{document.category} · {document.storageMode || "Firebase Storage"}</small>{readable && <small className={`document-status ${document.analysisStatus || "not-indexed"}`}>{indexingLabel(document)}</small>}{document.analysisStatus === "index_failed" && document.analysisError?.message && <small className="document-error" role="status">{document.analysisError.message}</small>}{document.analysis?.summary && <small>{document.analysis.summary}</small>}{document.analysis?.chunkCount && <small>Indexed for Assistant · {document.analysis.chunkCount} sections</small>}</div><button className="analyze-button" disabled={!readable || isIndexing || (localProcessing && document.analysisStatus === "indexed")} onClick={() => onAnalyze(document)}>{actionLabel}</button><button aria-label={`Delete ${document.name}`} onClick={() => onDelete(document)}><Trash2 size={16} /></button></div>;
         })}</div>
       </section>
       <Disclaimer />

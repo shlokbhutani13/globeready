@@ -118,6 +118,7 @@ input,select,textarea{color:#344054}.auth-form input,.profile-form input,.profil
 .app-error{border-radius:8px;background:#7f2d26;box-shadow:0 8px 24px rgba(16,24,40,.12)}
 @media(max-width:900px){.login-page{grid-template-columns:1fr}.login-story{min-height:auto;padding:28px 24px;border-right:0;border-bottom:1px solid var(--line)}.login-copy{margin:52px 0 20px}.login-copy h1{font-size:42px}.login-panel{padding:36px 24px}.login-card{margin:auto}}
 @media(max-width:760px){.app-main{padding-bottom:64px}.mobile-nav{height:64px;background:rgba(255,255,255,.98);box-shadow:0 -1px 8px rgba(16,24,40,.04)}.mobile-nav a{font-size:10px;color:#7a8494}.mobile-nav a.active{color:#315f8f;background:#f5f8fa}.page{padding:28px 16px 40px}.page-header{padding-bottom:20px;margin-bottom:20px}.home-page{padding-top:28px}.home-header{margin-bottom:20px}.home-section{padding:18px}.assistant-page{padding:20px 14px 76px}}
+.beta-status{margin-bottom:18px;border-color:#cbdde8;background:#f8fbfd}.beta-status p{margin:6px 0 0;line-height:1.55}.availability-list{margin:0;padding-left:20px;color:var(--muted);font-size:13px;line-height:1.65}.availability-list li+li{margin-top:6px}
 
 /* News reader */
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}

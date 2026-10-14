@@ -4,7 +4,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const storyFields = [
-  "id", "sourceId", "title", "publisher", "canonicalUrl", "officialPdfUrl", "publishedAt", "updatedAt",
+  "id", "sourceId", "sourceVerified", "title", "publisher", "canonicalUrl", "officialPdfUrl", "publishedAt", "updatedAt", "verifiedAt",
   "effectiveAt", "expiresAt", "documentType", "legalState", "editorialState", "docketNumber", "excerpt",
   "sourceExcerpt", "plainLanguageSummary", "shortSummary", "whyItMatters", "detailSections", "actions", "image",
   "urgency", "topics", "visaTypes", "nationalities", "universityIds", "journeyStages", "lifecycleState", "replacementItemId",

@@ -4,7 +4,7 @@ import ConsentPanel from "../components/ConsentPanel";
 
 export const deletionPhrase = "DELETE MY ACCOUNT";
 
-export default function SettingsPage({ live = true, preferences = {}, onUpdatePreferences, onExport, onDelete, consent, onSaveConsent, onShowGettingStarted }) {
+export default function SettingsPage({ live = true, preferences = {}, onUpdatePreferences, onExport, onDelete, consent, onSaveConsent, onShowGettingStarted, zeroCostMode = false }) {
   const [confirmation, setConfirmation] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -33,11 +33,13 @@ export default function SettingsPage({ live = true, preferences = {}, onUpdatePr
     <div className="page">
       <header className="page-header"><div><span className="eyebrow">Account</span><h1>Settings</h1><p>Control your notifications, export your data, or delete your account.</p></div></header>
 
-      {consent !== undefined && <ConsentPanel consent={consent} onSave={onSaveConsent} />}
+      {consent !== undefined && <ConsentPanel consent={consent} onSave={onSaveConsent} aiAvailable={!zeroCostMode} />}
+
+      {zeroCostMode && <section className="panel settings-section" aria-labelledby="free-runtime-title"><div className="panel-title"><h2 id="free-runtime-title">Free public beta availability</h2></div><ul className="availability-list"><li>Original-file backup is unavailable; only extracted text is saved.</li><li>Cloud AI answers are unavailable; Ask GlobeReady returns matching passages from your documents.</li><li>Email and push delivery are unavailable; check the app and official sources for changes.</li></ul></section>}
 
       <section className="panel settings-section"><div className="panel-title"><h2>Help</h2></div><p className="muted">Reopen the short guide to Home, Updates, Documents, Guides, and Ask GlobeReady.</p><button className="button secondary" onClick={onShowGettingStarted}>Show getting started guide</button></section>
 
-      <section className="panel settings-section">
+      {!zeroCostMode && <section className="panel settings-section">
         <div className="panel-title"><h2>Email and notifications</h2></div>
         <p className="muted">GlobeReady does not send email yet. Reminders appear in your notification inbox. Your email choices are saved so they apply once email delivery is available.</p>
         <label className="settings-check">
@@ -56,7 +58,7 @@ export default function SettingsPage({ live = true, preferences = {}, onUpdatePr
             <option value="off">Off</option>
           </select>
         </label>
-      </section>
+      </section>}
 
       <section className="panel settings-section">
         <div className="panel-title"><h2>Your data</h2></div>

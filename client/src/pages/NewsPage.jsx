@@ -26,6 +26,7 @@ export default function NewsPage({
   coverage = null, coverageLedger = null, sourceHealth = null, profile = {},
   preferences = {}, digests = [], onUpdatePreferences,
   onLoadMore, hasMore = false,
+  zeroCostMode = false,
 }) {
   const [showPreferences, setShowPreferences] = useState(false);
   const ranked = rankNewsItems(items, profile);
@@ -42,11 +43,11 @@ export default function NewsPage({
         <div>
           <span className="eyebrow">Nationwide updates</span>
           <h1>Updates for you</h1>
-          <p>Verified updates currently available from monitored sources, ranked for your profile. The complete available feed stays visible.</p>
+          <p>{zeroCostMode ? "A reviewed official-source feed stored with the app. Search and filters cover the currently published snapshot." : "Verified updates currently available from monitored sources, ranked for your profile. The complete available feed stays visible."}</p>
         </div>
-        <button className="button secondary" onClick={() => setShowPreferences((value) => !value)}>
+        {!zeroCostMode && <button className="button secondary" onClick={() => setShowPreferences((value) => !value)}>
           {showPreferences ? "Hide preferences" : "Edit preferences"}
-        </button>
+        </button>}
       </header>
 
       <NewsToolbar filters={filters} onChange={onFilterChange} />
@@ -54,7 +55,7 @@ export default function NewsPage({
       {sourceHealth?.state === "delayed" && (
         <div className="panel" style={{ marginBottom: 18 }} role="status">
           <SourceStatus state="delayed" />
-          <small className="muted">Delayed sources: {sourceHealth.delayedPublishers.join(", ")}. Updates from these publishers may be missing or late.</small>
+          <small className="muted">{sourceHealth.delayedPublishers?.length ? `Delayed sources: ${sourceHealth.delayedPublishers.join(", ")}. Updates from these publishers may be missing or late.` : "This reviewed feed may be out of date. Check the official sources before relying on it."}</small>
         </div>
       )}
 
@@ -67,9 +68,9 @@ export default function NewsPage({
 
       <CoverageLedger ledger={coverageLedger} />
 
-      <DigestSettings preferences={preferences} digests={digests} onChange={onUpdatePreferences} />
+      {!zeroCostMode && <DigestSettings preferences={preferences} digests={digests} onChange={onUpdatePreferences} />}
 
-      {showPreferences && (
+      {!zeroCostMode && showPreferences && (
         <section className="panel" style={{ marginBottom: 18 }}>
           <div className="panel-title"><h2>Topics you care about</h2></div>
           <div className="filter-row">

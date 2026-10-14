@@ -6,16 +6,16 @@ import { newsImageFor } from "../lib/news-images";
 import Disclaimer from "../components/Disclaimer";
 import NewsExplanation from "../components/NewsExplanation";
 
-export default function NewsDetailPage({ item: supplied, items = [], explanation }) {
+export default function NewsDetailPage({ item: supplied, items = [], explanation, localMode = false }) {
   const { id } = useParams();
   const [item, setItem] = useState(supplied || items.find((entry) => entry.id === id) || null);
   const [error, setError] = useState("");
   useEffect(() => {
-    if (item || !id) return;
+    if (item || !id || localMode) return;
     fetchNewsItem(id).then(setItem).catch((reason) => setError(reason.message || "Could not load this update."));
-  }, [id, item]);
+  }, [id, item, localMode]);
   if (error) return <div className="page"><div className="inline-error" role="alert">{error}</div><Link to="/news">Back to all news</Link></div>;
-  if (!item) return <div className="page"><div className="empty-state">Loading verified update…</div></div>;
+  if (!item) return <div className="page"><div className="empty-state">{localMode ? "This update is not in the current reviewed snapshot." : "Loading verified update…"}</div></div>;
   const image = newsImageFor(item);
   return <article className="page news-detail">
     <Link className="back-link" to="/news"><ArrowLeft size={16} /> All news</Link>
@@ -24,7 +24,7 @@ export default function NewsDetailPage({ item: supplied, items = [], explanation
     {(item.shortSummary || item.excerpt || item.sourceExcerpt) && <p className="news-detail-lead">{item.shortSummary || item.excerpt || item.sourceExcerpt}</p>}
     {item.whyItMatters && <section className="news-detail-callout"><h2>Why this matters</h2><p>{item.whyItMatters}</p></section>}
     {(item.detailSections || []).map((section) => <section key={section.heading}><h2>{section.heading}</h2><p>{section.body}</p></section>)}
-    {explanation || <NewsExplanation itemId={item.id} />}
+    {explanation || (localMode ? <section className="news-detail-callout"><h2>Need help understanding this?</h2><p>Cloud AI explanation is unavailable in the free public beta. Read the official source and ask your designated school official about your situation.</p></section> : <NewsExplanation itemId={item.id} />)}
     {item.canonicalUrl && <a className="button secondary official-link" href={item.canonicalUrl} target="_blank" rel="noreferrer">Read the official source <ExternalLink size={15} /></a>}
     <Disclaimer compact />
   </article>;

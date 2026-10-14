@@ -11,7 +11,7 @@ const primaryNavigation = [
   ["/assistant", "Ask", Bot],
 ];
 
-export default function AppShell({ onSignOut, isAdmin = false }) {
+export default function AppShell({ onSignOut, isAdmin = false, zeroCostMode = false }) {
   const navigation = isAdmin ? [...primaryNavigation, ["/admin/news", "Admin", ShieldCheck]] : primaryNavigation;
 
   return (
@@ -19,7 +19,7 @@ export default function AppShell({ onSignOut, isAdmin = false }) {
       <aside className="sidebar">
         <div className="sidebar-brand">
           <div className="logo"><span><Globe2 size={19} /></span> GlobeReady</div>
-          <small>Student workspace</small>
+          <small>{zeroCostMode ? "Free public beta" : "Student workspace"}</small>
         </div>
         <span className="workspace-label">Workspace</span>
         <nav aria-label="Workspace navigation">

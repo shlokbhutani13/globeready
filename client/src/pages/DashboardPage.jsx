@@ -12,7 +12,7 @@ function greetingFor(date = new Date()) {
 
 // Home answers three questions: what changed, what is next, and what Ask can help with. Everything else
 // lives one tap deeper, so an empty day stays calm instead of filling with cards.
-export default function DashboardPage({ profile = {}, tasks = [], topNews = [], unreadNotifications = 0, onToggleTask, showGettingStarted = false, onDismissGettingStarted }) {
+export default function DashboardPage({ profile = {}, tasks = [], topNews = [], unreadNotifications = 0, onToggleTask, showGettingStarted = false, onDismissGettingStarted, zeroCostMode = false }) {
   const navigate = useNavigate();
   const firstName = profile.fullName?.split(" ")[0] || "there";
   const openTasks = tasks.filter((task) => !task.completed);
@@ -25,6 +25,8 @@ export default function DashboardPage({ profile = {}, tasks = [], topNews = [], 
         <h1>{greetingFor()}, {firstName}.</h1>
         {profile.university && <p>{profile.university}</p>}
       </header>
+
+      {zeroCostMode && <section className="panel beta-status" role="status"><strong>Free public beta</strong><p className="muted">Your workspace uses free services and browser-private document reading. There is no guaranteed service level; always confirm time-sensitive decisions with the official source.</p></section>}
 
       {showGettingStarted && <GettingStartedBoard onDismiss={onDismissGettingStarted} />}
 

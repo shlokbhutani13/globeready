@@ -6,6 +6,7 @@
     {
       "id": "federal-register-2026-14439",
       "sourceId": "federal-register",
+      "sourceVerified": true,
       "title": "Fixed admission periods replace duration of status for F, J, and I categories",
       "publisher": "U.S. Department of Homeland Security",
       "canonicalUrl": "https://www.federalregister.gov/documents/2026/07/17/2026-14439/establishing-a-fixed-time-period-of-admission-and-an-extension-of-stay-procedure-for-nonimmigrant",
@@ -52,5 +53,5 @@
       ]
     }
   ],
-  "contentHash": "56097c838ad6d21449bdbb281c51ee2c3e187d72f848ac8332ba07a1021d9b42"
+  "contentHash": "9b206994ba345b691b7f8631febda3915deb94e84c4e69e6059fe51b0abb0738"
 }

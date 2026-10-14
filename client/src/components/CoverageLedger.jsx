@@ -30,7 +30,7 @@ export default function CoverageLedger({ ledger, admin = false }) {
       <p className="muted">Coverage depends on verified sources and recent successful checks. Missing or delayed checks can mean updates are late.</p>
       {open && <div className="coverage-list">
         {ledger.entries.map((entry) => <div className="coverage-row" key={entry.id}>
-          <div><strong>{entry.publisher}</strong><small>{labels[entry.status] || entry.status} · {formatDate(entry.lastSuccessAt)}</small></div>
+          <div><strong>{entry.publisher || entry.name}</strong><small>{labels[entry.status] || entry.status} · {formatDate(entry.lastSuccessAt || entry.lastVerifiedAt)}</small></div>
           <span className={`coverage-state ${entry.status}`}>{labels[entry.status] || entry.status}</span>
           {entry.safeReason && <p>{entry.safeReason}</p>}
           {admin && <small className="coverage-admin-detail">

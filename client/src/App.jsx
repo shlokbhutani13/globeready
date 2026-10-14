@@ -17,7 +17,7 @@ import { useAuth } from "./lib/auth-context";
 import { apiDownload, apiRequest } from "./lib/api";
 import { deleteAccountWithReauth } from "./lib/account-deletion";
 import { fetchConsent, saveConsent } from "./lib/consent";
-import { demoMode, localUserMode, storageAvailable } from "./lib/firebase";
+import { db, demoMode, localUserMode, storageAvailable, zeroCostPublicMode } from "./lib/firebase";
 import {
   createTask, removeDocument, removeTask, saveResource, subscribeStudentData,
   toggleTask, uploadDocument,
@@ -27,6 +27,9 @@ import {
   saveNews, subscribeNews, subscribeNewsPreferences, subscribeNotifications, subscribeSavedNews,
   syncNotifications, universityIdFor, unsaveNews, updateNewsPreferences,
 } from "./lib/news-data";
+import { createZeroCostDataStore } from "./lib/zero-cost-data";
+import { extractLocalDocument } from "./lib/local-documents/extract";
+import { loadStaticCoverage, subscribeStaticNews } from "./lib/static-news";
 
 const initialProfile = { fullName: "Maya Singh", homeCountry: "India", university: "UNC Chapel Hill", program: "Computer Science", visaType: "F-1", journeyStage: "Preparing for arrival" };
 const emptyProfile = { fullName: "", homeCountry: "", university: "", program: "", visaType: "F-1", journeyStage: "Preparing for arrival" };
@@ -39,6 +42,11 @@ const initialDocuments = [
   { id: "doc-1", name: "I-20.pdf", category: "Immigration", storageMode: "safe demo metadata" },
   { id: "doc-2", name: "Insurance policy.pdf", category: "Healthcare", storageMode: "safe demo metadata" },
 ];
+const zeroCostConsentText = {
+  documents: "GlobeReady extracts text on this device, then saves only the text and document metadata to your account.",
+  aiGeneration: "Cloud AI is unavailable in the free public beta. Ask GlobeReady uses deterministic passage matching in your browser.",
+  withdraw: "You can turn document reading off at any time. Delete saved document text from the Vault.",
+};
 
 export default function App() {
   const auth = useAuth();
@@ -74,7 +82,7 @@ export default function App() {
   // window regains focus, and after the task list changes, so a task that becomes due mid-session is reminded
   // without a reload. The server is idempotent per task and due date, so repeated checks never duplicate.
   useEffect(() => {
-    if (!auth.user) return undefined;
+    if (!auth.user || zeroCostPublicMode) return undefined;
     const check = () => { syncNotifications().catch(() => {}); };
     check();
     const timer = setInterval(check, 15 * 60_000);
@@ -88,11 +96,12 @@ export default function App() {
   // Consent is loaded before any early return, so every render calls the same hooks in the same order.
   useEffect(() => {
     if (!auth.user) return;
+    if (zeroCostPublicMode) return;
     fetchConsent().then(setConsent).catch(() => setConsent(null));
   }, [auth.user?.uid]);
 
   useEffect(() => {
-    if (!auth.user || tasks.length === 0) return;
+    if (!auth.user || zeroCostPublicMode || tasks.length === 0) return;
     syncNotifications().catch(() => {});
   }, [tasks]);
 
@@ -112,25 +121,33 @@ export default function App() {
     setIsAdmin(false);
 
     const unsubscribers = subscribeStudentData(auth.user.uid, {
-      profile: (value) => setProfile({ ...emptyProfile, fullName: auth.user.displayName || "", ...value }),
+      profile: (value) => {
+        const { consent: storedConsent, ...profileValue } = value;
+        setProfile({ ...emptyProfile, fullName: auth.user.displayName || "", ...profileValue });
+        if (zeroCostPublicMode) setConsent({ documents: false, aiGeneration: false, ...storedConsent, text: zeroCostConsentText });
+      },
       tasks: setTasks,
       documents: setDocuments,
       savedResources: setSavedResources,
       error: (error) => setAppError(error?.message || "Could not load your workspace."),
     });
 
-    const stopNews = subscribeNews(
+    const stopNews = (zeroCostPublicMode ? subscribeStaticNews : subscribeNews)(
       newsFilters,
       (items, meta) => { setNewsItems(items); setSourceHealth(meta.sourceHealth); setNewsLoading(false); setNewsError(""); },
       (error) => { setNewsLoading(false); setNewsError(error?.message || "Could not load updates."); },
     );
-    const stopSavedNews = subscribeSavedNews(auth.user.uid, setSavedNews, () => {});
-    const stopPreferences = subscribeNewsPreferences(auth.user.uid, setNewsPreferences, () => {});
-    const stopNotifications = subscribeNotifications(auth.user.uid, setNotifications, () => {});
+    const stopSavedNews = zeroCostPublicMode ? () => {} : subscribeSavedNews(auth.user.uid, setSavedNews, () => {});
+    const stopPreferences = zeroCostPublicMode ? () => {} : subscribeNewsPreferences(auth.user.uid, setNewsPreferences, () => {});
+    const stopNotifications = zeroCostPublicMode ? () => {} : subscribeNotifications(auth.user.uid, setNotifications, () => {});
 
-    apiRequest("/api/admin/news/health").then(() => setIsAdmin(true)).catch(() => setIsAdmin(false));
-    fetchCoverageLedger().then(setCoverageLedger).catch(() => setCoverageLedger(null));
-    fetchNewsDigests().then((items) => setNewsDigests(Array.isArray(items) ? items : [])).catch(() => setNewsDigests([]));
+    if (zeroCostPublicMode) {
+      loadStaticCoverage().then(setCoverageLedger).catch(() => setCoverageLedger(null));
+    } else {
+      apiRequest("/api/admin/news/health").then(() => setIsAdmin(true)).catch(() => setIsAdmin(false));
+      fetchCoverageLedger().then(setCoverageLedger).catch(() => setCoverageLedger(null));
+      fetchNewsDigests().then((items) => setNewsDigests(Array.isArray(items) ? items : [])).catch(() => setNewsDigests([]));
+    }
 
     return () => {
       unsubscribers.forEach((unsubscribe) => unsubscribe());
@@ -144,7 +161,7 @@ export default function App() {
 
   useEffect(() => {
     const universityId = universityIdFor(profile.university);
-    if (!auth.user || !universityId) { setCoverage(null); return; }
+    if (!auth.user || zeroCostPublicMode || !universityId) { setCoverage(null); return; }
     fetchUniversityCoverage(universityId).then(setCoverage).catch(() => setCoverage(null));
   }, [auth.user, profile.university]);
 
@@ -152,6 +169,7 @@ export default function App() {
   if (!auth.user && !demo) return <LoginPage onDemo={() => setDemo(true)} auth={auth} localUser={localUserMode} demoAvailable={demoMode} />;
 
   const live = Boolean(auth.user);
+  const zeroCostStore = live && zeroCostPublicMode ? createZeroCostDataStore({ firestore: db, uid: auth.user.uid }) : null;
   const savedNewsIds = new Set(savedNews.map((item) => item.id));
   const unreadNotifications = notifications.filter((notification) => !notification.read).length;
   const topNews = rankNewsItems(newsItems, profile).slice(0, 2);
@@ -160,6 +178,7 @@ export default function App() {
     const details = typeof input === "string" ? { title: input, dueDate: "", priority: "medium" } : input;
     if (live) {
       setAppError("");
+      if (zeroCostStore) return zeroCostStore.createTask(details).catch((error) => setAppError(error.message));
       return createTask(auth.user.uid, details).catch((error) => setAppError(error.message));
     }
     setTasks([...tasks, {
@@ -170,15 +189,26 @@ export default function App() {
   const changeTask = async (id) => {
     const task = tasks.find((item) => item.id === id);
     if (!task) return;
-    if (live) return toggleTask(auth.user.uid, task).catch((error) => setAppError(error.message));
+    if (live) return (zeroCostStore ? zeroCostStore.toggleTask(task) : toggleTask(auth.user.uid, task)).catch((error) => setAppError(error.message));
     setTasks(tasks.map((item) => item.id === id ? { ...item, completed: !item.completed } : item));
   };
   const deleteTask = async (id) => live
-    ? removeTask(auth.user.uid, id).catch((error) => setAppError(error.message))
+    ? (zeroCostStore ? zeroCostStore.removeTask(id) : removeTask(auth.user.uid, id)).catch((error) => setAppError(error.message))
     : setTasks(tasks.filter((task) => task.id !== id));
   const addDocument = async (file) => {
     if (live) {
       setAppError("");
+      if (zeroCostStore) {
+        setUploadProgress(1);
+        try {
+          const id = crypto.randomUUID();
+          await extractLocalDocument(file, { id, persist: ({ metadata, chunks }) => zeroCostStore.replaceDocumentIndex({ id, metadata, chunks }) });
+          setUploadProgress(100);
+        } catch (error) {
+          setAppError(error.message);
+        } finally { setTimeout(() => setUploadProgress(0), 500); }
+        return;
+      }
       if (!storageAvailable) {
         setAppError("Document uploads are not enabled for this deployment.");
         return;
@@ -195,13 +225,14 @@ export default function App() {
     }
   };
   const deleteDocument = async (document) => live
-    ? removeDocument(
+    ? (zeroCostStore ? zeroCostStore.removeLocalDocument(document.id) : removeDocument(
       auth.user.uid,
       document,
       () => apiRequest(`/api/documents/${document.id}`, { method: "DELETE" }),
-    ).catch((error) => setAppError(error.message))
+    )).catch((error) => setAppError(error.message))
     : setDocuments(documents.filter((item) => item.id !== document.id));
   const analyzeDocument = async (document) => {
+    if (zeroCostStore) return;
     if (!live) {
       const analysis = {
         summary: "Demo mode does not read file contents. Connect Firebase and Gemini for document analysis.",
@@ -225,10 +256,16 @@ export default function App() {
     setProfile(value);
     if (!live) return;
     setAppError("");
+    if (zeroCostStore) return zeroCostStore.saveProfile(value).catch((error) => setAppError(error.message));
     await apiRequest("/api/profile", { method: "PUT", body: JSON.stringify(value) })
       .catch((error) => setAppError(error.message));
   };
   const saveConsentChoice = async (choice) => {
+    if (zeroCostStore) {
+      const next = await zeroCostStore.saveConsent(choice);
+      setConsent({ ...next, text: zeroCostConsentText });
+      return;
+    }
     const next = await saveConsent({ version: consent?.version, ...choice });
     setConsent(next);
   };
@@ -248,10 +285,10 @@ export default function App() {
   };
   const saveGuide = async (guide) => {
     if (!live) return;
-    await saveResource(auth.user.uid, guide);
+    await (zeroCostStore ? zeroCostStore.saveResource(guide) : saveResource(auth.user.uid, guide));
   };
   const toggleSaveNews = async (item) => {
-    if (!live) return;
+    if (!live || zeroCostPublicMode) return;
     try {
       if (savedNewsIds.has(item.id)) await unsaveNews(item.id);
       else await saveNews(item.id);
@@ -260,7 +297,7 @@ export default function App() {
     }
   };
   const updatePreferences = async (input) => {
-    if (!live) return;
+    if (!live || zeroCostPublicMode) return;
     try {
       await updateNewsPreferences(input);
     } catch (error) {
@@ -280,8 +317,8 @@ export default function App() {
     <BrowserRouter>
       {appError && <div className="app-error" role="alert"><span>{appError}</span><button onClick={() => setAppError("")}>Dismiss</button></div>}
       <Routes>
-        <Route element={<AppShell onSignOut={signOut} isAdmin={isAdmin} unreadNotifications={unreadNotifications} />}>
-          <Route index element={<DashboardPage profile={profile} tasks={tasks} topNews={topNews} unreadNotifications={unreadNotifications} onToggleTask={changeTask} showGettingStarted={showGettingStarted} onDismissGettingStarted={dismissGettingStarted} />} />
+        <Route element={<AppShell onSignOut={signOut} isAdmin={isAdmin} unreadNotifications={unreadNotifications} zeroCostMode={zeroCostPublicMode} />}>
+          <Route index element={<DashboardPage zeroCostMode={zeroCostPublicMode} profile={profile} tasks={tasks} topNews={topNews} unreadNotifications={unreadNotifications} onToggleTask={changeTask} showGettingStarted={showGettingStarted} onDismissGettingStarted={dismissGettingStarted} />} />
           <Route path="news" element={(
             <NewsPage
               items={newsItems}
@@ -299,13 +336,14 @@ export default function App() {
               preferences={newsPreferences}
               digests={newsDigests}
               onUpdatePreferences={updatePreferences}
+              zeroCostMode={zeroCostPublicMode}
             />
           )} />
-          <Route path="news/:id" element={<NewsDetailPage items={newsItems} />} />
-          <Route path="documents" element={<DocumentsPage consent={live ? consent : undefined} onSaveConsent={saveConsentChoice} documents={documents} uploadProgress={uploadProgress} storageAvailable={!live || storageAvailable} onAdd={addDocument} onDelete={deleteDocument} onAnalyze={analyzeDocument} />} />
+          <Route path="news/:id" element={<NewsDetailPage items={newsItems} localMode={zeroCostPublicMode} />} />
+          <Route path="documents" element={<DocumentsPage localProcessing={live && zeroCostPublicMode} consent={live ? consent : undefined} onSaveConsent={saveConsentChoice} documents={documents} uploadProgress={uploadProgress} storageAvailable={!live || storageAvailable} onAdd={addDocument} onDelete={deleteDocument} onAnalyze={analyzeDocument} />} />
           <Route path="tasks" element={<TasksPage tasks={tasks} onAdd={addTask} onToggle={changeTask} onDelete={deleteTask} />} />
           <Route path="guides" element={<GuidesPage onSave={saveGuide} savedUrls={savedResources.map((resource) => resource.url)} />} />
-          <Route path="assistant" element={<AssistantPage documents={documents.filter((document) => document.analysisStatus === "indexed")} />} />
+          <Route path="assistant" element={<AssistantPage localMode={zeroCostPublicMode} localChunks={documents.flatMap((document) => (document.chunks || []).map((chunk) => ({ ...chunk, documentId: document.id, documentName: document.name })))} documents={documents.filter((document) => document.analysisStatus === "indexed")} />} />
           <Route path="notifications" element={<NotificationsPage notifications={notifications} onMarkRead={markRead} onMarkAllRead={markAllRead} />} />
           <Route path="profile" element={<ProfilePage profile={profile} onSave={updateProfile} />} />
           <Route path="settings" element={(
@@ -318,6 +356,7 @@ export default function App() {
               onExport={() => apiDownload("/api/account/export", "globeready-account-export.json").catch((error) => setAppError(error.message))}
               onDelete={deleteAccount}
               onShowGettingStarted={() => setShowGettingStarted(true)}
+              zeroCostMode={zeroCostPublicMode}
             />
           )} />
           <Route path="admin/news" element={isAdmin ? <NewsAdminPage isAdmin={isAdmin} /> : <Navigate to="/" replace />} />
