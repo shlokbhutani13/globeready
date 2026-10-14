@@ -147,3 +147,23 @@ describe("Search page", () => {
     expect(screen.getByText("Nothing matches")).toBeInTheDocument();
   });
 });
+
+describe("update relevance in the interface", () => {
+  test("cards and detail pages explain the match and stay informational", async () => {
+    const { default: NewsCard } = await import("../components/NewsCard");
+    const { default: NewsDetailPage } = await import("../pages/NewsDetailPage");
+    const { Route, Routes } = await import("react-router-dom");
+    const item = { id: "n", title: "Rule", visaTypes: ["f-1"], topics: ["employment"], sourceVerified: true };
+    wrap(<NewsCard item={item} profile={{ visaType: "F-1", topics: ["employment"] }} />);
+    expect(screen.getByText("May be relevant to you")).toBeInTheDocument();
+    expect(screen.getByText(/Matched on visa type, saved topics/)).toBeInTheDocument();
+    cleanup();
+    render(<MemoryRouter initialEntries={["/news/n"]}><Routes><Route path="news/:id" element={<NewsDetailPage localMode items={[item]} profile={{ visaType: "F-1" }} />} /></Routes></MemoryRouter>);
+    expect(screen.getByText(/does not mean the update legally applies to you/i)).toBeInTheDocument();
+  });
+  test("nothing is shown without a match", async () => {
+    const { default: NewsCard } = await import("../components/NewsCard");
+    wrap(<NewsCard item={{ id: "n", title: "Rule", visaTypes: ["j-1"] }} profile={{ visaType: "F-1" }} />);
+    expect(screen.queryByText("May be relevant to you")).not.toBeInTheDocument();
+  });
+});

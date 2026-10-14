@@ -1,10 +1,13 @@
 import React, { useState } from "react";
 import { Download, ShieldAlert, Trash2 } from "lucide-react";
 import ConsentPanel from "../components/ConsentPanel";
+import DisplaySettings from "../components/DisplaySettings";
+import RestorePanel from "../components/RestorePanel";
+import PageHeader from "../components/ui/PageHeader";
 
 export const deletionPhrase = "DELETE MY ACCOUNT";
 
-export default function SettingsPage({ live = true, preferences = {}, onUpdatePreferences, onExport, onDelete, consent, onSaveConsent, onShowGettingStarted, zeroCostMode = false, signInProviders = [] }) {
+export default function SettingsPage({ live = true, preferences = {}, onUpdatePreferences, onExport, onDelete, consent, onSaveConsent, onShowGettingStarted, zeroCostMode = false, signInProviders = [], restore }) {
   const [confirmation, setConfirmation] = useState("");
   const [password, setPassword] = useState("");
   const passwordAccount = zeroCostMode && signInProviders.includes("password");
@@ -15,7 +18,8 @@ export default function SettingsPage({ live = true, preferences = {}, onUpdatePr
   if (!live) {
     return (
       <div className="page">
-        <header className="page-header"><div><span className="eyebrow">Account</span><h1>Settings</h1></div></header>
+        <PageHeader eyebrow="Account" title="Settings" description="Display choices work without an account." />
+        <DisplaySettings />
         <div className="empty-state"><p>Sign in with a GlobeReady account to manage your email settings, export your data, or delete your account.</p></div>
       </div>
     );
@@ -34,9 +38,11 @@ export default function SettingsPage({ live = true, preferences = {}, onUpdatePr
 
   return (
     <div className="page">
-      <header className="page-header"><div><span className="eyebrow">Account</span><h1>Settings</h1><p>Control your notifications, export your data, or delete your account.</p></div></header>
+      <PageHeader eyebrow="Account" title="Settings" description="Privacy, display, your data, and account deletion." />
 
       {consent !== undefined && <ConsentPanel consent={consent} onSave={onSaveConsent} aiAvailable={!zeroCostMode} />}
+
+      <DisplaySettings />
 
       {zeroCostMode && <section className="panel settings-section" aria-labelledby="free-runtime-title"><div className="panel-title"><h2 id="free-runtime-title">Free public beta availability</h2></div><ul className="availability-list"><li>Original-file backup is unavailable; only extracted text is saved.</li><li>Cloud AI answers are unavailable; Ask GlobeReady returns matching passages from your documents.</li><li>Email and push delivery are unavailable; check the app and official sources for changes.</li></ul></section>}
 
@@ -65,9 +71,11 @@ export default function SettingsPage({ live = true, preferences = {}, onUpdatePr
 
       <section className="panel settings-section">
         <div className="panel-title"><h2>Your data</h2></div>
-        <p className="muted">{zeroCostMode ? "Download your profile, tasks, saved resources, saved updates, and locally extracted document text as a JSON file. Original files are not stored." : "Download your profile, tasks, document text, saved updates, and assistant conversations as a JSON file."}</p>
+        <p className="muted">{zeroCostMode ? "Download your profile, tasks, key dates, contacts, checklists, saved guides and updates, and locally extracted document text as a JSON file. Original files are not stored." : "Download your profile, tasks, document text, saved updates, and assistant conversations as a JSON file."}</p>
         <button className="button secondary" onClick={onExport}><Download size={16} /> Export my data</button>
       </section>
+
+      {restore && <RestorePanel uid={restore.uid} existing={restore.existing} store={restore.store} />}
 
       <section className="panel settings-section danger-zone">
         <div className="panel-title"><h2>Delete account</h2></div>

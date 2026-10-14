@@ -1,5 +1,6 @@
 import React from "react";
 import { Bookmark, BookmarkCheck, ExternalLink } from "lucide-react";
+import RelevanceNote from "./RelevanceNote";
 import UpdateLifecycle from "./UpdateLifecycle";
 import { newsImageFor } from "../lib/news-images";
 
@@ -9,7 +10,7 @@ const legalStateCopy = {
   expired: "Expired", informational: "Informational",
 };
 
-export default function NewsCard({ item, saved = false, onToggleSave, compact = false }) {
+export default function NewsCard({ item, saved = false, onToggleSave, compact = false, profile }) {
   const legalLabel = legalStateCopy[item.legalState] || item.legalState || "Informational";
   const summary = item.editorialState === "approved" && item.plainLanguageSummary
     ? item.plainLanguageSummary
@@ -34,6 +35,7 @@ export default function NewsCard({ item, saved = false, onToggleSave, compact = 
       <h3>{item.title || "Untitled update"}</h3>
       <p className="news-card-publisher">{item.publisher}</p>
       <UpdateLifecycle item={item} />
+      {profile && <RelevanceNote item={item} profile={profile} />}
       {!compact && summary && <p className="news-card-summary">{summary}</p>}
       <div className="news-card-meta">
         {item.effectiveAt && <span>Effective {item.effectiveAt}</span>}

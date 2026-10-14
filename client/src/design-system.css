@@ -165,3 +165,7 @@ label { color: var(--gr-ink); font-weight: 550; }
   .mobile-nav { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 1fr; height: 64px; }
   .form-grid { grid-template-columns: 1fr; }
 }
+
+.topic-fieldset { grid-column: 1 / -1; border: 1px solid var(--gr-line); border-radius: var(--gr-radius); padding: var(--gr-space-4); margin: 0; }
+.topic-fieldset legend { font-weight: 650; padding: 0 6px; }
+.topic-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0 var(--gr-space-4); }
