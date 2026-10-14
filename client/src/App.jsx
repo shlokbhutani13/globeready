@@ -306,9 +306,9 @@ export default function App() {
     setProfile(value);
     if (!live) return;
     setAppError("");
-    if (zeroCostStore) return zeroCostStore.saveProfile(value).catch((error) => setAppError(friendlyError(error)));
-    await apiRequest("/api/profile", { method: "PUT", body: JSON.stringify(value) })
-      .catch((error) => setAppError(friendlyError(error)));
+    const failed = (error) => { setAppError(friendlyError(error)); return false; };
+    if (zeroCostStore) return zeroCostStore.saveProfile(value).then(() => true, failed);
+    return apiRequest("/api/profile", { method: "PUT", body: JSON.stringify(value) }).then(() => true, failed);
   };
   const saveConsentChoice = async (choice) => {
     if (zeroCostStore) {

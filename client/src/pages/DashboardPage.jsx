@@ -1,5 +1,6 @@
 import React from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { dueStatus } from "../lib/reminders";
 import Disclaimer from "../components/Disclaimer";
 import GettingStartedBoard from "../components/GettingStartedBoard";
 
@@ -16,7 +17,9 @@ export default function DashboardPage({ profile = {}, tasks = [], topNews = [], 
   const navigate = useNavigate();
   const firstName = profile.fullName?.split(" ")[0] || "there";
   const openTasks = tasks.filter((task) => !task.completed);
-  const nextTask = openTasks[0];
+  // Soonest deadline first; tasks without a deadline come last.
+  const byDeadline = [...openTasks].sort((left, right) => (left.dueDate || "9999").localeCompare(right.dueDate || "9999"));
+  const nextTask = byDeadline[0];
   const topUpdate = topNews[0];
 
   return (
@@ -48,7 +51,7 @@ export default function DashboardPage({ profile = {}, tasks = [], topNews = [], 
               <input type="checkbox" checked={false} onChange={() => onToggleTask?.(nextTask.id)} />
               <span>{nextTask.title}</span>
             </label>
-            {nextTask.dueDate && <time dateTime={nextTask.dueDate}>{nextTask.dueDate}</time>}
+            {nextTask.dueDate && <time dateTime={nextTask.dueDate}>{dueStatus(nextTask)?.label || nextTask.dueDate}</time>}
           </div>
         ) : (
           <p className="home-quiet">Nothing urgent. You are caught up.</p>
