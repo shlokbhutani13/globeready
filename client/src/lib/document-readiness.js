@@ -1,3 +1,4 @@
+import { notifyLifeChanged } from "./life-events";
 import { daysUntil } from "./reminders";
 import { isCalendarDate } from "./calendar-date";
 
@@ -44,6 +45,7 @@ export function loadReadiness(storage, scope) { try { return cleanReadiness(JSON
 export function saveReadiness(storage, scope, state) {
   const clean = cleanReadiness(state);
   try { storage.setItem(key(scope), JSON.stringify(clean)); } catch { throw new Error("This browser would not save your checklist. Private browsing can block it."); }
+  notifyLifeChanged();
   return clean;
 }
 export function clearReadiness(storage, scope) { try { storage?.removeItem(key(scope)); } catch { /* ignore */ } }

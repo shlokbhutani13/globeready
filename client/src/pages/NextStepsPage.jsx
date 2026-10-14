@@ -10,15 +10,15 @@ import Disclaimer from "../components/Disclaimer";
 import { buildNextSteps, loadSnoozes, snoozeChoices, snoozeItem, splitSnoozed, unsnoozeItem, weeklySummary, weeklyText } from "../lib/next-steps";
 import { friendlyError } from "../lib/friendly-error";
 
-const kindLabel = { overdue: "Past your date", task: "Task", reminder: "Reminder", date: "Key date", case: "Case date", suggestion: "Suggestion" };
+const kindLabel = { overdue: "Past your date", task: "Task", reminder: "Reminder", documents: "Documents", date: "Key date", case: "Case date", suggestion: "Suggestion" };
 
-export default function NextStepsPage({ tasks = [], dates = [], journeyHave = [], profile = {}, now = new Date(), onToggleTask, onAddTasks, storageScope = "", storage = typeof localStorage === "undefined" ? undefined : localStorage }) {
+export default function NextStepsPage({ tasks = [], dates = [], journeyHave = [], profile = {}, now = new Date(), extra = [], onToggleTask, onAddTasks, storageScope = "", storage = typeof localStorage === "undefined" ? undefined : localStorage }) {
   const [snoozes, setSnoozes] = useState(() => loadSnoozes(storage, storageScope, now));
   const [view, setView] = useState("list");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState("");
-  const steps = buildNextSteps({ tasks, dates, journeyHave, profile, now });
+  const steps = buildNextSteps({ tasks, dates, journeyHave, profile, now, extra });
   const { active, snoozed } = splitSnoozed(steps, snoozes);
   const week = weeklySummary({ tasks, dates, now });
 

@@ -13,7 +13,7 @@ function greetingFor(date = new Date()) {
 
 // Home answers three questions: what changed, what is next, and what Ask can help with. Everything else
 // lives one tap deeper, so an empty day stays calm instead of filling with cards.
-export default function DashboardPage({ profile = {}, tasks = [], topNews = [], unreadNotifications = 0, onToggleTask, showGettingStarted = false, onDismissGettingStarted, zeroCostMode = false, keyDates = [], setup }) {
+export default function DashboardPage({ profile = {}, tasks = [], topNews = [], unreadNotifications = 0, onToggleTask, showGettingStarted = false, onDismissGettingStarted, zeroCostMode = false, keyDates = [], setup, nextStepCount = 0 }) {
   const navigate = useNavigate();
   const firstName = profile.fullName?.split(" ")[0] || "there";
   const openTasks = tasks.filter((task) => !task.completed);
@@ -77,7 +77,7 @@ export default function DashboardPage({ profile = {}, tasks = [], topNews = [], 
           ) : (
             <p className="home-quiet">No dates coming up. <Link to="/dates">Add your passport, visa or I-20 dates</Link> to get reminders.</p>
           )}
-          <div className="home-links"><Link to="/next">Your next steps</Link><Link to="/journey">Journey planner</Link><Link to="/cases">Cases</Link><Link to="/travel">Travel readiness</Link><Link to="/university">University</Link><Link to="/contacts">Contacts</Link></div>
+          <div className="home-links"><Link to="/next">{nextStepCount > 0 ? `Your next steps (${nextStepCount})` : "Your next steps"}</Link><Link to="/life">Arrival and daily life</Link><Link to="/life/documents">Documents checklist</Link><Link to="/university">University</Link></div>
         </section>
       )}
 

@@ -1,4 +1,5 @@
 import { daysUntil, localDateKey } from "./reminders";
+import { notifyLifeChanged } from "./life-events";
 import { journeyItemsFor } from "../data/journey-templates";
 
 // "Your next steps": one ranked, plain list built from tasks, dates and cases the student entered, plus a few common
@@ -12,7 +13,7 @@ const snoozeKey = (scope) => `globeready:next-snooze:v1:${scope || "anon"}`;
 const dayWord = (days) => (days < 0 ? `${-days} day${days === -1 ? "" : "s"} ago` : days === 0 ? "today" : days === 1 ? "tomorrow" : `in ${days} days`);
 const normalize = (text) => String(text || "").trim().toLowerCase();
 
-export function buildNextSteps({ tasks = [], dates = [], journeyHave = [], profile = {}, now = new Date(), horizonDays = 14, suggestionLimit = 3 } = {}) {
+export function buildNextSteps({ tasks = [], dates = [], journeyHave = [], profile = {}, now = new Date(), horizonDays = 14, suggestionLimit = 3, extra = [] } = {}) {
   const rows = [];
   for (const task of tasks) {
     if (task.completed) continue;
@@ -39,15 +40,17 @@ export function buildNextSteps({ tasks = [], dates = [], journeyHave = [], profi
       to: fromCase ? "/cases" : "/dates", openLabel: fromCase ? "Open cases" : "Open key dates",
     });
   }
+  const extraSuggestions = extra.filter((entry) => entry.kind === "suggestion").slice(0, suggestionLimit);
+  rows.push(...extra.filter((entry) => entry.kind !== "suggestion"));
   const haveTitles = new Set(tasks.map((task) => normalize(task.title)));
   const have = new Set(journeyHave);
   const suggestions = journeyItemsFor(profile.visaType || "")
     .filter((item) => !have.has(item.id) && !haveTitles.has(normalize(item.title)))
     .sort((left, right) => (left.priority === "high" ? 0 : 1) - (right.priority === "high" ? 0 : 1))
-    .slice(0, suggestionLimit)
+    .slice(0, Math.max(0, suggestionLimit - extraSuggestions.length))
     .map((item) => ({ id: `journey:${item.id}`, kind: "suggestion", rank: 4, days: null, title: item.title, reason: "A common step for international students. It is a suggestion with no deadline, and your school may do things differently.", item, to: "/journey", openLabel: "Open journey planner" }));
   const sorted = rows.sort((left, right) => left.rank - right.rank || (left.days ?? 0) - (right.days ?? 0) || left.title.localeCompare(right.title));
-  return [...sorted, ...suggestions];
+  return [...sorted, ...extraSuggestions, ...suggestions];
 }
 
 export function loadSnoozes(storage, scope, now = new Date()) {
@@ -63,12 +66,14 @@ export function snoozeItem(storage, scope, id, days, now = new Date()) {
   const until = new Date(now.getFullYear(), now.getMonth(), now.getDate() + days);
   current[id] = localDateKey(until);
   try { storage?.setItem(snoozeKey(scope), JSON.stringify(Object.fromEntries(Object.entries(current).slice(-SNOOZE_CAP)))); } catch { /* storage may be blocked */ }
+  notifyLifeChanged();
   return current;
 }
 export function unsnoozeItem(storage, scope, id, now = new Date()) {
   const current = loadSnoozes(storage, scope, now);
   delete current[id];
   try { storage?.setItem(snoozeKey(scope), JSON.stringify(current)); } catch { /* storage may be blocked */ }
+  notifyLifeChanged();
   return current;
 }
 export function splitSnoozed(steps, snoozes = {}) {
