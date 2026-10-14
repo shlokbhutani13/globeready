@@ -18,6 +18,7 @@ import DashboardPage from "./pages/DashboardPage";
 import DocumentsPage from "./pages/DocumentsPage";
 import TasksPage from "./pages/TasksPage";
 import GuidesPage from "./pages/GuidesPage";
+import RulesPage from "./pages/RulesPage";
 import AssistantPage from "./pages/AssistantPage";
 import ProfilePage from "./pages/ProfilePage";
 import SettingsPage from "./pages/SettingsPage";
@@ -464,6 +465,7 @@ export default function App() {
             <Route path="travel" element={<TravelPage have={records.planner.travel.have} custom={records.planner.travel.custom} onSaveChecklist={(value) => zeroCostStore.savePlanner("travel", value)} onAddTasks={addTasksFromItems} />} />
             <Route path="contacts" element={<ContactsPage contacts={records.contacts} onCreate={(input, count) => zeroCostStore.createContact(input, count)} onUpdate={(entry, input) => zeroCostStore.updateContact(entry.id, { ...input, createdAt: entry.createdAt })} onRemove={(id) => zeroCostStore.removeContact(id)} />} />
           </>}
+          <Route path="rules" element={<RulesPage profile={profile} onAddTasks={zeroCostStore ? addTasksFromItems : undefined} />} />
           <Route path="guides" element={<GuidesPage onSave={saveGuide} onRemove={zeroCostStore ? (id) => zeroCostStore.removeResource(id) : undefined} savedResources={savedResources} savedUrls={savedResources.map((resource) => resource.url)} />} />
           <Route path="assistant" element={<AssistantPage localMode={zeroCostPublicMode} documentsAllowed={!zeroCostPublicMode || consent?.documents === true} localChunks={localChunks} documents={documents.filter((document) => document.analysisStatus === "indexed")} />} />
           <Route path="notifications" element={<NotificationsPage localMode={zeroCostPublicMode} notifications={shownNotifications} onMarkRead={markRead} onMarkAllRead={markAllRead} />} />
