@@ -123,6 +123,10 @@ export function createZeroCostDataStore({ firestore, uid, sdk = defaultSdk }) {
       const reference = await sdk.addDoc(userCollection("savedResources"), resource);
       return { id: reference.id, ...resource };
     },
+    removeResource(resourceId) {
+      if (typeof resourceId !== "string" || !resourceId) throw new Error("Saved resource is invalid.");
+      return sdk.deleteDoc(sdk.doc(firestore, "users", uid, "savedResources", resourceId));
+    },
     async saveLocalDocument({ id, metadata = {}, chunks = [], pageCount, pagesWithText }) {
       if (!/^doc-[0-4]\d$/u.test(id || "")) throw new Error("Document slot is invalid.");
       if (!Array.isArray(chunks) || chunks.length < 1 || chunks.length > 400) throw new Error("Document passages are invalid.");

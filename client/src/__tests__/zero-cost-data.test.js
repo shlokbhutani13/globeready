@@ -72,6 +72,8 @@ describe("zero-cost Firestore data adapter", () => {
     expect(calls[0][2]).toMatchObject({ title: "File form", source: "user", completed: false });
     expect(calls[1][1]).toBe("users/student-1/savedResources");
     await expect(store.createTask({ title: "x", dueDate: "soon" })).rejects.toThrow(/due date/i);
+    await store.removeResource("r1");
+    expect(calls.at(-1)).toEqual(expect.arrayContaining(["delete"]));
   });
 
   test("stores a complete local document index with page counts in one write to a bounded slot", async () => {
