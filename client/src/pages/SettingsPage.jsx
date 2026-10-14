@@ -4,11 +4,12 @@ import ConsentPanel from "../components/ConsentPanel";
 import DisplaySettings from "../components/DisplaySettings";
 import InstallPanel from "../components/InstallPanel";
 import RestorePanel from "../components/RestorePanel";
+import DeviceBackupPanel from "../components/DeviceBackupPanel";
 import PageHeader from "../components/ui/PageHeader";
 
 export const deletionPhrase = "DELETE MY ACCOUNT";
 
-export default function SettingsPage({ live = true, preferences = {}, onUpdatePreferences, onExport, onDelete, consent, onSaveConsent, onShowGettingStarted, zeroCostMode = false, signInProviders = [], restore }) {
+export default function SettingsPage({ live = true, preferences = {}, onUpdatePreferences, onExport, onDelete, consent, onSaveConsent, onShowGettingStarted, zeroCostMode = false, signInProviders = [], restore, deviceBackupUid }) {
   const [confirmation, setConfirmation] = useState("");
   const [password, setPassword] = useState("");
   const passwordAccount = zeroCostMode && signInProviders.includes("password");
@@ -77,6 +78,8 @@ export default function SettingsPage({ live = true, preferences = {}, onUpdatePr
         <p className="muted">{zeroCostMode ? "Download your profile, tasks, key dates, contacts, checklists, saved guides and updates, and locally extracted document text as a JSON file. Original files are not stored." : "Download your profile, tasks, document text, saved updates, and assistant conversations as a JSON file."}</p>
         <button className="button secondary" onClick={onExport}><Download size={16} /> Export my data</button>
       </section>
+
+      {zeroCostMode && deviceBackupUid && <DeviceBackupPanel uid={deviceBackupUid} />}
 
       {restore && <RestorePanel uid={restore.uid} existing={restore.existing} store={restore.store} />}
 

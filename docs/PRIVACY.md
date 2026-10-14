@@ -29,6 +29,7 @@ The free beta (`docs/ZERO_COST_PUBLIC.md`) has no server and stores less:
   anything from Firebase or Google, any account record, document text, or OCR file.
 - **Backup restore:** importing a GlobeReady export happens in the browser after a preview. It only adds records, skips
   duplicates, refuses files from another account, and never restores document text or privacy choices.
+- **Device-only backup:** in the free public beta, Settings can download the seven browser-only categories listed above as a separate, versioned JSON file. The file may contain sensitive health, insurance, financial and private notes; it is not encrypted and is never uploaded by GlobeReady. Import is limited to the same signed-in account, validates the whole file, shows a replacement preview, and writes nothing until the student confirms. It replaces only those seven browser-only categories. Account export and restore remain separate.
 - **Never sent to an AI provider:** Ask GlobeReady ranks stored passages in the browser and quotes them.
 - **Withdrawing document reading** stops Ask from searching saved text at once and blocks new documents. Saved text is
   kept until the student deletes it; the Documents page offers "Delete all saved document text".

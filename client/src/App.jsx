@@ -535,6 +535,7 @@ export default function App() {
               onDelete={deleteAccount}
               onShowGettingStarted={() => setShowGettingStarted(true)}
               zeroCostMode={zeroCostPublicMode}
+              deviceBackupUid={live && zeroCostPublicMode ? auth.user?.uid : undefined}
               restore={restoreContext}
               signInProviders={live && zeroCostPublicMode ? auth.signInProviders() : []}
             />
