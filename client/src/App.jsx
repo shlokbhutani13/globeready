@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { friendlyError } from "./lib/friendly-error";
 import { createReminderReadStore, deriveReminders } from "./lib/reminders";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import AppShell from "./components/AppShell";
@@ -153,7 +154,7 @@ export default function App() {
       tasks: setTasks,
       documents: setDocuments,
       savedResources: setSavedResources,
-      error: (error) => setAppError(error?.message || "Could not load your workspace."),
+      error: (error) => setAppError(friendlyError(error, "Could not load your workspace.")),
     });
 
     const stopNews = (zeroCostPublicMode ? subscribeStaticNews : subscribeNews)(
@@ -211,8 +212,8 @@ export default function App() {
     const details = typeof input === "string" ? { title: input, dueDate: "", priority: "medium" } : input;
     if (live) {
       setAppError("");
-      if (zeroCostStore) return zeroCostStore.createTask(details).catch((error) => setAppError(error.message));
-      return createTask(auth.user.uid, details).catch((error) => setAppError(error.message));
+      if (zeroCostStore) return zeroCostStore.createTask(details).catch((error) => setAppError(friendlyError(error)));
+      return createTask(auth.user.uid, details).catch((error) => setAppError(friendlyError(error)));
     }
     setTasks([...tasks, {
       id: crypto.randomUUID(), title: details.title, category: "General",
@@ -222,11 +223,11 @@ export default function App() {
   const changeTask = async (id) => {
     const task = tasks.find((item) => item.id === id);
     if (!task) return;
-    if (live) return (zeroCostStore ? zeroCostStore.toggleTask(task) : toggleTask(auth.user.uid, task)).catch((error) => setAppError(error.message));
+    if (live) return (zeroCostStore ? zeroCostStore.toggleTask(task) : toggleTask(auth.user.uid, task)).catch((error) => setAppError(friendlyError(error)));
     setTasks(tasks.map((item) => item.id === id ? { ...item, completed: !item.completed } : item));
   };
   const deleteTask = async (id) => live
-    ? (zeroCostStore ? zeroCostStore.removeTask(id) : removeTask(auth.user.uid, id)).catch((error) => setAppError(error.message))
+    ? (zeroCostStore ? zeroCostStore.removeTask(id) : removeTask(auth.user.uid, id)).catch((error) => setAppError(friendlyError(error)))
     : setTasks(tasks.filter((task) => task.id !== id));
   const addDocument = async (file) => {
     if (live) {
@@ -245,7 +246,7 @@ export default function App() {
             persist: (result) => zeroCostStore.saveLocalDocument(result),
           });
         } catch (error) {
-          if (error?.name !== "AbortError") setAppError(error.message);
+          if (error?.name !== "AbortError") setAppError(friendlyError(error));
         } finally {
           processingController.current = null;
           setProcessing(null);
@@ -260,7 +261,7 @@ export default function App() {
       try {
         await uploadDocument(auth.user.uid, file, setUploadProgress);
       } catch (error) {
-        setAppError(error.message);
+        setAppError(friendlyError(error));
       }
       finally { setTimeout(() => setUploadProgress(0), 500); }
     } else {
@@ -271,14 +272,14 @@ export default function App() {
   const deleteAllDocumentText = async () => {
     if (!zeroCostStore) return;
     setAppError("");
-    await zeroCostStore.removeAllLocalDocuments().catch((error) => setAppError(error.message));
+    await zeroCostStore.removeAllLocalDocuments().catch((error) => setAppError(friendlyError(error)));
   };
   const deleteDocument = async (document) => live
     ? (zeroCostStore ? zeroCostStore.removeLocalDocument(document.id) : removeDocument(
       auth.user.uid,
       document,
       () => apiRequest(`/api/documents/${document.id}`, { method: "DELETE" }),
-    )).catch((error) => setAppError(error.message))
+    )).catch((error) => setAppError(friendlyError(error)))
     : setDocuments(documents.filter((item) => item.id !== document.id));
   const analyzeDocument = async (document) => {
     if (zeroCostStore) return;
@@ -305,9 +306,9 @@ export default function App() {
     setProfile(value);
     if (!live) return;
     setAppError("");
-    if (zeroCostStore) return zeroCostStore.saveProfile(value).catch((error) => setAppError(error.message));
+    if (zeroCostStore) return zeroCostStore.saveProfile(value).catch((error) => setAppError(friendlyError(error)));
     await apiRequest("/api/profile", { method: "PUT", body: JSON.stringify(value) })
-      .catch((error) => setAppError(error.message));
+      .catch((error) => setAppError(friendlyError(error)));
   };
   const saveConsentChoice = async (choice) => {
     if (zeroCostStore) {
@@ -360,7 +361,7 @@ export default function App() {
       } else if (savedNewsIds.has(item.id)) await unsaveNews(item.id);
       else await saveNews(item.id);
     } catch (error) {
-      setAppError(error.message);
+      setAppError(friendlyError(error));
     }
   };
   const updatePreferences = async (input) => {
@@ -368,7 +369,7 @@ export default function App() {
     try {
       await updateNewsPreferences(input);
     } catch (error) {
-      setAppError(error.message);
+      setAppError(friendlyError(error));
     }
   };
   const markRead = async (notification) => {
@@ -377,7 +378,7 @@ export default function App() {
       return;
     }
     if (!live) return;
-    markNotificationRead(auth.user.uid, notification.id).catch((error) => setAppError(error.message));
+    markNotificationRead(auth.user.uid, notification.id).catch((error) => setAppError(friendlyError(error)));
   };
   const markAllRead = async () => {
     if (zeroCostPublicMode) {
@@ -385,7 +386,7 @@ export default function App() {
       return;
     }
     if (!live) return;
-    markAllNotificationsRead(auth.user.uid, notifications).catch((error) => setAppError(error.message));
+    markAllNotificationsRead(auth.user.uid, notifications).catch((error) => setAppError(friendlyError(error)));
   };
 
   return (
@@ -428,7 +429,7 @@ export default function App() {
               onSaveConsent={saveConsentChoice}
               preferences={newsPreferences}
               onUpdatePreferences={updatePreferences}
-              onExport={() => exportAccount().catch((error) => setAppError(error.message))}
+              onExport={() => exportAccount().catch((error) => setAppError(friendlyError(error)))}
               onDelete={deleteAccount}
               onShowGettingStarted={() => setShowGettingStarted(true)}
               zeroCostMode={zeroCostPublicMode}

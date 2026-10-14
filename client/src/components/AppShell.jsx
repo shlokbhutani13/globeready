@@ -15,6 +15,13 @@ export default function AppShell({ onSignOut, isAdmin = false, zeroCostMode = fa
   const [accountOpen, setAccountOpen] = useState(false);
   const accountRef = useRef(null);
   const location = useLocation();
+  const [online, setOnline] = useState(() => (typeof navigator === "undefined" ? true : navigator.onLine !== false));
+  useEffect(() => {
+    const update = () => setOnline(navigator.onLine !== false);
+    window.addEventListener("online", update);
+    window.addEventListener("offline", update);
+    return () => { window.removeEventListener("online", update); window.removeEventListener("offline", update); };
+  }, []);
   useEffect(() => setAccountOpen(false), [location.pathname]);
   useEffect(() => {
     if (!accountOpen) return undefined;
@@ -46,7 +53,7 @@ export default function AppShell({ onSignOut, isAdmin = false, zeroCostMode = fa
           <button onClick={onSignOut}><LogOut size={17} /> Sign out</button>
         </div>
       </aside>
-      <section className="app-main"><Outlet /></section>
+      <section className="app-main">{!online && <div className="offline-banner" role="status">You are offline. You can read what is already loaded, but changes will not save until you reconnect.</div>}<Outlet /></section>
       <nav className="mobile-nav" aria-label="Primary navigation">
         {navigation.map(([to, label, Icon]) => <NavLink key={to} to={to} end={to === "/"} aria-label={label}><Icon size={20} /><span>{label}</span></NavLink>)}
         <div className="mobile-account" ref={accountRef}>

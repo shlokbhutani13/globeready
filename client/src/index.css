@@ -165,3 +165,4 @@ input,select,textarea{color:#344054}.auth-form input,.profile-form input,.profil
 @media(max-width:760px){.mobile-nav{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:1fr}}
 .glance-list{display:grid;gap:8px;margin:0 0 12px}.glance-list div{display:grid;grid-template-columns:110px 1fr;gap:12px}.glance-list dt{color:#667085;font-size:13px}.glance-list dd{margin:0}@media(max-width:760px){.glance-list div{grid-template-columns:1fr;gap:2px}}
 .due-status.overdue{color:#b42318;font-weight:600}.due-status.today,.due-status.soon{color:#92400e;font-weight:600}.muted-note{color:#667085;font-size:13px}
+.offline-banner{background:#fffaeb;border-bottom:1px solid #fedf89;color:#93370d;padding:10px 20px;font-size:14px}
