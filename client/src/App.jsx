@@ -30,6 +30,8 @@ import { clearWorkspace } from "./lib/university-workspace";
 import LifeHubPage from "./pages/LifeHubPage";
 import BudgetPage from "./pages/BudgetPage";
 import { clearBudget } from "./lib/budget";
+import DocumentChecklistPage from "./pages/DocumentChecklistPage";
+import { clearReadiness } from "./lib/document-readiness";
 import SetupPage from "./pages/SetupPage";
 import HelpPage from "./pages/HelpPage";
 import { setupProgress, setupSteps } from "./lib/setup-guide";
@@ -396,7 +398,7 @@ export default function App() {
         reauthenticateGoogle: auth.reauthenticateGoogle,
       });
     }
-    if (zeroCostPublicMode) { clearNewsDeviceData(localStorage, auth.user?.uid || ""); clearNextStepsDeviceData(localStorage, auth.user?.uid || ""); clearWorkspace(localStorage, auth.user?.uid || ""); clearBudget(localStorage, auth.user?.uid || ""); }
+    if (zeroCostPublicMode) { clearNewsDeviceData(localStorage, auth.user?.uid || ""); clearNextStepsDeviceData(localStorage, auth.user?.uid || ""); clearWorkspace(localStorage, auth.user?.uid || ""); clearBudget(localStorage, auth.user?.uid || ""); clearReadiness(localStorage, auth.user?.uid || ""); }
     await auth.signOutUser().catch(() => {});
     setDemo(false);
   };
@@ -488,6 +490,7 @@ export default function App() {
             <Route path="prepare" element={<AdvisingPrepPage profile={profile} news={newsItems} contacts={records.contacts} cases={records.cases} dates={records.dates} now={reminderClock} storageScope={auth.user?.uid || ""} />} />
             <Route path="life" element={<LifeHubPage profile={profile} tasks={tasks} added={records.planner.journey.have} onAddTasks={addTasksFromItems} />} />
             <Route path="life/budget" element={<BudgetPage storageScope={auth.user?.uid || ""} />} />
+            <Route path="life/documents" element={<DocumentChecklistPage keyDates={records.dates} now={reminderClock} storageScope={auth.user?.uid || ""} />} />
             <Route path="journey" element={<JourneyPage profile={profile} tasks={tasks} added={records.planner.journey.have} onAddTasks={addTasksFromItems} />} />
             <Route path="dates" element={<KeyDatesPage dates={records.dates} tasks={tasks} onAddTasks={addTasksFromItems} onCreate={(input) => zeroCostStore.createTrackedDate(input)} onUpdate={(entry, input) => zeroCostStore.updateTrackedDate(entry.id, { ...input, createdAt: entry.createdAt })} onRemove={(id) => zeroCostStore.removeTrackedDate(id)} onExportCalendar={exportCalendar} now={reminderClock} />} />
             <Route path="travel" element={<TravelPage have={records.planner.travel.have} custom={records.planner.travel.custom} onSaveChecklist={(value) => zeroCostStore.savePlanner("travel", value)} onAddTasks={addTasksFromItems} />} />
