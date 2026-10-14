@@ -4,6 +4,18 @@ import { buildIcs, downloadIcs, escapeText, foldLine } from "../lib/ics";
 const now = new Date("2026-10-14T12:00:00Z");
 
 describe("calendar export", () => {
+  test("skips impossible calendar dates instead of rolling them into another month", () => {
+    const result = buildIcs({
+      tasks: [{ id: "invalid", title: "Impossible", dueDate: "2026-02-31" }],
+      dates: [{ id: "leap", label: "Valid leap day", date: "2028-02-29", remindDays: 30 }],
+      now: new Date("2026-10-14T12:00:00Z"),
+    });
+
+    expect(result.count).toBe(1);
+    expect(result.text).not.toContain("Impossible");
+    expect(result.text).toContain("DTSTART;VALUE=DATE:20280229");
+  });
+
   test("builds an all-day event per open task and per key date, with CRLF endings", () => {
     const { text, count } = buildIcs({
       now,
@@ -27,7 +39,7 @@ describe("calendar export", () => {
   });
 
   test("escapes special characters and folds long lines at 75 octets", () => {
-    expect(escapeText("a;b,c\\d\ne")).toBe("a\;b\\,c\\\\d\\ne");
+    expect(escapeText("a;b,c\\d\ne")).toBe(String.raw`a\;b\,c\\d\ne`);
     const folded = foldLine(`SUMMARY:${"é".repeat(80)}`);
     for (const line of folded.split("\r\n")) expect(new TextEncoder().encode(line).length).toBeLessThanOrEqual(75);
     expect(folded.split("\r\n").map((line, index) => (index ? line.slice(1) : line)).join("")).toBe(`SUMMARY:${"é".repeat(80)}`);

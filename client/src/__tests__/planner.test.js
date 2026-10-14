@@ -31,6 +31,7 @@ describe("planner logic", () => {
     expect(suggestedDueDate({ anchor: "graduation", offsetDays: 14 }, { graduationDate: "2028-05-15" })).toBe("2028-05-29");
     expect(suggestedDueDate({ anchor: "start", offsetDays: 1 }, {})).toBe("");
     expect(suggestedDueDate({}, { startDate: "2026-08-20" })).toBe("");
+    expect(suggestedDueDate({ anchor: "start", offsetDays: 1 }, { startDate: "2026-02-31" })).toBe("");
   });
 
   test("creating tasks skips ones that already exist and duplicates in the same batch", () => {
