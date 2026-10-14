@@ -15,14 +15,17 @@ Never deploy the zero-cost rules to a production project, or the production rule
 ## What students can use
 
 - Email/password sign-in (after verifying the email address) and Google sign-in (after the provider is enabled).
-- Profile, tasks, saved guides, saved updates, and privacy choices, stored in the student's own Firestore records.
+- Profile (including start and graduation dates), tasks with priorities, due dates, completion and a calendar, saved guides (removable), saved updates (with a saved-only view), and privacy choices, stored in the student's own Firestore records.
+- In-app due reminders: tasks that are overdue or due within three days are listed on Home and in Notifications. They are worked out in the browser, appear only while GlobeReady is open (checked every 15 minutes and when the window regains focus), and read marks stay on that device. Nothing runs in the background.
+- Plain-language reading aids on each update: a status explanation, dates and the official link, built from the reviewed record. They do not say how an update applies to a particular student.
+- Clear messages for sign-in problems, password reset, offline use, permission errors, and daily quota limits; an offline notice appears when the connection drops.
 - Document reading on the student's device: text PDFs up to 100 pages and PNG/JPEG photos of printed English up to 25 megapixels, 10 MB maximum. Up to 50 documents per account. Original files are never uploaded or backed up; only the extracted text is saved, and only while document reading is on.
 - Every page is read or the document is refused. If the text does not fit the per-document storage budget (about 800 KB), nothing is saved and the student is asked to split the file. Each document shows how many pages were read and how many had no readable text.
 - Ask GlobeReady finds exact passages across all saved documents and shows them with the document name and page. It never writes an answer, labels results as quotes rather than answers or legal advice, adds the same official-contact referral as the full product for immigration, legal, tax, and health questions, and stops searching as soon as document reading is turned off.
 - Searchable reviewed news with official links, legal-state labels, and source coverage that shows which sources are reviewed and which are only planned.
 - JSON export of everything stored, and account deletion that confirms identity first.
 
-Email, push notifications, cloud AI answers, original-file backup, and an availability guarantee are not provided.
+Email, push notifications, background reminders, cloud AI answers, original-file backup, and an availability guarantee are not provided. Reminders cannot fire when the app is closed because that would need a server.
 
 ## One-time setup
 
@@ -85,7 +88,7 @@ The files carry a SHA-256 content hash that the browser checks to detect corrupt
 Use disposable accounts and synthetic documents only.
 
 - Sign up with email, confirm the verification screen appears, open the link, and continue. Sign out and back in. Test Google sign-in if enabled for the preview domain.
-- Save and reload a profile; create, complete, and delete a task; save and unsave an update.
+- Save and reload a profile; create, complete, and delete a task; confirm a due-soon task appears under Notifications; save and unsave an update and a guide; open the Account menu at 390 px width.
 - Turn on document reading. Process a synthetic text PDF with one blank page and confirm the page count report. Process a printed-text PNG; in the browser's network panel, confirm every OCR request goes to the site itself. Cancel a long OCR run. Confirm no original file appears in Firestore.
 - Ask a matching and a non-matching question and an OPT question; confirm only quoted passages appear, the referral appears, and an unrelated passage is not shown.
 - Turn document reading off; confirm Ask stops searching. Delete all saved document text.
