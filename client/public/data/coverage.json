@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-10-13T12:00:00.000Z",
+  "cadenceHours": 168,
+  "entries": [
+    {
+      "id": "federal-register",
+      "name": "Federal Register",
+      "status": "active",
+      "officialUrl": "https://www.federalregister.gov",
+      "scope": "Federal rules and notices relevant to international students",
+      "lastVerifiedAt": "2026-10-13T12:00:00.000Z",
+      "cadenceHours": 168
+    },
+    {
+      "id": "study-in-the-states",
+      "name": "Study in the States",
+      "status": "planned",
+      "officialUrl": "https://studyinthestates.dhs.gov",
+      "scope": "SEVP guidance for F and M students",
+      "lastVerifiedAt": "2026-10-13T12:00:00.000Z",
+      "cadenceHours": 168
+    },
+    {
+      "id": "uscis",
+      "name": "U.S. Citizenship and Immigration Services",
+      "status": "planned",
+      "officialUrl": "https://www.uscis.gov/newsroom/all-news",
+      "scope": "Immigration alerts and policy updates",
+      "lastVerifiedAt": "2026-10-13T12:00:00.000Z",
+      "cadenceHours": 168
+    }
+  ],
+  "contentHash": "cc62f7a20d26df9cc3805c8418ebb304a92d69fccd7fa6e2d74da0a8b557f8f5"
+}

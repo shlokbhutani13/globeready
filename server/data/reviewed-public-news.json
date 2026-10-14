@@ -1,0 +1,73 @@
+{
+  "generatedAt": "2026-10-13T12:00:00.000Z",
+  "cadenceHours": 168,
+  "items": [
+    {
+      "id": "federal-register-2026-14439",
+      "sourceId": "federal-register",
+      "sourceVerified": true,
+      "editorialState": "approved",
+      "title": "Fixed admission periods replace duration of status for F, J, and I categories",
+      "publisher": "U.S. Department of Homeland Security",
+      "canonicalUrl": "https://www.federalregister.gov/documents/2026/07/17/2026-14439/establishing-a-fixed-time-period-of-admission-and-an-extension-of-stay-procedure-for-nonimmigrant",
+      "publishedAt": "2026-07-17",
+      "effectiveAt": "2026-09-15",
+      "documentType": "final-rule",
+      "legalState": "effective",
+      "docketNumber": "ICEB-2025-0001",
+      "shortSummary": "DHS replaced duration-of-status admission for F, J, and I nonimmigrants with fixed admission periods and an extension-of-stay process.",
+      "whyItMatters": "Students should review their admission period and program end date with their designated school official before travel, transfer, program changes, or an extension request.",
+      "detailSections": [
+        {
+          "heading": "What changed",
+          "body": "The final rule establishes fixed admission periods for F, J, and I classifications and procedures for requesting an extension of stay. It also changes several transfer, program-change, and departure-period rules."
+        },
+        {
+          "heading": "What to do",
+          "body": "Read the official rule and contact your designated school official for guidance specific to your Form I-20, admission record, program, travel, or practical training."
+        }
+      ],
+      "actions": [
+        {
+          "label": "Read the official final rule",
+          "sourceUrl": "https://www.federalregister.gov/documents/2026/07/17/2026-14439/establishing-a-fixed-time-period-of-admission-and-an-extension-of-stay-procedure-for-nonimmigrant"
+        }
+      ],
+      "urgency": "urgent",
+      "topics": ["status", "travel", "employment"],
+      "visaTypes": ["f-1", "j-1"],
+      "nationalities": [],
+      "universityIds": [],
+      "journeyStages": ["enrolled", "graduating", "opt"]
+    }
+  ],
+  "coverage": [
+    {
+      "id": "federal-register",
+      "name": "Federal Register",
+      "status": "active",
+      "officialUrl": "https://www.federalregister.gov",
+      "scope": "Federal rules and notices relevant to international students",
+      "lastVerifiedAt": "2026-10-13T12:00:00.000Z",
+      "cadenceHours": 168
+    },
+    {
+      "id": "uscis",
+      "name": "U.S. Citizenship and Immigration Services",
+      "status": "planned",
+      "officialUrl": "https://www.uscis.gov/newsroom/all-news",
+      "scope": "Immigration alerts and policy updates",
+      "lastVerifiedAt": "2026-10-13T12:00:00.000Z",
+      "cadenceHours": 168
+    },
+    {
+      "id": "study-in-the-states",
+      "name": "Study in the States",
+      "status": "planned",
+      "officialUrl": "https://studyinthestates.dhs.gov",
+      "scope": "SEVP guidance for F and M students",
+      "lastVerifiedAt": "2026-10-13T12:00:00.000Z",
+      "cadenceHours": 168
+    }
+  ]
+}

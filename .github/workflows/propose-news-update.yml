@@ -1,0 +1,41 @@
+name: Propose reviewed news update
+
+on:
+  schedule:
+    - cron: "23 12 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: public-news-review
+  cancel-in-progress: false
+
+jobs:
+  propose:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+      - working-directory: server
+        run: npm ci
+      - name: Collect official candidates for human review only
+        working-directory: server
+        run: npm run news:public -- --discover-output data/news-proposals.json
+      - name: Open or update the review pull request
+        uses: peter-evans/create-pull-request@v8
+        with:
+          branch: automation/public-news-review
+          delete-branch: true
+          commit-message: "chore(news): refresh official review candidates"
+          title: "Review official GlobeReady news candidates"
+          body: |
+            Automated candidate collection only. Nothing in this pull request is published to the app.
+            A human must verify the official source, legal state, dates, summary, and relevance, then deliberately update `server/data/reviewed-public-news.json`.
+          labels: news-review
