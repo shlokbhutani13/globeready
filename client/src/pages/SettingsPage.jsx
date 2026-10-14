@@ -49,7 +49,7 @@ export default function SettingsPage({ live = true, preferences = {}, onUpdatePr
 
       {zeroCostMode && <section className="panel settings-section" aria-labelledby="free-runtime-title"><div className="panel-title"><h2 id="free-runtime-title">Free public beta availability</h2></div><ul className="availability-list"><li>Original-file backup is unavailable; only extracted text is saved.</li><li>Cloud AI answers are unavailable; Ask GlobeReady returns matching passages from your documents.</li><li>Email and push delivery are unavailable; check the app and official sources for changes.</li></ul></section>}
 
-      <section className="panel settings-section"><div className="panel-title"><h2>Help</h2></div><p className="muted">Reopen the short guide to Home, Updates, Documents, Guides, and Ask GlobeReady.</p><button className="button secondary" onClick={onShowGettingStarted}>Show getting started guide</button></section>
+      <section className="panel settings-section"><div className="panel-title"><h2>Help</h2></div><p className="muted">Reopen the short guide to where everything is.</p><button className="button secondary" onClick={onShowGettingStarted}>Show getting started guide</button></section>
 
       {!zeroCostMode && <section className="panel settings-section">
         <div className="panel-title"><h2>Email and notifications</h2></div>
@@ -83,7 +83,7 @@ export default function SettingsPage({ live = true, preferences = {}, onUpdatePr
       <section className="panel settings-section danger-zone">
         <div className="panel-title"><h2>Delete account</h2></div>
         <p className="muted">{zeroCostMode
-          ? "This permanently removes your profile, tasks, saved resources, saved updates, extracted document text, and your sign-in. You confirm your identity first; nothing is deleted until that succeeds. This cannot be undone."
+          ? "This permanently removes your profile, tasks, key dates, contacts, checklists, saved guides and updates, extracted document text, and your sign-in. You confirm your identity first; nothing is deleted until that succeeds. This cannot be undone."
           : "This permanently removes your profile, documents and their extracted text, tasks, saved updates, notifications, and conversations. This cannot be undone."}</p>
         <label className="settings-field">
           Type {deletionPhrase} to confirm
