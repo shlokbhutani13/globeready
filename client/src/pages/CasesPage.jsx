@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { ExternalLink, ListPlus, Pencil, Trash2, X } from "lucide-react";
+import PageHelp from "../components/PageHelp";
 import PageHeader from "../components/ui/PageHeader";
 import SubNav, { planLinks } from "../components/ui/SubNav";
 import Notice from "../components/ui/Notice";
@@ -88,6 +89,7 @@ export default function CasesPage({ cases = [], tasks = [], onCreate, onUpdate, 
     <div className="page">
       <PageHeader eyebrow="Plan" title="Application and case tracker" description="Keep your forms, receipts, appointments and evidence requests in one private place, with the dates that matter." action={!adding && <button type="button" className="button primary" onClick={() => setAdding(true)}>Add a case</button>} />
       <SubNav label="Plan sections" links={planLinks} />
+      <PageHelp id="cases" />
       <Notice tone="info">You enter every update yourself. GlobeReady does not contact USCIS or any agency, so the status shown here is only what you last entered and may be out of date. <a href={officialStatusUrl} target="_blank" rel="noreferrer">Check your official case status <ExternalLink size={13} aria-hidden="true" /></a></Notice>
       {error && <Notice tone="error">{error}</Notice>}
       {message && <Notice tone="success">{message}</Notice>}

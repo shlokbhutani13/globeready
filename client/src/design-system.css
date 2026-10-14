@@ -257,3 +257,16 @@ button, .button, [role="button"], select { min-height: var(--gr-target); }
   .task-row > time, .task-row > .record-actions { grid-column: 2; justify-content: flex-start; }
 }
 .task-row small.task-extras { display: flex; }
+
+/* Batch 4.1: setup, help and glossary */
+.page-help { margin: 0 0 var(--space-4, 16px); }
+.page-help summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; font-weight: 600; }
+.setup-steps { list-style: none; padding: 0; display: grid; gap: 12px; }
+.setup-step { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+.setup-step h2 { margin: 0 0 4px; font-size: 1.05rem; }
+.setup-step.done h2::before { content: "✓ "; }
+.setup-bar { width: 100%; height: 10px; }
+.setup-nudge a { font-weight: 600; }
+.glossary-list dt { font-weight: 600; margin-top: 12px; }
+.glossary-list dd { margin: 4px 0 0; }
+@media (max-width: 640px) { .setup-step { flex-direction: column; align-items: stretch; } }

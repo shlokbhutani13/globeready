@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { ExternalLink, Trash2 } from "lucide-react";
+import PageHelp from "../components/PageHelp";
 import PageHeader from "../components/ui/PageHeader";
 import SubNav, { planLinks } from "../components/ui/SubNav";
 import Notice from "../components/ui/Notice";
@@ -43,6 +44,7 @@ export default function UniversityPage({ profile = {}, news = [], contacts = [],
         action={<Link className="button secondary" to="/profile">Edit university</Link>}
       />
       <SubNav label="Plan sections" links={planLinks} />
+      <PageHelp id="university" />
 
       <section className="panel" aria-labelledby="coverage-title">
         <div className="panel-title"><h2 id="coverage-title">Coverage</h2><span className={`chip coverage-${coverage.status}`}>{statusText[coverage.status]}</span></div>

@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import PageHelp from "../components/PageHelp";
 import PageHeader from "../components/ui/PageHeader";
 import SubNav, { planLinks } from "../components/ui/SubNav";
 import Notice from "../components/ui/Notice";
@@ -37,6 +38,7 @@ export default function JourneyPage({ profile = {}, tasks = [], added = [], onAd
         action={<button type="button" className="button primary" disabled={busy || chosenItems.length === 0} onClick={() => addSelected(chosenItems)}>Add {chosenItems.length || ""} selected to Tasks</button>}
       />
       <SubNav label="Plan sections" links={planLinks} />
+      <PageHelp id="journey" />
       <Notice tone="info">{journeyDisclaimer}</Notice>
       {missingDates && <Notice tone="warning">Add your program start and graduation dates in <Link to="/profile">Profile</Link> to get suggested due dates. Without them, tasks are added with no due date.</Notice>}
       {error && <Notice tone="error">{error}</Notice>}

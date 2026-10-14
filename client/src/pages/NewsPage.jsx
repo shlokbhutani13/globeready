@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { RefreshCcw } from "lucide-react";
+import PageHelp from "../components/PageHelp";
 import PageHeader from "../components/ui/PageHeader";
 import SubNav, { updatesLinks } from "../components/ui/SubNav";
 import SourceStatus from "../components/SourceStatus";
@@ -50,6 +51,7 @@ export default function NewsPage({
         action={!zeroCostMode && <button type="button" className="button secondary" onClick={() => setShowPreferences((value) => !value)}>{showPreferences ? "Hide preferences" : "Edit preferences"}</button>}
       />
       <SubNav label="Updates sections" links={updatesLinks} />
+      <PageHelp id="news" />
 
       <NewsToolbar filters={filters} onChange={onFilterChange} sources={zeroCostMode ? sourcesFromItems(items) : undefined} />
 

@@ -1,5 +1,6 @@
 import React, { useMemo } from "react";
 import { Link } from "react-router-dom";
+import PageHelp from "../components/PageHelp";
 import PageHeader from "../components/ui/PageHeader";
 import SubNav, { updatesLinks } from "../components/ui/SubNav";
 import Notice from "../components/ui/Notice";
@@ -24,6 +25,7 @@ export default function ForYouPage({ profile = {}, news = [], newsLoading = fals
         action={<Link className="button secondary" to="/profile">Edit your profile</Link>}
       />
       <SubNav label="Updates sections" links={updatesLinks} />
+      <PageHelp id="forYou" />
       <Notice tone="info">These are informational matches, not legal conclusions. A match does not mean an update or rule applies to you, and a missing match does not mean it does not. Confirm anything that affects your status with your designated school official or the official source.</Notice>
 
       <section className="panel" aria-labelledby="inputs-title">

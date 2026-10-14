@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { Bell, Bot, FileText, Globe2, Home, ListChecks, LogOut, Menu, Newspaper, Search, Settings, ShieldCheck, UserRound } from "lucide-react";
+import { Bell, Bot, FileText, Globe2, Home, ListChecks, LogOut, Menu, Newspaper, Search, HelpCircle, Settings, ShieldCheck, UserRound } from "lucide-react";
 
 const planPaths = ["/tasks", "/journey", "/dates", "/cases", "/travel", "/contacts", "/university"];
 const updatesPaths = ["/news", "/for-you", "/rules", "/guides", "/resources"];
@@ -69,6 +69,7 @@ export default function AppShell({ onSignOut, isAdmin = false, zeroCostMode = fa
         <div className="sidebar-footer" role="group" aria-label="Account">
           <NavLink to="/notifications"><Bell size={17} aria-hidden="true" /> {remindersLabel}</NavLink>
           <NavLink to="/profile"><UserRound size={17} aria-hidden="true" /> Profile</NavLink>
+          <NavLink to="/help"><HelpCircle size={17} aria-hidden="true" /> Help</NavLink>
           <NavLink to="/settings"><Settings size={17} aria-hidden="true" /> Settings</NavLink>
           <button type="button" onClick={onSignOut}><LogOut size={17} aria-hidden="true" /> Sign out</button>
         </div>
@@ -95,6 +96,7 @@ export default function AppShell({ onSignOut, isAdmin = false, zeroCostMode = fa
             <div id="mobile-account-menu" role="group" aria-label="Account menu" className="mobile-account-menu" onKeyDown={(event) => { if (event.key === "Escape") setAccountOpen(false); }}>
               <NavLink to="/notifications" autoFocus><Bell size={17} aria-hidden="true" /> {remindersLabel}</NavLink>
               <NavLink to="/profile"><UserRound size={17} aria-hidden="true" /> Profile</NavLink>
+              <NavLink to="/help"><HelpCircle size={17} aria-hidden="true" /> Help</NavLink>
               <NavLink to="/settings"><Settings size={17} aria-hidden="true" /> Settings</NavLink>
               {isAdmin && <NavLink to="/admin/news"><ShieldCheck size={17} aria-hidden="true" /> Admin</NavLink>}
               <button type="button" onClick={onSignOut}><LogOut size={17} aria-hidden="true" /> Sign out</button>

@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { Trash2 } from "lucide-react";
+import PageHelp from "../components/PageHelp";
 import PageHeader from "../components/ui/PageHeader";
 import SubNav, { planLinks } from "../components/ui/SubNav";
 import Notice from "../components/ui/Notice";
@@ -45,6 +46,7 @@ export default function TravelPage({ have = [], custom = [], onSaveChecklist, on
         action={<button type="button" className="button primary" disabled={busy || missing.length === 0} onClick={addMissing}>Add {missing.length} missing to Tasks</button>}
       />
       <SubNav label="Plan sections" links={planLinks} />
+      <PageHelp id="travel" />
       <Notice tone="info">This is a general reminder list, not a statement of what any border officer or consulate will require. Check the official sources and ask your DSO about your trip.</Notice>
       {error && <Notice tone="error">{error}</Notice>}
       {message && <Notice tone="success">{message}</Notice>}
