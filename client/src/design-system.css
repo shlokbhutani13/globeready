@@ -297,3 +297,9 @@ button, .button, [role="button"], select { min-height: var(--gr-target); }
 
 /* Batch 5.1: arrival and daily life hub */
 .section-block .chip-row { list-style: none; padding: 0; }
+
+/* Batch 5.2: budget planner */
+.table-scroll { overflow-x: auto; max-width: 100%; }
+.plain-table { width: 100%; border-collapse: collapse; }
+.plain-table th, .plain-table td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border, #e4e7ec); white-space: nowrap; }
+.plain-table thead th { font-size: 0.85rem; color: var(--muted, #667085); }

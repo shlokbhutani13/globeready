@@ -25,6 +25,8 @@ import UniversityPage from "../pages/UniversityPage";
 import SetupPage from "../pages/SetupPage";
 import HelpPage from "../pages/HelpPage";
 import NextStepsPage from "../pages/NextStepsPage";
+import LifeHubPage from "../pages/LifeHubPage";
+import BudgetPage from "../pages/BudgetPage";
 import AdvisingPrepPage from "../pages/AdvisingPrepPage";
 
 afterEach(cleanup);
@@ -56,6 +58,8 @@ const pages = {
   Help: <HelpPage zeroCostMode />,
   "Next steps": <NextStepsPage tasks={[{ id: "1", title: "Task", dueDate: "2020-01-01" }]} profile={profile} storage={undefined} />,
   "Appointment preparation": <AdvisingPrepPage profile={profile} contacts={[{ id: "c", name: "Dr. Rao", role: "dso" }]} cases={[{ id: "k", title: "OPT", kind: "opt-ead", status: "filed", timeline: [] }]} dates={[]} storage={undefined} />,
+  "Arrival and daily life": <LifeHubPage profile={profile} tasks={[]} onAddTasks={noop} />,
+  "Budget planner": <BudgetPage storage={undefined} />,
   Ask: <AssistantPage localMode documentsAllowed localChunks={[]} documents={[]} />,
 };
 
