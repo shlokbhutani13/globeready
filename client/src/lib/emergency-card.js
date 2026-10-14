@@ -1,3 +1,4 @@
+import { notifyLifeChanged } from "./life-events";
 import { contactRoleLabels } from "../pages/ContactsPage";
 
 // An emergency information card. Everything on it is typed by the student or picked from their own Contacts, and nothing
@@ -40,9 +41,10 @@ export function loadCard(storage, scope) { try { return cleanCard(JSON.parse(sto
 export function saveCard(storage, scope, card) {
   const clean = cleanCard(card);
   try { storage.setItem(key(scope), JSON.stringify(clean)); } catch { throw new Error("This browser would not save your card. Private browsing can block it."); }
+  notifyLifeChanged();
   return clean;
 }
-export function clearCard(storage, scope) { try { storage?.removeItem(key(scope)); } catch { /* ignore */ } }
+export function clearCard(storage, scope) { try { storage?.removeItem(key(scope)); } catch { /* ignore */ } notifyLifeChanged(); }
 
 export const setValue = (card, id, value) => ({ ...card, values: { ...card.values, [id]: value } });
 export const setInclude = (card, id, on) => ({ ...card, include: { ...card.include, [id]: on } });

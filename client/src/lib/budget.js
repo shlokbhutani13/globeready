@@ -1,3 +1,4 @@
+import { notifyLifeChanged } from "./life-events";
 // A private, manual budget. Amounts are typed by the student in one currency of their choice; nothing is converted, looked
 // up or fetched. Money is held as whole cents so totals never drift. The plan lives in this browser only.
 export const budgetCategories = [
@@ -71,6 +72,7 @@ export function loadBudget(storage, scope, now = new Date()) {
 export function saveBudget(storage, scope, budget, now = new Date()) {
   const clean = cleanBudget(budget, now);
   try { storage.setItem(key(scope), JSON.stringify(clean)); } catch { throw new Error("This browser would not save your budget. Private browsing can block it."); }
+  notifyLifeChanged();
   return clean;
 }
 export function clearBudget(storage, scope) { try { storage?.removeItem(key(scope)); } catch { /* ignore */ } }

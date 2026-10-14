@@ -24,7 +24,6 @@ import ForYouPage from "./pages/ForYouPage";
 import UniversityPage from "./pages/UniversityPage";
 import { clearNewsDeviceData, markSeen as markNewsSeen } from "./lib/news-discovery";
 import NextStepsPage from "./pages/NextStepsPage";
-import { clearNextStepsDeviceData } from "./lib/next-steps";
 import AdvisingPrepPage from "./pages/AdvisingPrepPage";
 import { clearWorkspace } from "./lib/university-workspace";
 import LifeHubPage from "./pages/LifeHubPage";
@@ -34,6 +33,8 @@ import DocumentChecklistPage from "./pages/DocumentChecklistPage";
 import { clearReadiness } from "./lib/document-readiness";
 import EmergencyCardPage from "./pages/EmergencyCardPage";
 import { clearCard } from "./lib/emergency-card";
+import { LIFE_EVENT, lifeSteps, loadLifeSignals } from "./lib/life-signals";
+import { buildNextSteps, clearNextStepsDeviceData, loadSnoozes, splitSnoozed } from "./lib/next-steps";
 import SetupPage from "./pages/SetupPage";
 import HelpPage from "./pages/HelpPage";
 import { setupProgress, setupSteps } from "./lib/setup-guide";
@@ -236,6 +237,19 @@ export default function App() {
 
   const live = Boolean(auth.user);
   const zeroCostStore = live && zeroCostPublicMode ? createZeroCostDataStore({ firestore: db, uid: auth.user.uid }) : null;
+  const [lifeVersion, setLifeVersion] = useState(0);
+  useEffect(() => {
+    const bump = () => setLifeVersion((value) => value + 1);
+    window.addEventListener(LIFE_EVENT, bump); window.addEventListener("storage", bump);
+    return () => { window.removeEventListener(LIFE_EVENT, bump); window.removeEventListener("storage", bump); };
+  }, []);
+  // Private life tools (documents checklist, budget, emergency card) add a few steps; they are read from this browser only.
+  const lifeExtra = useMemo(() => (zeroCostPublicMode && live ? lifeSteps(loadLifeSignals(localStorage, auth.user?.uid || "", { keyDates: records.dates, now: reminderClock })) : []), [zeroCostPublicMode, live, lifeVersion, records.dates, reminderClock, auth.user?.uid]); // eslint-disable-line react-hooks/exhaustive-deps
+  const nextStepCount = useMemo(() => {
+    if (!(zeroCostPublicMode && live)) return 0;
+    const steps = buildNextSteps({ tasks, dates: watchedDates, journeyHave: records.planner.journey.have, profile, now: reminderClock, extra: lifeExtra }).filter((step) => step.kind !== "suggestion");
+    return splitSnoozed(steps, loadSnoozes(localStorage, auth.user?.uid || "", reminderClock)).active.length;
+  }, [zeroCostPublicMode, live, tasks, watchedDates, records.planner, profile, reminderClock, lifeExtra, lifeVersion, auth.user?.uid]); // eslint-disable-line react-hooks/exhaustive-deps
   const keyDateUpcoming = zeroCostPublicMode ? upcomingDates(watchedDates, reminderClock) : [];
   // Tasks created from a template, always through the same validated path as a task typed by hand.
   const addTasksFromItems = async (items, { dueDate } = {}) => {
@@ -460,7 +474,7 @@ export default function App() {
       {appError && <div className="app-error" role="alert"><span>{appError}</span><button onClick={() => setAppError("")}>Dismiss</button></div>}
       <Routes>
         <Route element={<AppShell onSignOut={signOut} isAdmin={isAdmin} unreadNotifications={unreadNotifications} zeroCostMode={zeroCostPublicMode} />}>
-          <Route index element={<DashboardPage setup={zeroCostPublicMode && live ? setupProgress(setupSteps({ profile, dates: records.dates, contacts: records.contacts, journeyHave: records.planner.journey.have, consent })) : undefined} zeroCostMode={zeroCostPublicMode} keyDates={keyDateUpcoming} profile={profile} tasks={tasks} topNews={topNews} unreadNotifications={unreadNotifications} onToggleTask={changeTask} showGettingStarted={showGettingStarted} onDismissGettingStarted={dismissGettingStarted} />} />
+          <Route index element={<DashboardPage nextStepCount={nextStepCount} setup={zeroCostPublicMode && live ? setupProgress(setupSteps({ profile, dates: records.dates, contacts: records.contacts, journeyHave: records.planner.journey.have, consent })) : undefined} zeroCostMode={zeroCostPublicMode} keyDates={keyDateUpcoming} profile={profile} tasks={tasks} topNews={topNews} unreadNotifications={unreadNotifications} onToggleTask={changeTask} showGettingStarted={showGettingStarted} onDismissGettingStarted={dismissGettingStarted} />} />
           <Route path="news" element={(
             <NewsPage
               items={newsItems}
@@ -488,7 +502,7 @@ export default function App() {
           <Route path="search" element={<SearchPage news={newsItems} newsLoading={newsLoading} guides={guides} tasks={tasks} documents={documents} cases={zeroCostPublicMode ? records.cases : []} />} />
           {zeroCostPublicMode && live && <>
             <Route path="setup" element={<SetupPage profile={profile} dates={records.dates} contacts={records.contacts} journeyHave={records.planner.journey.have} consent={consent} />} />
-            <Route path="next" element={<NextStepsPage tasks={tasks} dates={watchedDates} journeyHave={records.planner.journey.have} profile={profile} now={reminderClock} onToggleTask={changeTask} onAddTasks={addTasksFromItems} storageScope={auth.user?.uid || ""} />} />
+            <Route path="next" element={<NextStepsPage extra={lifeExtra} tasks={tasks} dates={watchedDates} journeyHave={records.planner.journey.have} profile={profile} now={reminderClock} onToggleTask={changeTask} onAddTasks={addTasksFromItems} storageScope={auth.user?.uid || ""} />} />
             <Route path="prepare" element={<AdvisingPrepPage profile={profile} news={newsItems} contacts={records.contacts} cases={records.cases} dates={records.dates} now={reminderClock} storageScope={auth.user?.uid || ""} />} />
             <Route path="life" element={<LifeHubPage profile={profile} tasks={tasks} added={records.planner.journey.have} onAddTasks={addTasksFromItems} />} />
             <Route path="life/budget" element={<BudgetPage storageScope={auth.user?.uid || ""} />} />
