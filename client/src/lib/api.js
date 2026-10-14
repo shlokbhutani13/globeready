@@ -1,11 +1,15 @@
 import { auth, clientMode } from "./firebase";
 import { authHeadersForMode } from "./runtime-mode";
 
-const developmentApiUrl = "http://localhost:5051";
+const developmentApiUrl = __GLOBEREADY_ZERO_COST_PUBLIC__ ? "" : "http://localhost:5051";
 
 // Resolves the API origin for this build. Production builds must name an https origin explicitly; there is no
 // localhost fallback in production, so a misconfigured release fails visibly instead of calling the wrong host.
 export function resolveApiUrl(env, { PROD }) {
+  if (env.VITE_ZERO_COST_PUBLIC === "true") {
+    if (env.VITE_API_URL) throw new Error("zero-cost-public cannot configure VITE_API_URL.");
+    return null;
+  }
   const value = env.VITE_API_URL;
   if (!value) return PROD ? null : developmentApiUrl;
   let url;
