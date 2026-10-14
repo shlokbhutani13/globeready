@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { Trash2 } from "lucide-react";
 import PageHelp from "../components/PageHelp";
 import PageHeader from "../components/ui/PageHeader";
@@ -47,7 +48,7 @@ export default function TravelPage({ have = [], custom = [], onSaveChecklist, on
       />
       <SubNav label="Plan sections" links={planLinks} />
       <PageHelp id="travel" />
-      <Notice tone="info">This is a general reminder list, not a statement of what any border officer or consulate will require. Check the official sources and ask your DSO about your trip.</Notice>
+      <Notice tone="info">This is a general reminder list, not a statement of what any border officer or consulate will require. Check the official sources and ask your DSO about your trip. Details for emergencies can go on your <Link to="/life/emergency-card">Emergency card</Link>.</Notice>
       {error && <Notice tone="error">{error}</Notice>}
       {message && <Notice tone="success">{message}</Notice>}
 
