@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Pencil, Trash2 } from "lucide-react";
 import PageHelp from "../components/PageHelp";
 import PageHeader from "../components/ui/PageHeader";
-import SubNav, { planLinks } from "../components/ui/SubNav";
+import SubNav, { lifeLinks } from "../components/ui/SubNav";
 import Notice from "../components/ui/Notice";
 import EmptyState from "../components/ui/EmptyState";
 import CopyButton from "../components/ui/CopyButton";
@@ -41,7 +41,7 @@ export default function ContactsPage({ contacts = [], onCreate, onUpdate, onRemo
   return (
     <div className="page">
       <PageHeader eyebrow="Plan" title="Contacts" description="Keep your school, safety, insurance, consulate and trusted contacts in one private place. Only you can see them. Copy a number or email with one click." />
-      <SubNav label="Plan sections" links={planLinks} />
+      <SubNav label="Life sections" links={lifeLinks} />
       <PageHelp id="contacts" />
 
       <form className="panel" onSubmit={submit} aria-labelledby="contact-form-title">

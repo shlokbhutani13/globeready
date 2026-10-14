@@ -30,6 +30,9 @@ test("Plan stays current across its sub-pages, and the skip link targets the mai
 test.each([
   ["/cases", "Plan"],
   ["/university", "Plan"],
+  ["/life", "Plan"],
+  ["/life/budget", "Plan"],
+  ["/prepare", "Plan"],
   ["/for-you", "Updates"],
   ["/rules", "Updates"],
   ["/resources", "Updates"],

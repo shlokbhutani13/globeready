@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { Download, Printer, Trash2 } from "lucide-react";
 import PageHelp from "../components/PageHelp";
 import PageHeader from "../components/ui/PageHeader";
-import SubNav, { planLinks } from "../components/ui/SubNav";
+import SubNav, { lifeLinks } from "../components/ui/SubNav";
 import Notice from "../components/ui/Notice";
 import CopyButton from "../components/ui/CopyButton";
 import Disclaimer from "../components/Disclaimer";
@@ -44,7 +44,7 @@ export default function AdvisingPrepPage({ profile = {}, news = [], contacts = [
   return (
     <div className="page">
       <PageHeader eyebrow="Plan" title="Prepare for an advising appointment" description="Collect your questions, note what your university told you, and make a one-page summary to take with you. You choose what goes in it." />
-      <SubNav label="Plan sections" links={planLinks} />
+      <SubNav label="Life sections" links={lifeLinks} />
       <PageHelp id="prepare" />
       <Notice tone="info">What you type on this page is saved on this device only. It is not uploaded and is not part of your account, so it will not appear on another device. It is your own notes, not information GlobeReady has reviewed.</Notice>
       {error && <Notice tone="error">{error}</Notice>}
