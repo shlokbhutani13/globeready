@@ -42,16 +42,6 @@ function validDocument(uid, docId) {
   };
 }
 
-function validLocalDocument() {
-  const stamp = new Date("2026-01-01T00:00:00Z");
-  return {
-    name: "i20.pdf", category: "Other", contentType: "application/pdf", size: 1024,
-    storageMode: "browser-local", analysisStatus: "indexed",
-    chunks: [{ page: 1, text: "Form I-20 student record" }],
-    uploadedAt: stamp, createdAt: stamp, updatedAt: stamp,
-  };
-}
-
 describeEmulator("Firestore authorization rules", () => {
   beforeAll(async () => {
     const rules = await readFile(new URL("../../firestore.rules", import.meta.url), "utf8");
@@ -177,59 +167,12 @@ describeEmulator("Firestore authorization rules", () => {
     await assertFails(deleteDoc(record));
   });
 
-  test("an owner may atomically replace and remove a bounded browser-local document index", async () => {
-    const alice = environment.authenticatedContext("alice").firestore();
-    const local = doc(alice, "users", "alice", "documents", "local-one");
-    await assertSucceeds(setDoc(local, validLocalDocument()));
-    await assertSucceeds(setDoc(local, { ...validLocalDocument(), chunks: [{ page: 2, text: "Updated passage" }] }));
-    await assertFails(setDoc(local, { ...validLocalDocument(), isAdmin: true }));
-    await assertFails(setDoc(local, { ...validLocalDocument(), chunks: [] }));
-    await assertFails(setDoc(local, { ...validLocalDocument(), chunks: Array.from({ length: 101 }, () => ({ page: 1, text: "x" })) }));
-    const bob = environment.authenticatedContext("bob").firestore();
-    await assertFails(setDoc(doc(bob, "users", "alice", "documents", "local-one"), validLocalDocument()));
-    await assertSucceeds(deleteDoc(local));
-  });
-
-  test("a student may write only the bounded zero-cost profile and consent shape", async () => {
-    const dave = environment.authenticatedContext("dave").firestore();
-    const profile = doc(dave, "users", "dave");
-    await assertSucceeds(setDoc(profile, { fullName: "Dave", visaType: "F-1", updatedAt: new Date() }));
-    await assertSucceeds(setDoc(profile, {
-      consent: { version: "2026-10-13-zero-cost", documents: true, aiGeneration: false, acceptedAt: new Date() },
-      updatedAt: new Date(),
-    }, { merge: true }));
-    await assertFails(setDoc(profile, { fullName: "x".repeat(501), updatedAt: new Date() }));
-    await assertFails(setDoc(profile, { fullName: "Dave", isAdmin: true, updatedAt: new Date() }));
-    await assertFails(setDoc(profile, {
-      consent: { version: "2026-10-13-zero-cost", documents: true, aiGeneration: true, acceptedAt: new Date() },
-      updatedAt: new Date(),
-    }));
-  });
-
   test("saved resources must be https links with bounded text", async () => {
     const alice = environment.authenticatedContext("alice").firestore();
     await assertSucceeds(setDoc(doc(alice, "users", "alice", "savedResources", "r1"), validFor("savedResources")));
     await assertFails(setDoc(doc(alice, "users", "alice", "savedResources", "r2"), { ...validFor("savedResources"), url: "http://insecure.example" }));
     await assertFails(setDoc(doc(alice, "users", "alice", "savedResources", "r3"), { ...validFor("savedResources"), url: "javascript:alert(1)" }));
     await assertFails(setDoc(doc(alice, "users", "alice", "savedResources", "r4"), { ...validFor("savedResources"), url: `https://x.example/${"a".repeat(500)}` }));
-  });
-
-  test("an owner may remove the bounded zero-cost inventory but another user may not", async () => {
-    const erin = environment.authenticatedContext("erin").firestore();
-    const bob = environment.authenticatedContext("bob").firestore();
-    const profile = doc(erin, "users", "erin");
-    const task = doc(erin, "users", "erin", "tasks", "t1");
-    const resource = doc(erin, "users", "erin", "savedResources", "r1");
-    await assertSucceeds(setDoc(profile, {
-      fullName: "Erin", consent: { version: "2026-10-13-zero-cost", documents: true, aiGeneration: false }, updatedAt: new Date(),
-    }));
-    await assertSucceeds(setDoc(task, validFor("tasks")));
-    await assertSucceeds(setDoc(resource, validFor("savedResources")));
-    await assertFails(deleteDoc(doc(bob, "users", "erin", "tasks", "t1")));
-    await assertFails(deleteDoc(doc(bob, "users", "erin")));
-    await assertSucceeds(deleteDoc(task));
-    await assertSucceeds(deleteDoc(resource));
-    await assertSucceeds(deleteDoc(profile));
   });
 
   test("a student can mark an in-app notification read, and nothing else", async () => {
@@ -275,5 +218,16 @@ describeEmulator("Firestore authorization rules", () => {
       await assertFails(getDoc(doc(database, path)));
       await assertFails(setDoc(doc(database, path), { value: true }));
     }
+  });
+  test("production rules keep profiles and documents API-owned; zero-cost shapes are refused here", async () => {
+    const alice = environment.authenticatedContext("alice", { email_verified: true }).firestore();
+    const stamp = new Date("2026-01-01T00:00:00Z");
+    await assertFails(setDoc(doc(alice, "users", "alice"), { fullName: "Alice", updatedAt: stamp }, { merge: true }));
+    await assertFails(deleteDoc(doc(alice, "users", "alice")));
+    await assertFails(setDoc(doc(alice, "users", "alice", "documents", "doc-00"), {
+      name: "i20.pdf", category: "Other", contentType: "application/pdf", size: 1024, storageMode: "browser-local",
+      analysisStatus: "indexed", chunks: [{ page: 1, text: "x" }], uploadedAt: stamp, createdAt: stamp, updatedAt: stamp,
+    }));
+    await assertFails(setDoc(doc(alice, "users", "alice", "savedNews", "public"), { newsItemId: "public", createdAt: stamp }));
   });
 });

@@ -17,9 +17,14 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
-          cache-dependency-path: server/package-lock.json
+          cache-dependency-path: |
+            server/package-lock.json
+            client/package-lock.json
       - working-directory: server
         run: npm ci
+      # Server tests also exercise the zero-cost browser data layer, which lives in client/.
+      - working-directory: client
+        run: npm ci --ignore-scripts
       - working-directory: server
         run: npm run lint
       - working-directory: server
@@ -45,9 +50,13 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
-          cache-dependency-path: server/package-lock.json
+          cache-dependency-path: |
+            server/package-lock.json
+            client/package-lock.json
       - working-directory: server
         run: npm ci
+      - working-directory: client
+        run: npm ci --ignore-scripts
       - working-directory: server
         run: npm run test:rules
 
