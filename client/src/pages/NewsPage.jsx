@@ -6,7 +6,7 @@ import { rankNewsItems } from "../lib/news-data";
 import CoverageLedger from "../components/CoverageLedger";
 import DigestSettings from "../components/DigestSettings";
 import TopStoriesReader from "../components/TopStoriesReader";
-import NewsToolbar from "../components/NewsToolbar";
+import NewsToolbar, { sourcesFromItems } from "../components/NewsToolbar";
 import NewsArchive from "../components/NewsArchive";
 
 export const topicOptions = [
@@ -50,7 +50,7 @@ export default function NewsPage({
         </button>}
       </header>
 
-      <NewsToolbar filters={filters} onChange={onFilterChange} />
+      <NewsToolbar filters={filters} onChange={onFilterChange} sources={zeroCostMode ? sourcesFromItems(items) : undefined} />
 
       {sourceHealth?.state === "delayed" && (
         <div className="panel" style={{ marginBottom: 18 }} role="status">
@@ -120,7 +120,7 @@ export default function NewsPage({
 
       {!loading && !error && ranked.length > 0 && (
         <>
-          <section className="top-stories-section"><div className="section-heading"><div><span className="eyebrow">Quick briefing</span><h2>Top stories</h2></div></div><TopStoriesReader items={ranked.slice(0, 6)} onToggleSave={onToggleSave} /></section>
+          <section className="top-stories-section"><div className="section-heading"><div><span className="eyebrow">Quick briefing</span><h2>Top stories</h2></div></div><TopStoriesReader items={ranked.slice(0, 6)} savedIds={savedIds} onToggleSave={onToggleSave} /></section>
           <NewsArchive items={ranked} savedIds={savedIds} onToggleSave={onToggleSave} onLoadMore={onLoadMore} hasMore={hasMore} />
         </>
       )}

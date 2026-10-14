@@ -4,6 +4,7 @@ import { Link, useParams } from "react-router-dom";
 import { fetchNewsItem } from "../lib/news-data";
 import { newsImageFor } from "../lib/news-images";
 import Disclaimer from "../components/Disclaimer";
+import NewsAtAGlance from "../components/NewsAtAGlance";
 import NewsExplanation from "../components/NewsExplanation";
 
 export default function NewsDetailPage({ item: supplied, items = [], explanation, localMode = false, loading = false, error: feedError = "" }) {
@@ -28,7 +29,7 @@ export default function NewsDetailPage({ item: supplied, items = [], explanation
     {(item.shortSummary || item.excerpt || item.sourceExcerpt) && <p className="news-detail-lead">{item.shortSummary || item.excerpt || item.sourceExcerpt}</p>}
     {item.whyItMatters && <section className="news-detail-callout"><h2>Why this matters</h2><p>{item.whyItMatters}</p></section>}
     {(item.detailSections || []).map((section) => <section key={section.heading}><h2>{section.heading}</h2><p>{section.body}</p></section>)}
-    {explanation || (localMode ? <section className="news-detail-callout"><h2>Need help understanding this?</h2><p>Cloud AI explanation is unavailable in the free public beta. Read the official source and ask your designated school official about your situation.</p></section> : <NewsExplanation itemId={item.id} />)}
+    {explanation || (localMode ? <NewsAtAGlance item={item} /> : <NewsExplanation itemId={item.id} />)}
     {item.canonicalUrl && <a className="button secondary official-link" href={item.canonicalUrl} target="_blank" rel="noreferrer">Read the official source <ExternalLink size={15} /></a>}
     <Disclaimer compact />
   </article>;
