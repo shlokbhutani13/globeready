@@ -22,6 +22,7 @@ export default function BudgetPage({ storageScope = "", storage = typeof localSt
   const [confirmClear, setConfirmClear] = useState(false);
   const summary = summarize(budget);
   const money = (cents) => formatAmount(cents, budget.currency);
+  const num = (cents) => (cents / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const set = (name) => (event) => { setMessage(""); setForm({ ...form, [name]: event.target.value }); };
 
   const commit = (next, done = "") => {
@@ -87,14 +88,14 @@ export default function BudgetPage({ storageScope = "", storage = typeof localSt
 
           <section className="section-block" aria-labelledby="cats-title">
             <h2 id="cats-title">By category</h2>
-            <div className="table-scroll"><table className="plain-table"><thead><tr><th scope="col">Category</th><th scope="col">Per month</th><th scope="col">One-time</th></tr></thead>
-              <tbody>{summary.categories.map((entry) => <tr key={entry.id}><th scope="row">{entry.label}</th><td>{money(entry.monthly)}</td><td>{money(entry.oneTime)}</td></tr>)}</tbody></table></div>
+            <div className="table-scroll"><table className="plain-table"><thead><tr><th scope="col">Category</th><th scope="col">Per month ({budget.currency})</th><th scope="col">One-time ({budget.currency})</th></tr></thead>
+              <tbody>{summary.categories.map((entry) => <tr key={entry.id}><th scope="row">{entry.label}</th><td>{num(entry.monthly)}</td><td>{num(entry.oneTime)}</td></tr>)}</tbody></table></div>
           </section>
 
           <section className="section-block" aria-labelledby="months-title">
             <h2 id="months-title">Month by month</h2>
-            <div className="table-scroll"><table className="plain-table"><thead><tr><th scope="col">Month</th><th scope="col">Repeating</th><th scope="col">One-time</th><th scope="col">Total</th></tr></thead>
-              <tbody>{summary.timeline.map((row) => <tr key={row.month}><th scope="row">{row.month}</th><td>{money(row.recurring)}</td><td>{money(row.oneTime)}</td><td>{money(row.total)}</td></tr>)}</tbody></table></div>
+            <div className="table-scroll"><table className="plain-table"><thead><tr><th scope="col">Month</th><th scope="col">Repeating ({budget.currency})</th><th scope="col">One-time ({budget.currency})</th><th scope="col">Total ({budget.currency})</th></tr></thead>
+              <tbody>{summary.timeline.map((row) => <tr key={row.month}><th scope="row" className="nowrap">{row.month}</th><td>{num(row.recurring)}</td><td>{num(row.oneTime)}</td><td>{num(row.total)}</td></tr>)}</tbody></table></div>
           </section>
 
           <section className="section-block" aria-labelledby="costs-title">

@@ -312,3 +312,8 @@ button, .button, [role="button"], select { min-height: var(--gr-target); }
 
 /* Batch 5.4: emergency card */
 .card-field { display: grid; gap: 4px; margin-bottom: 12px; }
+@media (max-width: 640px) {
+  .plain-table th, .plain-table td { padding: 8px 6px; white-space: normal; font-size: 0.9rem; vertical-align: top; }
+  .plain-table thead th { font-size: 0.78rem; }
+}
+.plain-table .nowrap { white-space: nowrap; }
