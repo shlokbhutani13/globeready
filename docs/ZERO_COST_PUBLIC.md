@@ -7,7 +7,7 @@ The zero-cost beta has its own Firebase configuration and its own Firestore rule
 | File | Used by | Purpose |
 | --- | --- | --- |
 | `firebase.zero-cost.json` | zero-cost beta only | Hosting with the Content Security Policy and cache headers, plus `firestore.zero-cost.rules`. No Storage. |
-| `firestore.zero-cost.rules` | zero-cost beta only | Validates every direct browser write: exact fields, types, lengths, server timestamps, verified email, and per-account bounds. |
+| `firestore.zero-cost.rules` | zero-cost beta only | Validates every direct browser write: exact fields, types, lengths, server timestamps, verified email, and per-account bounds, including key dates, contacts and checklist progress. |
 | `firebase.json` / `firestore.rules` | full production only | Unchanged. The API writes profiles and documents through the Admin SDK, and its client calls an API origin that the zero-cost CSP would block. |
 
 Never deploy the zero-cost rules to a production project, or the production rules to the zero-cost project.
@@ -18,6 +18,15 @@ Never deploy the zero-cost rules to a production project, or the production rule
 - Profile (including start and graduation dates), tasks with priorities, due dates, completion and a calendar, saved guides (removable), saved updates (with a saved-only view), and privacy choices, stored in the student's own Firestore records.
 - In-app due reminders: tasks that are overdue or due within three days are listed on Home and in Notifications. They are worked out in the browser, appear only while GlobeReady is open (checked every 15 minutes and when the window regains focus), and read marks stay on that device. Nothing runs in the background.
 - Plain-language reading aids on each update: a status explanation, dates and the official link, built from the reviewed record. They do not say how an update applies to a particular student.
+- Journey planner (F-1, J-1 and general templates across arrival, enrollment, travel, employment, graduation and after the program), travel-readiness checklist with custom items, and one-click conversion of steps into tasks. Templates are general guidance and are labelled as such.
+- Key dates typed in by the student (passport, visa, I-20/DS-2019, travel signature, insurance, lease), with reminders and an upcoming list on Home. Nothing is read from documents automatically.
+- Calendar export: tasks and key dates as an `.ics` file built in the browser, for Google Calendar, Apple Calendar and Outlook.
+- Private contacts (DSO, international office, campus safety, insurance, embassy or consulate, trusted people) with click-to-copy phone and email.
+- Informational relevance labels on updates that list the matching fields (visa type, journey stage, university, saved topics). They never say an update legally applies to the student.
+- Search across reviewed updates, guides, task titles and document names. Document contents are searched only inside Ask, only while document reading is on.
+- Installable app with an offline shell. Offline use covers the app, reviewed updates already loaded, and guides. Changes made offline are not saved, queued or synchronized, and Firestore data and document text are never cached.
+- Restore from the app's own JSON export, with a full preview, size/ownership/limit validation, duplicate skipping, and no overwriting or deleting.
+- Text size, high contrast and reduced motion choices, remembered on the device; a skip link; labelled controls; 44 px touch targets.
 - Clear messages for sign-in problems, password reset, offline use, permission errors, and daily quota limits; an offline notice appears when the connection drops.
 - Document reading on the student's device: text PDFs up to 100 pages and PNG/JPEG photos of printed English up to 25 megapixels, 10 MB maximum. Up to 50 documents per account. Original files are never uploaded or backed up; only the extracted text is saved, and only while document reading is on.
 - Every page is read or the document is refused. If the text does not fit the per-document storage budget (about 800 KB), nothing is saved and the student is asked to split the file. Each document shows how many pages were read and how many had no readable text.
@@ -95,6 +104,10 @@ Use disposable accounts and synthetic documents only.
 - Search and filter Updates; open a detail page and its official link; confirm planned sources say "Not monitored".
 - In the browser console, confirm there are no Content Security Policy violations on any page.
 - Export the account and inspect the JSON. Delete one email/password account (with its password) and one Google account (with the pop-up); confirm Firestore and Authentication are empty for both.
+- Journey planner: add steps to Tasks and confirm repeats are skipped. Key dates: add, edit, delete, see them on Home and in Reminders. Contacts: copy a phone and an email. Download the `.ics` file and import it into a calendar. Search for a word in an update, guide, task and document name, and confirm text inside a document is not found there.
+- Install the app, go offline, reload, and confirm the shell opens, the offline banner says changes are not saved, and no Firebase or OCR request is served from cache.
+- Export the account, then restore the file: check the preview, confirm duplicates are skipped, and confirm a file from another account is refused.
+- Switch text size, contrast and animation in Settings and confirm they persist after reload.
 - Repeat at 390 px width and with keyboard-only navigation.
 
 ## Rollback and recovery

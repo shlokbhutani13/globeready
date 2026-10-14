@@ -16,8 +16,15 @@ The free beta (`docs/ZERO_COST_PUBLIC.md`) has no server and stores less:
 
 - **Never stored:** original document files. PDFs and photos are read in the browser; the bytes are discarded after
   extraction. OCR code and the English model are served from GlobeReady's own site, so no third party receives an image.
-- **Stored in Firestore under the student's UID:** profile fields, privacy choices, tasks, saved guides, saved update
-  IDs, and, only while document reading is on, the extracted text of up to 50 documents with page numbers.
+- **Stored in Firestore under the student's UID:** profile fields (including journey dates and chosen topics), privacy
+  choices, tasks, key dates the student typed in (passport, visa, I-20 and similar), private contacts (names, roles,
+  phone numbers, emails, notes), checklist progress, saved guides, saved update IDs, and, only while document reading is
+  on, the extracted text of up to 50 documents with page numbers. Dates are never read from documents automatically.
+- **Stored only in the browser:** display choices (text size, contrast, animation) and which reminders were marked read.
+  The offline service worker keeps only GlobeReady's public files (app code, reviewed news, icons). It never stores
+  anything from Firebase or Google, any account record, document text, or OCR file.
+- **Backup restore:** importing a GlobeReady export happens in the browser after a preview. It only adds records, skips
+  duplicates, refuses files from another account, and never restores document text or privacy choices.
 - **Never sent to an AI provider:** Ask GlobeReady ranks stored passages in the browser and quotes them.
 - **Withdrawing document reading** stops Ask from searching saved text at once and blocks new documents. Saved text is
   kept until the student deletes it; the Documents page offers "Delete all saved document text".
