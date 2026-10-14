@@ -39,6 +39,30 @@ function optionalBounded(value, max, label) {
   return text;
 }
 
+export function validTask(input = {}) {
+  const dueDate = typeof input.dueDate === "string" ? input.dueDate.trim() : "";
+  if (dueDate && !datePattern.test(dueDate)) throw new Error("Due date must be a date (YYYY-MM-DD).");
+  return {
+    title: boundedText(input.title, 200, "Task title"),
+    category: typeof input.category === "string" ? input.category.slice(0, 80) : "General",
+    priority: ["low", "medium", "high"].includes(input.priority) ? input.priority : "medium",
+    dueDate,
+  };
+}
+
+export function validResource(input = {}) {
+  let url;
+  try { url = new URL(input.url); } catch { throw new Error("Resource URL is invalid."); }
+  if (url.protocol !== "https:") throw new Error("Resource URL must use https.");
+  if (url.href.length > 500) throw new Error("Resource URL is too long.");
+  return {
+    title: boundedText(input.title, 200, "Resource title"),
+    url: url.href,
+    category: typeof input.category === "string" ? input.category.slice(0, 80) : "General",
+    source: typeof input.source === "string" ? input.source.slice(0, 200) : "",
+  };
+}
+
 export function validTrackedDate(input = {}) {
   const date = typeof input.date === "string" ? input.date.trim() : "";
   if (!datePattern.test(date) || Number.isNaN(Date.parse(`${date}T00:00:00Z`))) throw new Error("Date must be a real date (YYYY-MM-DD).");
@@ -144,33 +168,12 @@ export function createZeroCostDataStore({ firestore, uid, sdk = defaultSdk }) {
       return consent;
     },
     async createTask(input = {}) {
-      const dueDate = typeof input.dueDate === "string" ? input.dueDate.trim() : "";
-      if (dueDate && !datePattern.test(dueDate)) throw new Error("Due date must be a date (YYYY-MM-DD).");
-      const task = {
-        title: boundedText(input.title, 200, "Task title"),
-        category: typeof input.category === "string" ? input.category.slice(0, 80) : "General",
-        priority: ["low", "medium", "high"].includes(input.priority) ? input.priority : "medium",
-        dueDate,
-        completed: false,
-        source: "user",
-        createdAt: timestamp(),
-        updatedAt: timestamp(),
-      };
+      const task = { ...validTask(input), completed: false, source: "user", createdAt: timestamp(), updatedAt: timestamp() };
       const reference = await sdk.addDoc(userCollection("tasks"), task);
       return { id: reference.id, ...task };
     },
     async saveResource(input = {}) {
-      const url = new URL(input.url);
-      if (url.protocol !== "https:") throw new Error("Resource URL must use https.");
-      const resource = {
-        title: boundedText(input.title, 200, "Resource title"),
-        url: url.href,
-        category: typeof input.category === "string" ? input.category.slice(0, 80) : "General",
-        source: typeof input.source === "string" ? input.source.slice(0, 200) : "",
-        createdAt: timestamp(),
-        updatedAt: timestamp(),
-      };
-      if (resource.url.length > 500) throw new Error("Resource URL is too long.");
+      const resource = { ...validResource(input), createdAt: timestamp(), updatedAt: timestamp() };
       const reference = await sdk.addDoc(userCollection("savedResources"), resource);
       return { id: reference.id, ...resource };
     },
