@@ -4,7 +4,7 @@ import { NavLink } from "react-router-dom";
 // Secondary pages that belong to one section (for example Plan or Updates). Current page is marked with text and an
 // underline, not colour alone.
 export const planLinks = [
-  ["/tasks", "Tasks"], ["/journey", "Journey"], ["/dates", "Key dates"], ["/travel", "Travel"], ["/contacts", "Contacts"],
+  ["/tasks", "Tasks"], ["/journey", "Journey"], ["/dates", "Key dates"], ["/cases", "Cases"], ["/travel", "Travel"], ["/contacts", "Contacts"],
 ];
 export const updatesLinks = [["/news", "Updates"], ["/rules", "Rules and forms"], ["/guides", "Guides"], ["/resources", "Safety and life"]];
 

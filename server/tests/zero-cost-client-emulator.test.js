@@ -58,6 +58,25 @@ describeEmulator("zero-cost browser data layer against its rules", () => {
     expect((await reread(created.id)).data().completed).toBe(false);
   });
 
+  test("tracking a case as the browser does is accepted by the rules", async () => {
+    const firestore = environment.authenticatedContext("maya", { email_verified: true }).firestore();
+    const store = createZeroCostDataStore({ firestore, uid: "maya", sdk });
+    const created = await store.createCase({ title: "Post-completion OPT", kind: "opt-ead", formNumber: "I-765", receiptNumber: "ioe 1234567890", filedOn: "2026-10-01", status: "filed" }, 0);
+    const read = async () => ({ id: created.id, ...(await sdk.getDoc(sdk.doc(firestore, "users", "maya", "cases", created.id))).data() });
+    await store.addCaseEntry(await read(), { date: "2026-10-09", type: "receipt", text: "Receipt notice arrived" });
+    await store.addCaseEntry(await read(), { date: "2026-10-20", type: "appointment", text: "Biometrics 9am" });
+    let record = await read();
+    expect(record).toMatchObject({ status: "receipt-received", receiptNumber: "IOE1234567890" });
+    expect(record.timeline.map((entry) => entry.type)).toEqual(["receipt", "appointment"]);
+    await store.removeCaseEntry(record, 0);
+    await store.updateCase(created.id, { ...(await read()), title: "OPT (renamed)" });
+    record = await read();
+    expect(record.title).toBe("OPT (renamed)");
+    expect(record.timeline).toHaveLength(1);
+    await store.removeCase(created.id);
+    expect((await sdk.getDoc(sdk.doc(firestore, "users", "maya", "cases", created.id))).exists()).toBe(false);
+  });
+
   test("an unverified account cannot write, so the app must show the verification step", async () => {
     const firestore = environment.authenticatedContext("new", { email_verified: false }).firestore();
     const store = createZeroCostDataStore({ firestore, uid: "new", sdk });
@@ -94,7 +113,7 @@ describeEmulator("zero-cost browser data layer against its rules", () => {
     expect(order).toEqual(["reauthenticated", "identity deleted"]);
     await environment.withSecurityRulesDisabled(async (context) => {
       const database = context.firestore();
-      for (const name of ["tasks", "documents", "savedResources", "savedNews", "trackedDates", "contacts", "planner"]) {
+      for (const name of ["tasks", "documents", "savedResources", "savedNews", "trackedDates", "contacts", "cases", "planner"]) {
         expect((await sdk.getDocs(sdk.collection(database, "users", "maya", name))).size, name).toBe(0);
       }
       expect((await sdk.getDoc(sdk.doc(database, "users", "maya"))).exists()).toBe(false);

@@ -24,7 +24,7 @@ describe("restore preview", () => {
   test("accepts a valid export, separates invalid and duplicate records, and counts what would be written", () => {
     const result = plan(archive(), { tasks: [{ title: "existing task", dueDate: "2026-11-02" }], profile: { fullName: "Already Set" } });
     expect(result.ok).toBe(true);
-    expect(result.counts).toEqual({ tasks: 1, savedResources: 1, savedNews: 1, trackedDates: 1, contacts: 1, planner: 1 });
+    expect(result.counts).toEqual({ tasks: 1, savedResources: 1, savedNews: 1, trackedDates: 1, contacts: 1, cases: 0, planner: 1 });
     expect(result.duplicates).toBe(1);
     expect(result.invalid.map((entry) => entry.section).sort()).toEqual(["savedNews", "savedResources", "tasks"]);
     expect(result.profileFill).toEqual({ visaType: "F-1", startDate: "2026-08-20", topics: ["employment"] });
@@ -91,5 +91,31 @@ describe("applying a confirmed restore", () => {
 
   test("refuses to run without a valid plan", async () => {
     await expect(applyRestore({ ok: false }, makeStore())).rejects.toThrow(/no valid restore plan/);
+  });
+});
+
+describe("restoring cases and richer tasks", () => {
+  const goodCase = { title: "Post-completion OPT", kind: "opt-ead", status: "filed", receiptNumber: "IOE1234567890", timeline: [{ date: "2026-10-01", type: "note", text: "Filed" }] };
+  test("validates every case and keeps its history; tasks keep notes, repeat and links", () => {
+    const result = plan(archive({ cases: [goodCase, { title: "", kind: "opt-ead" }, { ...goodCase, title: "Bad status", status: "approved" }], tasks: [{ title: "Pay rent", dueDate: "2026-11-01", recurrence: "monthly", notes: "n", links: [{ type: "case", id: "abc" }] }] }));
+    expect(result.add.cases).toHaveLength(1);
+    expect(result.add.cases[0].timeline).toHaveLength(1);
+    expect(result.invalid.filter((item) => item.section === "cases")).toHaveLength(2);
+    expect(result.add.tasks[0]).toMatchObject({ recurrence: "monthly", notes: "n", links: [{ type: "case", id: "abc" }] });
+  });
+  test("skips a case that already exists and caps the total at 50", () => {
+    expect(plan(archive({ cases: [goodCase] }), { cases: [{ title: "post-completion opt", kind: "opt-ead", receiptNumber: "ioe1234567890" }] }).duplicates).toBeGreaterThan(0);
+    const many = Array.from({ length: 10 }, (_, index) => ({ ...goodCase, title: `Case ${index}`, receiptNumber: undefined }));
+    const result = plan(archive({ cases: many }), { cases: Array.from({ length: 45 }, (_, index) => ({ title: `Old ${index}`, kind: "other" })) });
+    expect(result.add.cases).toHaveLength(5);
+    expect(result.capped).toContainEqual({ section: "cases", skipped: 5 });
+  });
+  test("refuses an export with too many cases", () => {
+    expect(plan(archive({ cases: Array.from({ length: 51 }, () => goodCase) })).error).toMatch(/"cases" section has more than 50/u);
+  });
+  test("writes restored cases through the store", async () => {
+    const store = { createTask: vi.fn(async () => ({ id: "t" })), toggleTask: vi.fn(), saveResource: vi.fn(), saveNews: vi.fn(), createTrackedDate: vi.fn(), createContact: vi.fn(), savePlanner: vi.fn(), saveProfile: vi.fn(), createCase: vi.fn(async () => ({})) };
+    await applyRestore(plan({ schemaVersion: 2, uid, cases: [goodCase] }), store);
+    expect(store.createCase).toHaveBeenCalledWith(expect.objectContaining({ title: "Post-completion OPT" }), 0);
   });
 });

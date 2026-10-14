@@ -150,6 +150,21 @@ service cloud.firestore {
         && stampedNow(data, 'updatedAt');
     }
 
+    // Application and case tracker. Everything here was typed in by the student; nothing is read from any agency.
+    // History entries live in one bounded list whose contents the browser checks.
+    function validCaseFields(data) {
+      return data.keys().hasOnly(['title', 'kind', 'formNumber', 'receiptNumber', 'status', 'filedOn', 'notes', 'timeline', 'createdAt', 'updatedAt'])
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 120
+        && data.kind in ['opt-ead', 'stem-opt', 'change-of-status', 'sevis-transfer', 'travel-document', 'other']
+        && data.status in ['preparing', 'filed', 'receipt-received', 'biometrics', 'evidence-requested', 'interview', 'decision-received', 'closed']
+        && optionalText(data, 'formNumber', 40)
+        && optionalText(data, 'receiptNumber', 40)
+        && optionalDate(data, 'filedOn')
+        && optionalText(data, 'notes', 1000)
+        && data.timeline is list && data.timeline.size() <= 40
+        && stampedNow(data, 'updatedAt');
+    }
+
     // Checklist progress for the journey planner and travel workspace. Element contents are checked in the browser.
     function validPlannerDoc(data) {
       return data.keys().hasOnly(['have', 'custom', 'updatedAt'])
@@ -203,6 +218,15 @@ service cloud.firestore {
         allow create: if canWrite(uid) && contactId.size() <= 128 && validContactFields(request.resource.data)
           && stampedNow(request.resource.data, 'createdAt');
         allow update: if canWrite(uid) && validContactFields(request.resource.data)
+          && request.resource.data.createdAt == resource.data.createdAt;
+        allow delete: if isOwner(uid);
+      }
+
+      match /cases/{caseId} {
+        allow read: if isOwner(uid);
+        allow create: if canWrite(uid) && caseId.size() <= 128 && validCaseFields(request.resource.data)
+          && stampedNow(request.resource.data, 'createdAt');
+        allow update: if canWrite(uid) && validCaseFields(request.resource.data)
           && request.resource.data.createdAt == resource.data.createdAt;
         allow delete: if isOwner(uid);
       }

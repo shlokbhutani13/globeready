@@ -89,6 +89,24 @@ describeEmulator("zero-cost Firestore rules", () => {
     await assertFails(setDoc(doc(maya, "users", "maya", "tasks", "r6"), task({ links: "news" })));
   });
 
+  test("cases are private, bounded, and keep their creation time", async () => {
+    const maya = verified("maya");
+    const caseDoc = (extra = {}) => ({ title: "OPT application", kind: "opt-ead", status: "filed", timeline: [{ date: "2026-10-01", type: "note", text: "Filed online" }], createdAt: now(), updatedAt: now(), ...extra });
+    const ref = doc(maya, "users", "maya", "cases", "c1");
+    await assertSucceeds(setDoc(ref, caseDoc({ formNumber: "I-765", receiptNumber: "IOE1234567890", filedOn: "2026-10-01", notes: "n" })));
+    await assertSucceeds(setDoc(ref, caseDoc({ status: "receipt-received", createdAt: (await getDoc(ref)).data().createdAt, updatedAt: now() })));
+    await assertFails(setDoc(ref, caseDoc({ createdAt: new Date("2020-01-01T00:00:00Z") })));
+    await assertFails(setDoc(doc(maya, "users", "maya", "cases", "c2"), caseDoc({ status: "approved" })));
+    await assertFails(setDoc(doc(maya, "users", "maya", "cases", "c3"), caseDoc({ kind: "green-card" })));
+    await assertFails(setDoc(doc(maya, "users", "maya", "cases", "c4"), caseDoc({ title: "" })));
+    await assertFails(setDoc(doc(maya, "users", "maya", "cases", "c5"), caseDoc({ timeline: Array.from({ length: 41 }, () => ({ date: "2026-10-01", type: "note", text: "x" })) })));
+    await assertFails(setDoc(doc(maya, "users", "maya", "cases", "c6"), caseDoc({ filedOn: "yesterday" })));
+    await assertFails(setDoc(doc(maya, "users", "maya", "cases", "c7"), caseDoc({ isAdmin: true })));
+    await assertFails(getDoc(doc(verified("bob"), "users", "maya", "cases", "c1")));
+    await assertFails(setDoc(doc(unverified("maya"), "users", "maya", "cases", "c8"), caseDoc()));
+    await assertSucceeds(deleteDoc(doc(unverified("maya"), "users", "maya", "cases", "c1")));
+  });
+
   test("extracted document text needs consent, a slot ID, page counts, and the browser-local shape", async () => {
     const maya = verified("maya");
     await assertFails(setDoc(doc(maya, "users", "maya", "documents", "doc-00"), localDocument()));

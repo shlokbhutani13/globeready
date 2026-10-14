@@ -3,7 +3,7 @@ import {
 } from "firebase/firestore";
 
 // Everything the zero-cost beta stores for a student, all owner-scoped under users/{uid}.
-export const zeroCostCollections = ["tasks", "documents", "savedResources", "savedNews", "trackedDates", "contacts", "planner"];
+export const zeroCostCollections = ["tasks", "documents", "savedResources", "savedNews", "trackedDates", "contacts", "cases", "planner"];
 const pageSize = 400;
 const maxExportBytes = 10 * 1024 * 1024;
 const encoder = new TextEncoder();
