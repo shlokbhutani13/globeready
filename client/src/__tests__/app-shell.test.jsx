@@ -1,15 +1,42 @@
 import "@testing-library/jest-dom/vitest";
 import React from "react";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, expect, test, vi } from "vitest";
 import AppShell from "../components/AppShell";
 
 afterEach(cleanup);
+const shell = (props = {}, path = "/") => render(
+  <MemoryRouter initialEntries={[path]}><Routes><Route element={<AppShell onSignOut={() => {}} {...props} />}><Route path="*" element={<p>page</p>} /></Route></Routes></MemoryRouter>,
+);
 
-test("mobile bar has an Account menu with Profile, Settings and Sign out, usable by keyboard", () => {
+test("main navigation is five predictable destinations on desktop and phone", () => {
+  shell();
+  for (const name of ["Main navigation", "Primary navigation"]) {
+    const nav = screen.getByRole("navigation", { name });
+    expect(within(nav).getAllByRole("link").map((link) => link.textContent.trim()).filter((text) => ["Home", "Plan", "Updates", "Documents", "Ask"].includes(text))).toEqual(["Home", "Plan", "Updates", "Documents", "Ask"]);
+  }
+});
+
+test("Plan stays current across its sub-pages, and the skip link targets the main region", () => {
+  shell({}, "/dates");
+  const nav = screen.getByRole("navigation", { name: "Main navigation" });
+  expect(within(nav).getByRole("link", { name: "Plan" })).toHaveAttribute("aria-current", "page");
+  expect(within(nav).getByRole("link", { name: "Home" })).not.toHaveAttribute("aria-current");
+  expect(screen.getByRole("link", { name: "Skip to main content" })).toHaveAttribute("href", "#main-content");
+  expect(screen.getByRole("main")).toHaveAttribute("id", "main-content");
+});
+
+test("search is a labelled landmark and reminders show an unread count in text", () => {
+  shell({ unreadNotifications: 3 });
+  expect(screen.getByRole("search")).toBeInTheDocument();
+  expect(screen.getByLabelText(/search updates, guides, tasks/i)).toBeInTheDocument();
+  expect(screen.getAllByRole("link", { name: "Reminders (3 unread)" }).length).toBeGreaterThan(0);
+});
+
+test("phone Account menu has Reminders, Profile, Settings and Sign out, usable by keyboard", () => {
   const onSignOut = vi.fn();
-  render(<MemoryRouter><AppShell onSignOut={onSignOut} /></MemoryRouter>);
+  shell({ onSignOut });
   const mobile = screen.getByRole("navigation", { name: "Primary navigation" });
   const toggle = within(mobile).getByRole("button", { name: "Account" });
   expect(toggle).toHaveAttribute("aria-expanded", "false");
@@ -25,14 +52,11 @@ test("mobile bar has an Account menu with Profile, Settings and Sign out, usable
   expect(onSignOut).toHaveBeenCalled();
 });
 
-test("shows an offline notice that clears when the connection returns", () => {
-  render(<MemoryRouter><AppShell onSignOut={() => {}} /></MemoryRouter>);
-  expect(screen.queryByText(/you are offline/i)).not.toBeInTheDocument();
-  fireEvent(window, new Event("offline"));
-  expect(screen.queryByText(/you are offline/i)).not.toBeInTheDocument();
+test("shows an offline notice that says changes are not synchronized, and clears when back online", () => {
+  shell();
   Object.defineProperty(navigator, "onLine", { configurable: true, value: false });
   fireEvent(window, new Event("offline"));
-  expect(screen.getByText(/you are offline/i)).toBeInTheDocument();
+  expect(screen.getByText(/changes will not be saved or synchronized/i)).toBeInTheDocument();
   Object.defineProperty(navigator, "onLine", { configurable: true, value: true });
   fireEvent(window, new Event("online"));
   expect(screen.queryByText(/you are offline/i)).not.toBeInTheDocument();
