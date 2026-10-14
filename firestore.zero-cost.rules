@@ -1,0 +1,160 @@
+rules_version = '2';
+
+// Rules for the zero-cost public beta only (deployed with firebase.zero-cost.json). The full-production rules in
+// firestore.rules are separate and unchanged: there, the API writes profiles and documents through the Admin SDK.
+//
+// In this runtime the browser writes directly, so every write is validated here: exact keys, types, lengths,
+// server timestamps, and per-account bounds. Anything not matched below is denied.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    // Writes need a verified email address. Google accounts arrive verified; email/password accounts must open the
+    // verification link first. This makes bulk sign-up abuse of the shared free quota cost a real mailbox per account.
+    function canWrite(uid) {
+      return isOwner(uid) && request.auth.token.email_verified == true;
+    }
+
+    function optionalText(data, field, max) {
+      return !(field in data) || (data[field] is string && data[field].size() <= max);
+    }
+
+    function optionalDate(data, field) {
+      return !(field in data) || data[field] == ''
+        || (data[field] is string && data[field].matches('[0-9]{4}-[0-9]{2}-[0-9]{2}'));
+    }
+
+    function stampedNow(data, field) {
+      return field in data && data[field] == request.time;
+    }
+
+    function documentsConsented(uid) {
+      return get(/databases/$(database)/documents/users/$(uid)).data.get('consent', {}).get('documents', false) == true;
+    }
+
+    function validConsent(consent) {
+      return consent is map
+        && consent.keys().hasOnly(['version', 'documents', 'aiGeneration', 'acceptedAt'])
+        && consent.keys().hasAll(['version', 'documents', 'aiGeneration'])
+        && consent.version is string && consent.version.size() >= 1 && consent.version.size() <= 80
+        && consent.documents is bool
+        && consent.aiGeneration == false
+        && (!('acceptedAt' in consent) || consent.acceptedAt is timestamp);
+    }
+
+    function validProfile(data) {
+      return data.keys().hasOnly([
+          'fullName', 'homeCountry', 'university', 'universityId', 'officialUniversityDomain', 'degreeLevel',
+          'program', 'visaType', 'journeyStage', 'startDate', 'graduationDate', 'timeZone', 'updatedAt', 'consent'
+        ])
+        && stampedNow(data, 'updatedAt')
+        && optionalText(data, 'fullName', 200)
+        && optionalText(data, 'homeCountry', 100)
+        && optionalText(data, 'university', 200)
+        && optionalText(data, 'universityId', 120)
+        && optionalText(data, 'officialUniversityDomain', 253)
+        && optionalText(data, 'degreeLevel', 80)
+        && optionalText(data, 'program', 200)
+        && optionalText(data, 'visaType', 40)
+        && optionalText(data, 'journeyStage', 80)
+        && optionalText(data, 'timeZone', 64)
+        && optionalDate(data, 'startDate')
+        && optionalDate(data, 'graduationDate')
+        && (!('consent' in data) || validConsent(data.consent));
+    }
+
+    function validTask(data) {
+      return data.keys().hasOnly(['title', 'category', 'priority', 'dueDate', 'notes', 'completed', 'source', 'createdAt', 'updatedAt'])
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 200
+        && data.completed == false
+        && data.source == 'user'
+        && optionalText(data, 'category', 80)
+        && (!('priority' in data) || data.priority in ['low', 'medium', 'high'])
+        && optionalDate(data, 'dueDate')
+        && optionalText(data, 'notes', 1000)
+        && stampedNow(data, 'createdAt')
+        && stampedNow(data, 'updatedAt');
+    }
+
+    // Extracted text from a file processed in the student's browser. The original file is never stored. Rules cannot
+    // inspect each list element, so the browser validates every chunk; here the list length is bounded and Firestore's
+    // 1 MiB document limit bounds the total size.
+    function validLocalDocument(data) {
+      return data.keys().hasOnly([
+          'name', 'category', 'contentType', 'size', 'storageMode', 'analysisStatus', 'chunks',
+          'pageCount', 'pagesWithText', 'uploadedAt', 'createdAt', 'updatedAt'
+        ])
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 200
+        && optionalText(data, 'category', 80)
+        && data.contentType in ['application/pdf', 'image/png', 'image/jpeg']
+        && data.size is int && data.size > 0 && data.size <= 10485760
+        && data.storageMode == 'browser-local'
+        && data.analysisStatus == 'indexed'
+        && data.chunks is list && data.chunks.size() >= 1 && data.chunks.size() <= 400
+        && data.pageCount is int && data.pageCount >= 1 && data.pageCount <= 100
+        && data.pagesWithText is int && data.pagesWithText >= 1 && data.pagesWithText <= data.pageCount
+        && stampedNow(data, 'uploadedAt')
+        && stampedNow(data, 'createdAt')
+        && stampedNow(data, 'updatedAt');
+    }
+
+    function validSavedResource(data) {
+      return data.keys().hasOnly(['title', 'url', 'category', 'source', 'createdAt', 'updatedAt'])
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 200
+        && data.url is string && data.url.size() <= 500 && data.url.matches('https://[^ ]+')
+        && optionalText(data, 'category', 80)
+        && optionalText(data, 'source', 200)
+        && stampedNow(data, 'createdAt')
+        && stampedNow(data, 'updatedAt');
+    }
+
+    match /users/{uid} {
+      allow read: if isOwner(uid);
+      allow create, update: if canWrite(uid) && validProfile(request.resource.data);
+      // Deletion never requires verification, so a student can always remove their own data.
+      allow delete: if isOwner(uid);
+
+      match /tasks/{taskId} {
+        allow read: if isOwner(uid);
+        allow create: if canWrite(uid) && taskId.size() <= 128 && validTask(request.resource.data);
+        allow update: if canWrite(uid)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['completed', 'updatedAt'])
+          && request.resource.data.completed is bool
+          && stampedNow(request.resource.data, 'updatedAt');
+        allow delete: if isOwner(uid);
+      }
+
+      // Document IDs are 50 fixed slots (doc-00 to doc-49), which caps each account's stored extracted text.
+      match /documents/{docId} {
+        allow read: if isOwner(uid);
+        allow create: if canWrite(uid)
+          && docId.matches('doc-[0-4][0-9]')
+          && validLocalDocument(request.resource.data)
+          && documentsConsented(uid);
+        allow update: if false;
+        allow delete: if isOwner(uid);
+      }
+
+      match /savedResources/{resourceId} {
+        allow read: if isOwner(uid);
+        allow create: if canWrite(uid) && resourceId.size() <= 128 && validSavedResource(request.resource.data);
+        allow update: if false;
+        allow delete: if isOwner(uid);
+      }
+
+      // A saved update stores only the public news ID; the story itself comes from the static reviewed feed.
+      match /savedNews/{newsId} {
+        allow read: if isOwner(uid);
+        allow create: if canWrite(uid)
+          && newsId.matches('[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}')
+          && request.resource.data.keys().hasOnly(['newsItemId', 'createdAt'])
+          && request.resource.data.newsItemId == newsId
+          && stampedNow(request.resource.data, 'createdAt');
+        allow update: if false;
+        allow delete: if isOwner(uid);
+      }
+    }
+  }
+}

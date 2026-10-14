@@ -64,6 +64,8 @@ jobs:
         with:
           name: zero-cost-public-${{ github.run_id }}
           path: client/dist
+      - name: Use the zero-cost Firebase configuration (CSP, cache headers, and zero-cost rules)
+        run: cp firebase.zero-cost.json firebase.json
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
@@ -83,6 +85,8 @@ jobs:
         with:
           name: zero-cost-public-${{ github.run_id }}
           path: client/dist
+      - name: Use the zero-cost Firebase configuration (CSP, cache headers, and zero-cost rules)
+        run: cp firebase.zero-cost.json firebase.json
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}

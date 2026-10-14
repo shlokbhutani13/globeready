@@ -1,0 +1,133 @@
+import { readFile } from "node:fs/promises";
+import { afterAll, beforeAll, beforeEach, describe, test } from "vitest";
+import { assertFails, assertSucceeds, initializeTestEnvironment } from "@firebase/rules-unit-testing";
+import { deleteDoc, doc, getDoc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
+
+// The zero-cost beta's rules are a separate file with a separate project ID, so they never mix with production rules.
+const projectId = "globeready-zero-cost-test";
+let environment;
+const describeEmulator = process.env.FIRESTORE_EMULATOR_HOST ? describe : describe.skip;
+
+const verified = (uid) => environment.authenticatedContext(uid, { email_verified: true }).firestore();
+const unverified = (uid) => environment.authenticatedContext(uid, { email_verified: false }).firestore();
+
+const now = () => serverTimestamp();
+const profile = (extra = {}) => ({ fullName: "Maya Singh", visaType: "F-1", startDate: "2026-08-20", updatedAt: now(), ...extra });
+const consent = (documents = true, extra = {}) => ({
+  consent: { version: "2026-10-14-zero-cost", documents, aiGeneration: false, acceptedAt: now(), ...extra }, updatedAt: now(),
+});
+const task = (extra = {}) => ({
+  title: "Renew passport", category: "General", priority: "medium", dueDate: "2026-11-01", completed: false, source: "user",
+  createdAt: now(), updatedAt: now(), ...extra,
+});
+const localDocument = (extra = {}) => ({
+  name: "i20.pdf", category: "Other", contentType: "application/pdf", size: 1024, storageMode: "browser-local",
+  analysisStatus: "indexed", chunks: [{ page: 1, text: "Form I-20 student record" }], pageCount: 2, pagesWithText: 1,
+  uploadedAt: now(), createdAt: now(), updatedAt: now(), ...extra,
+});
+const resource = (extra = {}) => ({
+  title: "Maintaining status", url: "https://studyinthestates.dhs.gov/students", category: "status", source: "SEVP",
+  createdAt: now(), updatedAt: now(), ...extra,
+});
+
+describeEmulator("zero-cost Firestore rules", () => {
+  beforeAll(async () => {
+    const rules = await readFile(new URL("../../firestore.zero-cost.rules", import.meta.url), "utf8");
+    environment = await initializeTestEnvironment({ projectId, firestore: { rules } });
+  });
+  beforeEach(async () => environment.clearFirestore());
+  afterAll(async () => environment?.cleanup());
+
+  test("profile and consent writes need a verified owner and the exact bounded shape", async () => {
+    const maya = verified("maya");
+    const ref = doc(maya, "users", "maya");
+    await assertSucceeds(setDoc(ref, profile()));
+    await assertSucceeds(setDoc(ref, consent(true), { merge: true }));
+    await assertFails(setDoc(doc(unverified("maya"), "users", "maya"), profile()));
+    await assertFails(setDoc(doc(verified("bob"), "users", "maya"), profile()));
+    await assertFails(setDoc(ref, profile({ fullName: "x".repeat(201) })));
+    await assertFails(setDoc(ref, profile({ visaType: { nested: "map" } })));
+    await assertFails(setDoc(ref, profile({ startDate: "next week" })));
+    await assertFails(setDoc(ref, profile({ isAdmin: true })));
+    await assertFails(setDoc(ref, profile({ updatedAt: new Date("2020-01-01T00:00:00Z") })));
+    await assertFails(setDoc(ref, consent(true, { aiGeneration: true }), { merge: true }));
+    await assertFails(setDoc(ref, consent(true, { scope: "everything" }), { merge: true }));
+  });
+
+  test("tasks are created incomplete with server timestamps and only completion can change", async () => {
+    const maya = verified("maya");
+    const ref = doc(maya, "users", "maya", "tasks", "t1");
+    await assertSucceeds(setDoc(ref, task()));
+    await assertSucceeds(updateDoc(ref, { completed: true, updatedAt: now() }));
+    await assertFails(updateDoc(ref, { title: "changed", updatedAt: now() }));
+    await assertFails(setDoc(doc(maya, "users", "maya", "tasks", "t2"), task({ title: "" })));
+    await assertFails(setDoc(doc(maya, "users", "maya", "tasks", "t3"), task({ notes: "x".repeat(1001) })));
+    await assertFails(setDoc(doc(maya, "users", "maya", "tasks", "t4"), task({ completed: true })));
+    await assertFails(setDoc(doc(unverified("maya"), "users", "maya", "tasks", "t5"), task()));
+    await assertSucceeds(deleteDoc(ref));
+  });
+
+  test("extracted document text needs consent, a slot ID, page counts, and the browser-local shape", async () => {
+    const maya = verified("maya");
+    await assertFails(setDoc(doc(maya, "users", "maya", "documents", "doc-00"), localDocument()));
+    await assertSucceeds(setDoc(doc(maya, "users", "maya"), { ...profile(), ...consent(true) }));
+    const ref = doc(maya, "users", "maya", "documents", "doc-00");
+    await assertSucceeds(setDoc(ref, localDocument()));
+    await assertFails(setDoc(ref, localDocument({ name: "replaced.pdf" })));
+    await assertFails(setDoc(doc(maya, "users", "maya", "documents", "doc-50"), localDocument()));
+    await assertFails(setDoc(doc(maya, "users", "maya", "documents", "random-uuid"), localDocument()));
+    await assertFails(setDoc(doc(maya, "users", "maya", "documents", "doc-01"), localDocument({ storagePath: "users/maya/x.pdf" })));
+    await assertFails(setDoc(doc(maya, "users", "maya", "documents", "doc-02"), localDocument({ chunks: [] })));
+    await assertFails(setDoc(doc(maya, "users", "maya", "documents", "doc-03"), localDocument({ chunks: Array.from({ length: 401 }, () => ({ page: 1, text: "x" })) })));
+    await assertFails(setDoc(doc(maya, "users", "maya", "documents", "doc-04"), localDocument({ pagesWithText: 3, pageCount: 2 })));
+    await assertFails(setDoc(doc(maya, "users", "maya", "documents", "doc-05"), localDocument({ pageCount: 101 })));
+    await assertFails(setDoc(doc(maya, "users", "maya", "documents", "doc-06"), localDocument({ contentType: "text/html" })));
+    await assertFails(setDoc(doc(verified("bob"), "users", "maya", "documents", "doc-07"), localDocument()));
+    await assertFails(getDoc(doc(verified("bob"), "users", "maya", "documents", "doc-00")));
+    await assertSucceeds(deleteDoc(ref));
+  });
+
+  test("withdrawn consent blocks new extracted text but never blocks deleting it", async () => {
+    const maya = verified("maya");
+    await assertSucceeds(setDoc(doc(maya, "users", "maya"), { ...profile(), ...consent(true) }));
+    await assertSucceeds(setDoc(doc(maya, "users", "maya", "documents", "doc-10"), localDocument()));
+    await assertSucceeds(setDoc(doc(maya, "users", "maya"), consent(false), { merge: true }));
+    await assertFails(setDoc(doc(maya, "users", "maya", "documents", "doc-11"), localDocument()));
+    await assertSucceeds(deleteDoc(doc(unverified("maya"), "users", "maya", "documents", "doc-10")));
+  });
+
+  test("saved resources and saved updates are bounded, owner-only, and removable", async () => {
+    const maya = verified("maya");
+    await assertSucceeds(setDoc(doc(maya, "users", "maya", "savedResources", "r1"), resource()));
+    await assertFails(setDoc(doc(maya, "users", "maya", "savedResources", "r2"), resource({ url: "http://insecure.example" })));
+    await assertFails(setDoc(doc(maya, "users", "maya", "savedResources", "r3"), resource({ url: "javascript:alert(1)" })));
+    const saved = doc(maya, "users", "maya", "savedNews", "federal-register-2026-14439");
+    await assertSucceeds(setDoc(saved, { newsItemId: "federal-register-2026-14439", createdAt: now() }));
+    await assertFails(setDoc(doc(maya, "users", "maya", "savedNews", "other"), { newsItemId: "federal-register-2026-14439", createdAt: now() }));
+    await assertFails(setDoc(doc(maya, "users", "maya", "savedNews", "note"), { newsItemId: "note", createdAt: now(), note: "x" }));
+    await assertFails(getDoc(doc(verified("bob"), "users", "maya", "savedNews", "federal-register-2026-14439")));
+    await assertSucceeds(deleteDoc(saved));
+    await assertSucceeds(deleteDoc(doc(maya, "users", "maya", "savedResources", "r1")));
+  });
+
+  test("an owner can delete the whole inventory, even before verifying, and nobody else can", async () => {
+    const maya = verified("maya");
+    await assertSucceeds(setDoc(doc(maya, "users", "maya"), profile()));
+    await assertSucceeds(setDoc(doc(maya, "users", "maya", "tasks", "t1"), task()));
+    await assertFails(deleteDoc(doc(verified("bob"), "users", "maya", "tasks", "t1")));
+    await assertFails(deleteDoc(doc(verified("bob"), "users", "maya")));
+    await assertSucceeds(deleteDoc(doc(unverified("maya"), "users", "maya", "tasks", "t1")));
+    await assertSucceeds(deleteDoc(doc(unverified("maya"), "users", "maya")));
+  });
+
+  test("every collection the production API owns is closed in the zero-cost project", async () => {
+    const maya = verified("maya");
+    for (const path of [
+      ["newsItems", "x"], ["reviewQueue", "x"], ["users", "maya", "notifications", "x"], ["users", "maya", "conversations", "x"],
+      ["users", "maya", "newsPreferences", "x"], ["users", "maya", "ragChunks", "x"], ["users", "maya", "pushSubscriptions", "x"],
+    ]) {
+      await assertFails(getDoc(doc(maya, ...path)));
+      await assertFails(setDoc(doc(maya, ...path), { value: 1 }));
+    }
+  });
+});
