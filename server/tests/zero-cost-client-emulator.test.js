@@ -75,7 +75,7 @@ describeEmulator("zero-cost browser data layer against its rules", () => {
     expect(order).toEqual(["reauthenticated", "identity deleted"]);
     await environment.withSecurityRulesDisabled(async (context) => {
       const database = context.firestore();
-      for (const name of ["tasks", "documents", "savedResources", "savedNews"]) {
+      for (const name of ["tasks", "documents", "savedResources", "savedNews", "trackedDates", "contacts", "planner"]) {
         expect((await sdk.getDocs(sdk.collection(database, "users", "maya", name))).size, name).toBe(0);
       }
       expect((await sdk.getDoc(sdk.doc(database, "users", "maya"))).exists()).toBe(false);

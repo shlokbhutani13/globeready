@@ -26,8 +26,59 @@ function boundedText(value, max, label) {
   return text;
 }
 
+export const trackedDateKinds = ["passport", "visa", "i20-ds2019", "travel-signature", "insurance", "lease", "enrollment", "other"];
+export const contactRoles = ["dso", "international-office", "campus-safety", "insurance", "embassy", "personal", "other"];
+export const topicChoices = ["general", "status", "forms-fees", "employment", "travel-entry", "taxes-social-security", "emergency", "campus-life", "university"];
+export const maxContacts = 50;
+export const maxPlannerHave = 200;
+export const maxPlannerCustom = 40;
+
+function optionalBounded(value, max, label) {
+  const text = typeof value === "string" ? value.trim() : "";
+  if (text.length > max) throw new Error(`${label} must be ${max} characters or fewer.`);
+  return text;
+}
+
+export function validTrackedDate(input = {}) {
+  const date = typeof input.date === "string" ? input.date.trim() : "";
+  if (!datePattern.test(date) || Number.isNaN(Date.parse(`${date}T00:00:00Z`))) throw new Error("Date must be a real date (YYYY-MM-DD).");
+  if (!trackedDateKinds.includes(input.kind)) throw new Error("Choose a valid date type.");
+  const remindDays = input.remindDays === undefined ? 30 : input.remindDays;
+  if (!Number.isInteger(remindDays) || remindDays < 0 || remindDays > 365) throw new Error("Remind days must be a whole number from 0 to 365.");
+  return {
+    label: boundedText(input.label, 120, "Label"), kind: input.kind, date,
+    notes: optionalBounded(input.notes, 500, "Notes"), remindDays,
+  };
+}
+
+export function validContact(input = {}) {
+  if (!contactRoles.includes(input.role)) throw new Error("Choose a valid contact role.");
+  const email = optionalBounded(input.email, 254, "Email");
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(email)) throw new Error("Enter a valid email address.");
+  const name = typeof input.name === "string" ? input.name.trim() : "";
+  if (!name || name.length > 120) throw new Error("A contact name of 1 to 120 characters is required.");
+  return { name, role: input.role, phone: optionalBounded(input.phone, 40, "Phone"), email, notes: optionalBounded(input.notes, 500, "Notes") };
+}
+
+export function validPlanner(input = {}) {
+  const have = Array.isArray(input.have) ? [...new Set(input.have.filter((id) => typeof id === "string" && id.length > 0 && id.length <= 60))] : [];
+  if (have.length > maxPlannerHave) throw new Error(`A checklist can track up to ${maxPlannerHave} items.`);
+  const custom = Array.isArray(input.custom) ? input.custom : [];
+  if (custom.length > maxPlannerCustom) throw new Error(`You can add up to ${maxPlannerCustom} custom items.`);
+  return {
+    have,
+    custom: custom.map((item) => ({ id: boundedText(item?.id, 60, "Item id"), label: boundedText(item?.label, 120, "Item label"), ...(typeof item?.section === "string" ? { section: item.section.slice(0, 40) } : {}) })),
+  };
+}
+
 export function validProfileFields(input = {}) {
   const profile = {};
+  if (input.topics !== undefined && input.topics !== null) {
+    if (!Array.isArray(input.topics)) throw new Error("Topics must be a list.");
+    const topics = [...new Set(input.topics)];
+    if (topics.some((topic) => !topicChoices.includes(topic))) throw new Error("Choose topics from the list.");
+    profile.topics = topics.slice(0, 12);
+  }
   for (const [field, max] of Object.entries(profileLimits)) {
     if (input[field] === undefined || input[field] === null) continue;
     const value = String(input[field]).trim();
@@ -126,6 +177,34 @@ export function createZeroCostDataStore({ firestore, uid, sdk = defaultSdk }) {
     removeResource(resourceId) {
       if (typeof resourceId !== "string" || !resourceId) throw new Error("Saved resource is invalid.");
       return sdk.deleteDoc(sdk.doc(firestore, "users", uid, "savedResources", resourceId));
+    },
+    async createTrackedDate(input = {}) {
+      const record = { ...validTrackedDate(input), createdAt: timestamp(), updatedAt: timestamp() };
+      const reference = await sdk.addDoc(userCollection("trackedDates"), record);
+      return { id: reference.id, ...record };
+    },
+    updateTrackedDate(id, input = {}) {
+      return sdk.setDoc(sdk.doc(firestore, "users", uid, "trackedDates", id), { ...validTrackedDate(input), createdAt: input.createdAt, updatedAt: timestamp() });
+    },
+    removeTrackedDate(id) { return sdk.deleteDoc(sdk.doc(firestore, "users", uid, "trackedDates", id)); },
+    async createContact(input = {}, existingCount = 0) {
+      if (existingCount >= maxContacts) throw new Error(`The free beta keeps up to ${maxContacts} contacts. Delete one to add another.`);
+      const record = { ...validContact(input), createdAt: timestamp(), updatedAt: timestamp() };
+      const reference = await sdk.addDoc(userCollection("contacts"), record);
+      return { id: reference.id, ...record };
+    },
+    updateContact(id, input = {}) {
+      return sdk.setDoc(sdk.doc(firestore, "users", uid, "contacts", id), { ...validContact(input), createdAt: input.createdAt, updatedAt: timestamp() });
+    },
+    removeContact(id) { return sdk.deleteDoc(sdk.doc(firestore, "users", uid, "contacts", id)); },
+    async savePlanner(plannerId, input = {}) {
+      if (!["journey", "travel"].includes(plannerId)) throw new Error("Unknown planner.");
+      const value = validPlanner(input);
+      await sdk.setDoc(sdk.doc(firestore, "users", uid, "planner", plannerId), { ...value, updatedAt: timestamp() });
+      return value;
+    },
+    subscribeRecords(name, onList, onError) {
+      return sdk.onSnapshot(userCollection(name), (snapshot) => onList(snapshot.docs.map((item) => ({ id: item.id, ...(item.data ? item.data() : {}) }))), onError);
     },
     async saveLocalDocument({ id, metadata = {}, chunks = [], pageCount, pagesWithText }) {
       if (!/^doc-[0-4]\d$/u.test(id || "")) throw new Error("Document slot is invalid.");

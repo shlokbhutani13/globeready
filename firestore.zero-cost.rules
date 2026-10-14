@@ -47,7 +47,7 @@ service cloud.firestore {
     function validProfile(data) {
       return data.keys().hasOnly([
           'fullName', 'homeCountry', 'university', 'universityId', 'officialUniversityDomain', 'degreeLevel',
-          'program', 'visaType', 'journeyStage', 'startDate', 'graduationDate', 'timeZone', 'updatedAt', 'consent'
+          'program', 'visaType', 'journeyStage', 'startDate', 'graduationDate', 'timeZone', 'topics', 'updatedAt', 'consent'
         ])
         && stampedNow(data, 'updatedAt')
         && optionalText(data, 'fullName', 200)
@@ -60,6 +60,7 @@ service cloud.firestore {
         && optionalText(data, 'visaType', 40)
         && optionalText(data, 'journeyStage', 80)
         && optionalText(data, 'timeZone', 64)
+        && (!('topics' in data) || (data.topics is list && data.topics.size() <= 12))
         && optionalDate(data, 'startDate')
         && optionalDate(data, 'graduationDate')
         && (!('consent' in data) || validConsent(data.consent));
@@ -110,6 +111,36 @@ service cloud.firestore {
         && stampedNow(data, 'updatedAt');
     }
 
+    // Dates the student types in by hand (passport, visa, I-20 and so on). Nothing is read from documents.
+    function validTrackedDateFields(data) {
+      return data.keys().hasOnly(['label', 'kind', 'date', 'notes', 'remindDays', 'createdAt', 'updatedAt'])
+        && data.label is string && data.label.size() >= 1 && data.label.size() <= 120
+        && data.kind in ['passport', 'visa', 'i20-ds2019', 'travel-signature', 'insurance', 'lease', 'enrollment', 'other']
+        && data.date is string && data.date.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')
+        && optionalText(data, 'notes', 500)
+        && data.remindDays is int && data.remindDays >= 0 && data.remindDays <= 365
+        && stampedNow(data, 'updatedAt');
+    }
+
+    // Private contacts: school officials, campus safety, insurance, consulate, and trusted people.
+    function validContactFields(data) {
+      return data.keys().hasOnly(['name', 'role', 'phone', 'email', 'notes', 'createdAt', 'updatedAt'])
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 120
+        && data.role in ['dso', 'international-office', 'campus-safety', 'insurance', 'embassy', 'personal', 'other']
+        && optionalText(data, 'phone', 40)
+        && optionalText(data, 'email', 254)
+        && optionalText(data, 'notes', 500)
+        && stampedNow(data, 'updatedAt');
+    }
+
+    // Checklist progress for the journey planner and travel workspace. Element contents are checked in the browser.
+    function validPlannerDoc(data) {
+      return data.keys().hasOnly(['have', 'custom', 'updatedAt'])
+        && data.have is list && data.have.size() <= 200
+        && data.custom is list && data.custom.size() <= 40
+        && stampedNow(data, 'updatedAt');
+    }
+
     match /users/{uid} {
       allow read: if isOwner(uid);
       allow create, update: if canWrite(uid) && validProfile(request.resource.data);
@@ -141,6 +172,30 @@ service cloud.firestore {
         allow read: if isOwner(uid);
         allow create: if canWrite(uid) && resourceId.size() <= 128 && validSavedResource(request.resource.data);
         allow update: if false;
+        allow delete: if isOwner(uid);
+      }
+
+      match /trackedDates/{dateId} {
+        allow read: if isOwner(uid);
+        allow create: if canWrite(uid) && dateId.size() <= 128 && validTrackedDateFields(request.resource.data)
+          && stampedNow(request.resource.data, 'createdAt');
+        allow update: if canWrite(uid) && validTrackedDateFields(request.resource.data)
+          && request.resource.data.createdAt == resource.data.createdAt;
+        allow delete: if isOwner(uid);
+      }
+
+      match /contacts/{contactId} {
+        allow read: if isOwner(uid);
+        allow create: if canWrite(uid) && contactId.size() <= 128 && validContactFields(request.resource.data)
+          && stampedNow(request.resource.data, 'createdAt');
+        allow update: if canWrite(uid) && validContactFields(request.resource.data)
+          && request.resource.data.createdAt == resource.data.createdAt;
+        allow delete: if isOwner(uid);
+      }
+
+      match /planner/{plannerId} {
+        allow read: if isOwner(uid);
+        allow create, update: if canWrite(uid) && plannerId in ['journey', 'travel'] && validPlannerDoc(request.resource.data);
         allow delete: if isOwner(uid);
       }
 
