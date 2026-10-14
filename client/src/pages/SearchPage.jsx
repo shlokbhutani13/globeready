@@ -4,17 +4,17 @@ import PageHeader from "../components/ui/PageHeader";
 import EmptyState from "../components/ui/EmptyState";
 import { searchEverything } from "../lib/global-search";
 
-export default function SearchPage({ news = [], guides = [], tasks = [], documents = [], newsLoading = false }) {
+export default function SearchPage({ news = [], guides = [], tasks = [], documents = [], cases = [], newsLoading = false }) {
   const [params] = useSearchParams();
   const query = params.get("q") || "";
-  const result = useMemo(() => searchEverything(query, { news, guides, tasks, documents }), [query, news, guides, tasks, documents]);
+  const result = useMemo(() => searchEverything(query, { news, guides, tasks, documents, cases }), [query, news, guides, tasks, documents, cases]);
 
   return (
     <div className="page">
       <PageHeader
         eyebrow="Search"
         title={query ? `Results for “${query}”` : "Search"}
-        description="Searches reviewed updates, guides, task titles and document names. It never looks inside your documents. To find a passage inside one, use Ask, which works only while document reading is on."
+        description="Searches reviewed updates, rules and forms, guides, resources, case names, task titles and document names. It never looks inside your documents or notes. To find a passage inside one, use Ask, which works only while document reading is on."
         action={<Link className="button secondary" to="/assistant">Search inside documents</Link>}
       />
       {!query.trim() && <EmptyState title="Type something to search">Use the search box at the top of the page.</EmptyState>}

@@ -11,10 +11,21 @@ const data = {
 describe("global search", () => {
   test("finds updates, guides, tasks and document names by title", () => {
     const result = searchEverything("sevis", data);
-    expect(result.groups.map((group) => group.id)).toEqual(["tasks"]);
+    expect(result.groups.map((group) => group.id)).toEqual(["rules", "tasks"]);
     expect(searchEverything("bank", data).groups[0].results[0]).toMatchObject({ title: "Set up U.S. banking", to: "/guides" });
-    expect(searchEverything("duration status", data).groups[0].results[0].to).toBe("/news/fr-1");
+    expect(searchEverything("duration status", data).groups.find((group) => group.id === "news").results[0].to).toBe("/news/fr-1");
     expect(searchEverything("maya", data).groups[0]).toMatchObject({ id: "documents", total: 1 });
+  });
+
+  test("finds rules, forms, safety resources and case names, never case notes or receipt numbers", () => {
+    const cases = [{ id: "c1", title: "Post-completion OPT", formNumber: "I-765", receiptNumber: "IOE1234567890", notes: "attorney secret-word" }];
+    expect(searchEverything("8843", { cases }).groups[0]).toMatchObject({ id: "rules" });
+    expect(searchEverything("8843", { cases }).groups[0].results[0].to).toBe("/rules");
+    expect(searchEverything("rental scam", { cases }).groups[0]).toMatchObject({ id: "resources" });
+    expect(searchEverything("rental scam", { cases }).groups[0].results.map((entry) => entry.id)).toContain("ftc-rental-scams");
+    expect(searchEverything("post-completion", { cases }).groups.find((group) => group.id === "cases").results[0]).toMatchObject({ id: "c1", detail: "Form I-765", to: "/cases" });
+    expect(searchEverything("IOE1234567890", { cases }).total).toBe(0);
+    expect(searchEverything("secret-word", { cases }).total).toBe(0);
   });
 
   test("never searches inside documents", () => {
@@ -26,7 +37,8 @@ describe("global search", () => {
     expect(searchEverything("  ", data).total).toBe(0);
     const many = { tasks: Array.from({ length: 20 }, (_, i) => ({ id: `t${i}`, title: `Pay fee ${i}` })) };
     const grouped = searchEverything("fee", many, { perGroup: 5 });
-    expect(grouped.groups[0].results).toHaveLength(5);
-    expect(grouped.groups[0].total).toBe(20);
+    const tasksGroup = grouped.groups.find((group) => group.id === "tasks");
+    expect(tasksGroup.results).toHaveLength(5);
+    expect(tasksGroup.total).toBe(20);
   });
 });

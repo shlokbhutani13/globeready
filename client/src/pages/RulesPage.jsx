@@ -9,12 +9,13 @@ import RelevanceNote from "../components/RelevanceNote";
 import Disclaimer from "../components/Disclaimer";
 import { effectiveLabel, filterRules, relatedRules, rulesFilters, rulesLibrary, supersessionChain } from "../data/rules-library";
 import { friendlyError } from "../lib/friendly-error";
+import { tasksLinkedTo } from "../lib/links";
 
 const kindLabel = Object.fromEntries(rulesFilters.kinds.map((kind) => [kind.id, kind.label]));
 const statusLabel = { current: "Current rule", reference: "Ongoing reference", superseded: "Superseded" };
 const blankFilters = { query: "", kind: "", status: "", visa: "", topic: "", hideSuperseded: false };
 
-export default function RulesPage({ profile = {}, onAddTasks, initialFilters = {} }) {
+export default function RulesPage({ profile = {}, tasks = [], onAddTasks, initialFilters = {} }) {
   const [filters, setFilters] = useState({ ...blankFilters, ...initialFilters });
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -91,6 +92,11 @@ export default function RulesPage({ profile = {}, onAddTasks, initialFilters = {
                   {chain.length > 1 && <ol className="supersession-chain" aria-label="Replacement history">{chain.map((link) => <li key={link.id}>{link.title}{link.id === entry.id ? " (this entry)" : ""}</li>)}</ol>}
                   <RelevanceNote item={entry} profile={profile} />
                   {(entry.newsIds || []).length > 0 && <p className="record-meta"><Link to={`/news/${encodeURIComponent(entry.newsIds[0])}`}>Read the related update</Link></p>}
+                  {tasksLinkedTo(tasks, "rule", entry.id).length > 0 && (
+                    <ul className="chip-row" aria-label={`Tasks for ${entry.title}`}>
+                      {tasksLinkedTo(tasks, "rule", entry.id).map((task) => <li key={task.id}><Link className="chip" to="/tasks">{task.completed ? "Done: " : "Task: "}{task.title}</Link></li>)}
+                    </ul>
+                  )}
                   {related.length > 0 && <p className="record-meta">Related: {related.map((other) => other.title).join("; ")}</p>}
                 </div>
                 <div className="record-actions">
