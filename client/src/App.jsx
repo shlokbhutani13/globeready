@@ -1,4 +1,5 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { createReminderReadStore, deriveReminders } from "./lib/reminders";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import AppShell from "./components/AppShell";
 import LoginPage from "./pages/LoginPage";
@@ -98,6 +99,24 @@ export default function App() {
     };
   }, [auth.user?.uid]);
 
+  // Free beta: reminders are worked out in this browser from the student's own tasks. They exist only while the app
+  // is open (checked every 15 minutes and when the window regains focus); nothing runs in the background and nothing
+  // is sent by email or push. Read state is kept on this device only.
+  const [reminderClock, setReminderClock] = useState(() => new Date());
+  const [readReminderIds, setReadReminderIds] = useState(() => new Set());
+  useEffect(() => {
+    if (!auth.user || !zeroCostPublicMode) return undefined;
+    setReadReminderIds(createReminderReadStore(auth.user.uid).read());
+    const tick = () => setReminderClock(new Date());
+    const timer = setInterval(tick, 15 * 60_000);
+    window.addEventListener("focus", tick);
+    return () => { clearInterval(timer); window.removeEventListener("focus", tick); };
+  }, [auth.user?.uid]);
+  const localReminders = useMemo(
+    () => (zeroCostPublicMode ? deriveReminders(tasks, reminderClock).map((reminder) => ({ ...reminder, read: readReminderIds.has(reminder.id) })) : []),
+    [tasks, reminderClock, readReminderIds],
+  );
+
   // Consent is loaded before any early return, so every render calls the same hooks in the same order.
   useEffect(() => {
     if (!auth.user) return;
@@ -180,7 +199,8 @@ export default function App() {
   const live = Boolean(auth.user);
   const zeroCostStore = live && zeroCostPublicMode ? createZeroCostDataStore({ firestore: db, uid: auth.user.uid }) : null;
   const savedNewsIds = new Set(savedNews.map((item) => item.id));
-  const unreadNotifications = notifications.filter((notification) => !notification.read).length;
+  const shownNotifications = zeroCostPublicMode ? localReminders : notifications;
+  const unreadNotifications = shownNotifications.filter((notification) => !notification.read).length;
   const topNews = rankNewsItems(newsItems, profile).slice(0, 2);
   // Ask searches stored text only while document reading is on; withdrawing consent stops it immediately.
   const localChunks = zeroCostPublicMode && consent?.documents === true
@@ -352,10 +372,18 @@ export default function App() {
     }
   };
   const markRead = async (notification) => {
+    if (zeroCostPublicMode) {
+      setReadReminderIds(createReminderReadStore(auth.user.uid).markRead([notification.id]));
+      return;
+    }
     if (!live) return;
     markNotificationRead(auth.user.uid, notification.id).catch((error) => setAppError(error.message));
   };
   const markAllRead = async () => {
+    if (zeroCostPublicMode) {
+      setReadReminderIds(createReminderReadStore(auth.user.uid).markRead(localReminders.map((reminder) => reminder.id)));
+      return;
+    }
     if (!live) return;
     markAllNotificationsRead(auth.user.uid, notifications).catch((error) => setAppError(error.message));
   };
@@ -391,7 +419,7 @@ export default function App() {
           <Route path="tasks" element={<TasksPage tasks={tasks} onAdd={addTask} onToggle={changeTask} onDelete={deleteTask} />} />
           <Route path="guides" element={<GuidesPage onSave={saveGuide} savedUrls={savedResources.map((resource) => resource.url)} />} />
           <Route path="assistant" element={<AssistantPage localMode={zeroCostPublicMode} documentsAllowed={!zeroCostPublicMode || consent?.documents === true} localChunks={localChunks} documents={documents.filter((document) => document.analysisStatus === "indexed")} />} />
-          <Route path="notifications" element={<NotificationsPage notifications={notifications} onMarkRead={markRead} onMarkAllRead={markAllRead} />} />
+          <Route path="notifications" element={<NotificationsPage localMode={zeroCostPublicMode} notifications={shownNotifications} onMarkRead={markRead} onMarkAllRead={markAllRead} />} />
           <Route path="profile" element={<ProfilePage profile={profile} onSave={updateProfile} />} />
           <Route path="settings" element={(
             <SettingsPage

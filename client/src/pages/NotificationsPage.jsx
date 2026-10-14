@@ -1,7 +1,7 @@
 import React from "react";
 import { Bell, Check } from "lucide-react";
 
-export default function NotificationsPage({ notifications = [], onMarkRead, onMarkAllRead }) {
+export default function NotificationsPage({ notifications = [], onMarkRead, onMarkAllRead, localMode = false }) {
   const unreadCount = notifications.filter((notification) => !notification.read).length;
 
   return (
@@ -10,7 +10,8 @@ export default function NotificationsPage({ notifications = [], onMarkRead, onMa
         <div>
           <span className="eyebrow">Notification inbox</span>
           <h1>Notifications</h1>
-          <p>Reminders about your plan and matched updates. {unreadCount > 0 ? `${unreadCount} unread.` : "No unread reminders."}</p>
+          <p>{localMode ? "Reminders for tasks that are overdue or due within three days." : "Reminders about your plan and matched updates."} {unreadCount > 0 ? `${unreadCount} unread.` : "No unread reminders."}</p>
+          {localMode && <p className="muted-note">Shown only while GlobeReady is open. The free beta sends no email or push notifications, and read marks stay on this device.</p>}
         </div>
         {unreadCount > 0 && (
           <button className="button secondary" onClick={onMarkAllRead}>
@@ -22,7 +23,7 @@ export default function NotificationsPage({ notifications = [], onMarkRead, onMa
       {notifications.length === 0 ? (
         <div className="empty-state">
           <h3>Nothing here yet</h3>
-          <p>Task reminders and matched updates will appear here.</p>
+          <p>{localMode ? "Tasks that are overdue or due within three days will appear here while the app is open." : "Task reminders and matched updates will appear here."}</p>
         </div>
       ) : (
         <section className="panel notification-list">
