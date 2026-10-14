@@ -72,6 +72,10 @@ describe("appointment summary", () => {
   it("is empty until the student picks something", () => {
     expect(buildSummary({ data, now, coverage: { name: "X University" }, profile: { visaType: "F-1" } })).toMatchObject({ empty: true, sections: [] });
   });
+  it("uses the student's local calendar date rather than UTC", () => {
+    const lateEvening = new Date(2026, 9, 14, 23, 30);
+    expect(buildSummary({ data, now: lateEvening }).header.prepared).toBe("2026-10-14");
+  });
   it("masks receipt numbers and leaves case notes out by default", () => {
     const text = summaryText(buildSummary({ data, now, selection: { caseIds: ["k1"] } }));
     expect(text).not.toContain("IOE0912345678");

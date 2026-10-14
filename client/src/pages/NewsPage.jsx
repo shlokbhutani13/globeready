@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useRef, useState } from "react";
 import { RefreshCcw } from "lucide-react";
 import PageHelp from "../components/PageHelp";
 import PageHeader from "../components/ui/PageHeader";
@@ -25,6 +25,12 @@ export const legalStateOptions = [
   "superseded", "withdrawn", "expired", "informational",
 ];
 
+const remember = (previous, current) => {
+  const values = new Map(previous.map((entry) => [entry.id, entry]));
+  for (const entry of current) values.set(entry.id, entry);
+  return [...values.values()].sort((left, right) => left.label.localeCompare(right.label));
+};
+
 export default function NewsPage({
   items = [], loading = false, error = "", onRetry,
   filters = {}, onFilterChange,
@@ -39,10 +45,16 @@ export default function NewsPage({
   const [flags, setFlags] = useState({});
   const [seen, setSeen] = useState(() => (zeroCostMode ? loadSeen(storage, storageScope) : {}));
   const [searches, setSearches] = useState(() => (zeroCostMode ? loadSearches(storage, storageScope) : []));
+  const optionCache = useRef({ scope: storageScope, topics: [], visas: [], sources: [] });
+  if (optionCache.current.scope !== storageScope) optionCache.current = { scope: storageScope, topics: [], visas: [], sources: [] };
   const allRanked = rankNewsItems(items, profile);
   const discovered = zeroCostMode ? applyDiscovery(allRanked, flags, { profile, seen, today: localDateKey(new Date()) }) : allRanked;
   const ranked = savedOnly ? discovered.filter((item) => savedIds.has(item.id)) : discovered;
-  const options = useMemo(() => discoveryOptions(items), [items]);
+  const foundOptions = discoveryOptions(items);
+  optionCache.current.topics = remember(optionCache.current.topics, foundOptions.topics);
+  optionCache.current.visas = remember(optionCache.current.visas, foundOptions.visas);
+  optionCache.current.sources = remember(optionCache.current.sources, sourcesFromItems(items));
+  const options = optionCache.current;
   const unreadCount = items.filter((item) => isUnread(item, seen) || isUpdatedSinceSeen(item, seen)).length;
   const setFlag = (name, value) => setFlags((current) => ({ ...current, [name]: value || undefined }));
   const currentSearch = () => mergeFilters(filters, flags);
@@ -65,7 +77,7 @@ export default function NewsPage({
       <SubNav label="Updates sections" links={updatesLinks} />
       <PageHelp id="news" />
 
-      <NewsToolbar filters={filters} onChange={onFilterChange} sources={zeroCostMode ? sourcesFromItems(items) : undefined} />
+      <NewsToolbar filters={filters} onChange={onFilterChange} sources={zeroCostMode ? options.sources : undefined} />
 
       {zeroCostMode && (
         <NewsDiscovery

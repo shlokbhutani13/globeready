@@ -57,7 +57,7 @@ describe("setup guide", () => {
     expect(setupProgress(steps).next.id).toBe("contact");
   });
   test("a DSO or international office contact counts; the optional step never blocks completion", () => {
-    const steps = setupSteps({ profile: { visaType: "F-1", university: "X", journeyStage: "Y", topics: ["status"] }, dates: [{}], contacts: [{ role: "international-office" }], tasks: [{}] });
+    const steps = setupSteps({ profile: { visaType: "F-1", university: "X", journeyStage: "Y", topics: ["status"] }, dates: [{}], contacts: [{ role: "international-office" }], journeyHave: ["f1-arrival"] });
     const progress = setupProgress(steps);
     expect(progress).toMatchObject({ done: 5, total: 5, complete: true, next: null });
     expect(steps.find((step) => step.id === "documents").done).toBe(false);

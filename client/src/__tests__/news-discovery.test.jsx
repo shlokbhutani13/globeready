@@ -10,7 +10,7 @@ import { explainNews } from "../lib/news-explainer";
 afterEach(cleanup);
 const memory = () => { const m = new Map(); return { getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, v), removeItem: (k) => m.delete(k), _m: m }; };
 const rule = { id: "a", title: "Fixed admission periods", publisher: "DHS", publishedAt: "2026-07-17", verifiedAt: "2026-07-20", effectiveAt: "2099-09-15", legalState: "effective", sourceId: "federal-register", sourceVerified: true, topics: ["status", "employment"], visaTypes: ["f-1", "j-1"], journeyStages: ["enrolled", "opt"], shortSummary: "DHS replaced duration of status.", detailSections: [{ heading: "What changed", body: "Fixed periods now apply." }] };
-const old = { id: "b", title: "Travel notice", publishedAt: "2026-01-01", effectiveAt: "2026-02-01", legalState: "informational", topics: ["travel"], visaTypes: ["m-1"], sourceVerified: true };
+const old = { id: "b", title: "Travel notice", publishedAt: "2026-01-01", effectiveAt: "2026-02-01", legalState: "informational", sourceId: "uscis", topics: ["travel"], visaTypes: ["m-1"], sourceVerified: true };
 
 describe("discovery logic", () => {
   it("offers only topics and visas that exist in the feed", () => {
@@ -102,6 +102,16 @@ describe("NewsPage discovery (free beta)", () => {
     fireEvent.click(screen.getByLabelText("Has an upcoming effective date"));
     expect(screen.getByText("1 stories")).toBeTruthy();
     expect(screen.getByText(/not a deadline for you/u)).toBeTruthy();
+  });
+  it("keeps the original topic, visa and source choices after the feed is narrowed", () => {
+    const store = memory();
+    const { rerender } = render(<MemoryRouter><NewsPage zeroCostMode items={[rule, old]} filters={{}} onFilterChange={() => {}} storage={store} storageScope="u" savedIds={new Set()} /></MemoryRouter>);
+    expect(screen.getByLabelText("Visa").querySelector('option[value="m-1"]')).toBeTruthy();
+    expect(screen.getByLabelText("Source").querySelector('option[value="uscis"]')).toBeTruthy();
+    rerender(<MemoryRouter><NewsPage zeroCostMode items={[rule]} filters={{ topic: "status" }} onFilterChange={() => {}} storage={store} storageScope="u" savedIds={new Set()} /></MemoryRouter>);
+    expect(screen.getByLabelText("Topic").querySelector('option[value="travel"]')).toBeTruthy();
+    expect(screen.getByLabelText("Visa").querySelector('option[value="m-1"]')).toBeTruthy();
+    expect(screen.getByLabelText("Source").querySelector('option[value="uscis"]')).toBeTruthy();
   });
   it("saves a search, shows it, applies it and removes it", () => {
     const changes = [];

@@ -1,4 +1,5 @@
 import { caseKindLabel, caseStatusLabel, entryTypeLabel } from "./cases";
+import { localDateKey } from "./reminders";
 import { contactRoleLabels } from "../pages/ContactsPage";
 
 // A one-page summary the student can take to an advising appointment. It contains only what the student explicitly
@@ -14,7 +15,7 @@ export function maskReceipt(value) {
 export function buildSummary({ coverage = {}, profile = {}, selection = {}, data = {}, options = {}, now = new Date() } = {}) {
   const pick = (list, ids) => (list || []).filter((entry) => (ids || []).includes(entry.id));
   const sections = [];
-  const header = { title: "Advising appointment summary", university: coverage.name || "", prepared: now.toISOString().slice(0, 10) };
+  const header = { title: "Advising appointment summary", university: coverage.name || "", prepared: localDateKey(now) };
 
   if (options.includeProfile) {
     const lines = [["Visa type", profile.visaType], ["Journey stage", profile.journeyStage], ["University", coverage.name]].filter(([, value]) => value && String(value).trim());

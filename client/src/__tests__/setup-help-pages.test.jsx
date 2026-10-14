@@ -19,9 +19,13 @@ describe("SetupPage", () => {
     expect(screen.getByRole("link", { name: /Open profile/u }).getAttribute("href")).toBe("/profile");
   });
   it("marks finished steps done and celebrates completion", () => {
-    wrap(<SetupPage profile={{ visaType: "F-1", university: "X", journeyStage: "Y", topics: ["status"] }} dates={[{}]} contacts={[{ role: "dso" }]} tasks={[{}]} />);
+    wrap(<SetupPage profile={{ visaType: "F-1", university: "X", journeyStage: "Y", topics: ["status"] }} dates={[{}]} contacts={[{ role: "dso" }]} journeyHave={["f1-arrival"]} />);
     expect(document.querySelector(".setup-progress").textContent).toContain("5 of 5");
     expect(screen.getByText(/finished the basics/u)).toBeTruthy();
+  });
+  it("does not count an unrelated task as choosing a journey step", () => {
+    wrap(<SetupPage tasks={[{ id: "personal", title: "Buy groceries" }]} />);
+    expect(screen.getByRole("heading", { name: "Pick your first steps" }).closest("li").textContent).toContain("Not started");
   });
   it("says suggestions are not legal conclusions", () => {
     wrap(<SetupPage />);
@@ -33,7 +37,10 @@ describe("HelpPage", () => {
   it("explains storage, lists terms and filters them", () => {
     wrap(<HelpPage zeroCostMode />);
     expect(screen.getByRole("heading", { level: 1, name: "Help and glossary" })).toBeTruthy();
-    expect(screen.getByText(/Never collected:/u)).toBeTruthy();
+    expect(document.body.textContent).toMatch(/extracted document text can be saved in your private account when document reading is on/iu);
+    expect(document.body.textContent).toMatch(/Turning document reading off stops search but does not delete text already saved/iu);
+    expect(document.body.textContent).toMatch(/Original files are never uploaded/iu);
+    expect(document.body.textContent).not.toMatch(/Original files and their text are not uploaded/iu);
     expect(screen.getByText(new RegExp(`${glossary.length} of ${glossary.length}`, "u"))).toBeTruthy();
     fireEvent.change(screen.getByLabelText("Search terms"), { target: { value: "work authorization" } });
     expect(screen.getByText("EAD (Employment Authorization Document)")).toBeTruthy();
