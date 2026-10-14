@@ -20,6 +20,8 @@ import TasksPage from "./pages/TasksPage";
 import GuidesPage from "./pages/GuidesPage";
 import RulesPage from "./pages/RulesPage";
 import CasesPage from "./pages/CasesPage";
+import ForYouPage from "./pages/ForYouPage";
+import UniversityPage from "./pages/UniversityPage";
 import { caseDates } from "./lib/cases";
 import ResourcesPage from "./pages/ResourcesPage";
 import AssistantPage from "./pages/AssistantPage";
@@ -474,6 +476,8 @@ export default function App() {
             <Route path="cases" element={<CasesPage cases={records.cases} tasks={tasks} now={reminderClock} onCreate={(input, count) => zeroCostStore.createCase(input, count)} onUpdate={(entry, input) => zeroCostStore.updateCase(entry.id, { ...input, createdAt: entry.createdAt })} onAddEntry={(entry, item) => zeroCostStore.addCaseEntry(entry, item)} onRemoveEntry={(entry, index) => zeroCostStore.removeCaseEntry(entry, index)} onRemove={(id) => zeroCostStore.removeCase(id)} onAddTasks={addTasksFromItems} />} />
             <Route path="contacts" element={<ContactsPage contacts={records.contacts} onCreate={(input, count) => zeroCostStore.createContact(input, count)} onUpdate={(entry, input) => zeroCostStore.updateContact(entry.id, { ...input, createdAt: entry.createdAt })} onRemove={(id) => zeroCostStore.removeContact(id)} />} />
           </>}
+          <Route path="for-you" element={<ForYouPage profile={profile} news={newsItems} newsLoading={newsLoading} tasks={tasks} dates={zeroCostPublicMode ? watchedDates : []} now={reminderClock} />} />
+          <Route path="university" element={<UniversityPage profile={profile} news={newsItems} contacts={zeroCostPublicMode ? records.contacts : []} savedResources={savedResources} onSaveLink={zeroCostStore ? (resource) => zeroCostStore.saveResource(resource) : undefined} onRemoveLink={zeroCostStore ? (id) => zeroCostStore.removeResource(id) : undefined} />} />
           <Route path="rules" element={<RulesPage profile={profile} onAddTasks={zeroCostStore ? addTasksFromItems : undefined} />} />
           <Route path="resources" element={<ResourcesPage />} />
           <Route path="guides" element={<GuidesPage onSave={saveGuide} onRemove={zeroCostStore ? (id) => zeroCostStore.removeResource(id) : undefined} savedResources={savedResources} savedUrls={savedResources.map((resource) => resource.url)} />} />

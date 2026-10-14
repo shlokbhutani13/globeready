@@ -17,6 +17,11 @@ import SearchPage from "../pages/SearchPage";
 import NotificationsPage from "../pages/NotificationsPage";
 import DocumentsPage from "../pages/DocumentsPage";
 import AssistantPage from "../pages/AssistantPage";
+import RulesPage from "../pages/RulesPage";
+import ResourcesPage from "../pages/ResourcesPage";
+import CasesPage from "../pages/CasesPage";
+import ForYouPage from "../pages/ForYouPage";
+import UniversityPage from "../pages/UniversityPage";
 
 afterEach(cleanup);
 const noop = vi.fn(async () => {});
@@ -38,6 +43,11 @@ const pages = {
   Search: <SearchPage news={[story]} guides={[]} tasks={[]} documents={[]} />,
   Reminders: <NotificationsPage localMode notifications={[{ id: "a", title: "T", body: "B", read: false }]} onMarkRead={noop} onMarkAllRead={noop} />,
   Documents: <DocumentsPage localProcessing consent={consent} onSaveConsent={noop} documents={[]} onAdd={noop} onDelete={noop} onAnalyze={noop} onDeleteAllText={noop} storageAvailable />,
+  "Rules and forms": <RulesPage profile={profile} onAddTasks={noop} />,
+  "Safety and life": <ResourcesPage />,
+  Cases: <CasesPage cases={[{ id: "c", title: "OPT", kind: "opt-ead", status: "filed", timeline: [] }]} onCreate={noop} onUpdate={noop} onAddEntry={noop} onRemoveEntry={noop} onRemove={noop} onAddTasks={noop} />,
+  "For you": <ForYouPage profile={profile} news={[story]} />,
+  University: <UniversityPage profile={{ university: "Example University", officialUniversityDomain: "example.edu" }} onSaveLink={noop} onRemoveLink={noop} />,
   Ask: <AssistantPage localMode documentsAllowed localChunks={[]} documents={[]} />,
 };
 

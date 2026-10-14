@@ -221,3 +221,17 @@ button, .button, [role="button"], select { min-height: var(--gr-target); }
 .task-links .chip { text-decoration: none; min-height: 28px; }
 .chip-remove { display: inline-grid; place-items: center; min-width: 24px; min-height: 24px; border: 0; background: transparent; color: inherit; cursor: pointer; }
 .task-row > .record-actions { flex-wrap: nowrap; }
+
+/* Batch 3: cases, for-you, university */
+.profile-inputs { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--gr-space-3); margin: 0 0 var(--gr-space-3); }
+.profile-inputs dt { color: var(--gr-muted); font-size: .8125rem; }
+.profile-inputs dd { margin: 2px 0 0; font-weight: 650; overflow-wrap: anywhere; }
+.case-form { display: grid; gap: var(--gr-space-3); margin-top: var(--gr-space-3); }
+.case-record { align-items: start; }
+.case-history { margin-top: var(--gr-space-2); }
+.case-history summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; font-weight: 650; }
+.case-history ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.case-history li { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--gr-line); }
+.chip.case-status.open { background: var(--gr-accent-soft); border-color: var(--gr-accent); color: var(--gr-accent-strong); }
+.chip.case-status.closed { background: var(--gr-surface-soft); }
+.chip.coverage-reviewed { background: var(--gr-sage-soft); border-color: var(--gr-sage-ink); color: var(--gr-sage-ink); }
