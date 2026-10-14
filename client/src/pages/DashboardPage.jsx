@@ -31,7 +31,7 @@ export default function DashboardPage({ profile = {}, tasks = [], topNews = [], 
 
       {zeroCostMode && <section className="panel beta-status" role="status"><strong>Free public beta</strong><p className="muted">Your workspace uses free services and browser-private document reading. There is no guaranteed service level; always confirm time-sensitive decisions with the official source.</p></section>}
 
-      {showGettingStarted && <GettingStartedBoard onDismiss={onDismissGettingStarted} />}
+      {showGettingStarted && <GettingStartedBoard zeroCostMode={zeroCostMode} onDismiss={onDismissGettingStarted} />}
 
       {topUpdate && (
         <section className="home-section" aria-labelledby="home-update-title">
