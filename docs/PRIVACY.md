@@ -22,7 +22,8 @@ The free beta (`docs/ZERO_COST_PUBLIC.md`) has no server and stores less:
   statuses, notes; nothing is fetched from any agency), task notes, repeats, reminder dates and links to other items,
   links the student saves for their university, checklist progress, saved guides, saved update IDs, and, only while document reading is
   on, the extracted text of up to 50 documents with page numbers. Dates are never read from documents automatically.
-- **Stored only in the browser:** display choices (text size, contrast, animation) and which reminders were marked read.
+- **Stored only in the browser:** display choices (text size, contrast, animation), which reminders were marked read, which updates were seen and saved news searches, snoozed next steps, and the appointment-preparation workspace (chosen questions, notes on what the university said, term notes). These are keyed to the account on that device, never uploaded, not included in the account export, not restored from it, and removed from the browser when the account is deleted from it. Clearing site data removes them.
+  Appointment summaries are produced only by an explicit download, print or copy; they hold only the items the student ticked, mask receipt numbers and leave out case notes unless chosen, and never include document contents.
   The offline service worker keeps only GlobeReady's public files (app code, reviewed news, icons). It never stores
   anything from Firebase or Google, any account record, document text, or OCR file.
 - **Backup restore:** importing a GlobeReady export happens in the browser after a preview. It only adds records, skips
