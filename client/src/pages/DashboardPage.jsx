@@ -59,6 +59,7 @@ export default function DashboardPage({ profile = {}, tasks = [], topNews = [], 
         <div className="home-links">
           <Link to="/tasks">{openTasks.length > 1 ? `${openTasks.length - 1} more task${openTasks.length === 2 ? "" : "s"}` : "Tasks"}</Link>
           {unreadNotifications > 0 && <Link to="/notifications">{unreadNotifications} reminder{unreadNotifications === 1 ? "" : "s"}</Link>}
+          <Link to="/for-you">What may apply to you</Link>
           <Link to="/guides">Guides</Link>
         </div>
       </section>
@@ -75,7 +76,7 @@ export default function DashboardPage({ profile = {}, tasks = [], topNews = [], 
           ) : (
             <p className="home-quiet">No dates coming up. <Link to="/dates">Add your passport, visa or I-20 dates</Link> to get reminders.</p>
           )}
-          <div className="home-links"><Link to="/journey">Journey planner</Link><Link to="/travel">Travel readiness</Link><Link to="/contacts">Contacts</Link></div>
+          <div className="home-links"><Link to="/journey">Journey planner</Link><Link to="/cases">Cases</Link><Link to="/travel">Travel readiness</Link><Link to="/university">University</Link><Link to="/contacts">Contacts</Link></div>
         </section>
       )}
 

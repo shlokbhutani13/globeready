@@ -1,0 +1,139 @@
+import React, { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import { ExternalLink, Trash2 } from "lucide-react";
+import PageHeader from "../components/ui/PageHeader";
+import SubNav, { planLinks } from "../components/ui/SubNav";
+import Notice from "../components/ui/Notice";
+import EmptyState from "../components/ui/EmptyState";
+import CopyButton from "../components/ui/CopyButton";
+import Disclaimer from "../components/Disclaimer";
+import { contactRoleLabels } from "./ContactsPage";
+import { friendlyError } from "../lib/friendly-error";
+import { isOnDomain, officeLinks, universityCoverage, universityLinkCategory, universityResources } from "../lib/university";
+
+const schoolRoles = ["dso", "international-office", "campus-safety"];
+const statusText = { reviewed: "Reviewed", "domain-only": "Not reviewed", "general-only": "Not reviewed", none: "No university added" };
+
+export default function UniversityPage({ profile = {}, news = [], contacts = [], savedResources = [], onSaveLink, onRemoveLink }) {
+  const coverage = useMemo(() => universityCoverage(profile, news), [profile, news]);
+  const links = officeLinks(coverage);
+  const saved = universityResources(savedResources);
+  const schoolContacts = contacts.filter((contact) => schoolRoles.includes(contact.role));
+  const [form, setForm] = useState({ title: "", url: "" });
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const submit = async (event) => {
+    event.preventDefault();
+    setError(""); setMessage(""); setBusy(true);
+    try {
+      await onSaveLink({ title: form.title, url: form.url, category: universityLinkCategory, source: coverage.domain || profile.university || "" });
+      setForm({ title: "", url: "" });
+      setMessage("Link saved.");
+    } catch (reason) { setError(friendlyError(reason)); } finally { setBusy(false); }
+  };
+
+  return (
+    <div className="page">
+      <PageHeader
+        eyebrow="Plan"
+        title={coverage.name || "Your university"}
+        description="Where to find your university's own offices, and what GlobeReady has and has not reviewed for it. Your designated school official is always the authority on your record."
+        action={<Link className="button secondary" to="/profile">Edit university</Link>}
+      />
+      <SubNav label="Plan sections" links={planLinks} />
+
+      <section className="panel" aria-labelledby="coverage-title">
+        <div className="panel-title"><h2 id="coverage-title">Coverage</h2><span className={`chip coverage-${coverage.status}`}>{statusText[coverage.status]}</span></div>
+        <p><strong>{coverage.headline}.</strong> {coverage.detail}</p>
+        {coverage.status === "none" && <Link className="button primary" to="/profile">Add your university</Link>}
+        {coverage.status === "general-only" && <Link className="button secondary" to="/profile">Add your university's website</Link>}
+      </section>
+
+      {coverage.name && (
+        <>
+          <section className="section-block" aria-labelledby="offices-title">
+            <h2 id="offices-title">Find your university's offices</h2>
+            {links.length === 0 ? <p className="muted">Add your university's website in <Link to="/profile">Profile</Link> to get search links for each office. You can also save your own links below.</p> : (
+              <>
+                {!links[0].reviewed && <Notice tone="warning">These open a web search restricted to {coverage.domain}. GlobeReady has not checked the results, so confirm you reached an official page.</Notice>}
+                <ul className="record-list">
+                  {links.map((link) => (
+                    <li className="record" key={link.id}>
+                      <div><h3>{link.label}</h3><div className="record-meta"><span>{link.reviewed ? "Reviewed link" : "Search of your university's website"}</span></div></div>
+                      <div className="record-actions"><a className="button secondary" href={link.url} target="_blank" rel="noreferrer" aria-label={`${link.label}: ${link.reviewed ? "open" : "search"}`}>{link.reviewed ? "Open" : "Search"} <ExternalLink size={15} aria-hidden="true" /></a></div>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+            {coverage.domain && <p><a href={`https://${coverage.domain}`} target="_blank" rel="noreferrer">Open {coverage.domain} <ExternalLink size={13} aria-hidden="true" /></a></p>}
+          </section>
+
+          <section className="section-block" aria-labelledby="saved-links-title">
+            <h2 id="saved-links-title">Links you saved</h2>
+            {onSaveLink ? (
+              <form className="panel" onSubmit={submit} aria-label="Save a university link">
+                <div className="form-grid">
+                  <label className="field">Name<input required maxLength={200} value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} placeholder="International Student Services" /></label>
+                  <label className="field">Web address<input required type="url" inputMode="url" maxLength={500} value={form.url} onChange={(event) => setForm({ ...form, url: event.target.value })} placeholder="https://" /><span className="hint">Must start with https://</span></label>
+                </div>
+                {error && <Notice tone="error">{error}</Notice>}
+                {message && <Notice tone="success">{message}</Notice>}
+                <div className="form-actions"><button className="button primary" disabled={busy}>{busy ? "Saving…" : "Save link"}</button></div>
+              </form>
+            ) : <Notice tone="info">Sign in to save your own links.</Notice>}
+            {saved.length === 0 ? <p className="muted">No saved links yet.</p> : (
+              <ul className="record-list" aria-label="Saved university links">
+                {saved.map((resource) => {
+                  const official = isOnDomain(resource.url, coverage.domain);
+                  return (
+                    <li className="record" key={resource.id}>
+                      <div>
+                        <h3>{resource.title}</h3>
+                        <div className="record-meta"><span>{official ? `On ${coverage.domain}` : coverage.domain ? `Not on ${coverage.domain}. Check it is official.` : "Saved by you"}</span></div>
+                      </div>
+                      <div className="record-actions">
+                        <a className="button secondary" href={resource.url} target="_blank" rel="noreferrer" aria-label={`Open ${resource.title}`}>Open <ExternalLink size={15} aria-hidden="true" /></a>
+                        {onRemoveLink && <button type="button" className="button secondary" aria-label={`Remove ${resource.title}`} onClick={async () => { try { await onRemoveLink(resource.id); } catch (reason) { setError(friendlyError(reason)); } }}><Trash2 size={15} aria-hidden="true" /> Remove</button>}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </section>
+
+          <section className="section-block" aria-labelledby="school-contacts-title">
+            <h2 id="school-contacts-title">Your school contacts</h2>
+            {schoolContacts.length === 0 ? (
+              <EmptyState title="No school contacts saved" action={<Link className="button secondary" to="/contacts">Add a contact</Link>}>Save your DSO, international office and campus safety numbers so you can reach them quickly.</EmptyState>
+            ) : (
+              <ul className="record-list">
+                {schoolContacts.map((contact) => (
+                  <li className="record" key={contact.id}>
+                    <div>
+                      <h3>{contact.name}</h3>
+                      <div className="record-meta"><span>{contactRoleLabels[contact.role]}</span></div>
+                      {contact.phone && <div className="record-meta"><a href={`tel:${contact.phone.replace(/[^+\d]/gu, "")}`}>{contact.phone}</a><CopyButton value={contact.phone} label={`${contact.name}'s phone number`} /></div>}
+                      {contact.email && <div className="record-meta"><a href={`mailto:${contact.email}`}>{contact.email}</a><CopyButton value={contact.email} label={`${contact.name}'s email address`} /></div>}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <section className="section-block" aria-labelledby="uni-updates-title">
+            <h2 id="uni-updates-title">Reviewed updates for your university</h2>
+            {coverage.updates.length === 0 ? <p className="muted">There are no reviewed updates for {coverage.name} yet. Federal updates that may matter to you are in <Link to="/for-you">What may apply to you</Link>.</p> : (
+              <ul className="record-list">{coverage.updates.map((item) => <li className="record" key={item.id}><div><h3><Link to={`/news/${encodeURIComponent(item.id)}`}>{item.title}</Link></h3><div className="record-meta"><span>{item.publisher}</span></div></div></li>)}</ul>
+            )}
+          </section>
+        </>
+      )}
+      <Disclaimer />
+    </div>
+  );
+}
