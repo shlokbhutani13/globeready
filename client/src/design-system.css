@@ -294,3 +294,6 @@ button, .button, [role="button"], select { min-height: var(--gr-target); }
   .summary-print, .summary-print * { visibility: visible; }
   .summary-print { display: block; position: absolute; left: 0; top: 0; width: 100%; padding: 24px; color: #000; background: #fff; }
 }
+
+/* Batch 5.1: arrival and daily life hub */
+.section-block .chip-row { list-style: none; padding: 0; }

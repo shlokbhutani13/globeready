@@ -6,16 +6,15 @@ import SubNav, { planLinks } from "../components/ui/SubNav";
 import Notice from "../components/ui/Notice";
 import { journeyDisclaimer, journeyItemsFor, journeyStages } from "../data/journey-templates";
 import { friendlyError } from "../lib/friendly-error";
-import { stageProgress, suggestedDueDate, tasksFromItems } from "../lib/planner";
+import { isPlanned, stageProgress, suggestedDueDate, tasksFromItems } from "../lib/planner";
 
 export default function JourneyPage({ profile = {}, tasks = [], added = [], onAddTasks }) {
   const items = useMemo(() => journeyItemsFor(profile.visaType), [profile.visaType]);
-  const taskTitles = useMemo(() => new Set(tasks.map((task) => task.title.trim().toLowerCase())), [tasks]);
   const [selected, setSelected] = useState(new Set());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
-  const inTasks = (item) => added.includes(item.id) || taskTitles.has(item.title.trim().toLowerCase());
+  const inTasks = (item) => isPlanned(item, tasks, added);
   const toggle = (id) => { setMessage(""); setSelected((current) => { const next = new Set(current); if (next.has(id)) next.delete(id); else next.add(id); return next; }); };
   const missingDates = !profile.startDate && !profile.graduationDate;
 
