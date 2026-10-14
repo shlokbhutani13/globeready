@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Bell, Bot, FileText, Globe2, Home, ListChecks, LogOut, Menu, Newspaper, Search, HelpCircle, Settings, ShieldCheck, UserRound } from "lucide-react";
 
-const planPaths = ["/tasks", "/journey", "/dates", "/cases", "/travel", "/contacts", "/university"];
+const planPaths = ["/next", "/tasks", "/journey", "/dates", "/cases", "/travel", "/contacts", "/university"];
 const updatesPaths = ["/news", "/for-you", "/rules", "/guides", "/resources"];
 
 // Five predictable destinations. Plan and Updates each open a short tab bar for the pages that belong to them, so
