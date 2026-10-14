@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { ExternalLink, Trash2 } from "lucide-react";
 import PageHelp from "../components/PageHelp";
 import PageHeader from "../components/ui/PageHeader";
-import SubNav, { planLinks } from "../components/ui/SubNav";
+import SubNav, { lifeLinks } from "../components/ui/SubNav";
 import Notice from "../components/ui/Notice";
 import EmptyState from "../components/ui/EmptyState";
 import CopyButton from "../components/ui/CopyButton";
@@ -45,7 +45,7 @@ export default function UniversityPage({ profile = {}, news = [], contacts = [],
         description="Where to find your university's own offices, and what GlobeReady has and has not reviewed for it. Your designated school official is always the authority on your record."
         action={<Link className="button secondary" to="/profile">Edit university</Link>}
       />
-      <SubNav label="Plan sections" links={planLinks} />
+      <SubNav label="Life sections" links={lifeLinks} />
       <PageHelp id="university" />
 
       <Notice tone="info"><strong>Two kinds of information appear here.</strong> “Reviewed by GlobeReady” means we checked it against an official source on the date shown. “Entered by you” means you typed or saved it, and we have not checked it.</Notice>
