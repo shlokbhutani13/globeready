@@ -211,3 +211,13 @@ button, .button, [role="button"], select { min-height: var(--gr-target); }
 .jump-links a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px; border: 1px solid var(--gr-line-strong); border-radius: 999px; background: var(--gr-surface); color: var(--gr-ink); text-decoration: none; }
 .jump-links a:hover { background: var(--gr-surface-soft); }
 .tip-list { margin: 0 0 var(--gr-space-3); padding-left: 20px; display: grid; gap: 6px; }
+
+/* Batch 3: task editing, connections */
+.task-editor { display: grid; gap: var(--gr-space-3); padding: var(--gr-space-4); margin: var(--gr-space-2) 0; background: var(--gr-surface-soft); border: 1px solid var(--gr-line); border-radius: var(--gr-radius); }
+.task-extras { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.task-extras span { display: inline-flex; align-items: center; gap: 4px; }
+.task-notes { margin: 4px 0 0; color: var(--gr-ink); font-size: .9375rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+.task-links, .chip-row { list-style: none; padding: 0; margin: 6px 0 0; }
+.task-links .chip { text-decoration: none; min-height: 28px; }
+.chip-remove { display: inline-grid; place-items: center; min-width: 24px; min-height: 24px; border: 0; background: transparent; color: inherit; cursor: pointer; }
+.task-row > .record-actions { flex-wrap: nowrap; }

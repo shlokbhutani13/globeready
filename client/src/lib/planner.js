@@ -30,6 +30,7 @@ export function tasksFromItems(items, existingTasks = [], profile = {}, { dueDat
       category: item.category || "General",
       priority: item.priority || "medium",
       dueDate: dueDate || suggestedDueDate(item, profile),
+      ...(Array.isArray(item.links) && item.links.length ? { links: item.links } : {}),
     });
   }
   return created;

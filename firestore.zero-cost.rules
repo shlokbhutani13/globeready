@@ -66,16 +66,33 @@ service cloud.firestore {
         && (!('consent' in data) || validConsent(data.consent));
     }
 
-    function validTask(data) {
-      return data.keys().hasOnly(['title', 'category', 'priority', 'dueDate', 'notes', 'completed', 'source', 'createdAt', 'updatedAt'])
+    // Shared by creating and editing a task. Link and reminder contents are checked in the browser; here the shapes
+    // and sizes are bounded.
+    function taskFields(data) {
+      return data.keys().hasOnly(['title', 'category', 'priority', 'dueDate', 'notes', 'recurrence', 'remindOn', 'links', 'completed', 'source', 'createdAt', 'updatedAt'])
         && data.title is string && data.title.size() >= 1 && data.title.size() <= 200
-        && data.completed == false
         && data.source == 'user'
         && optionalText(data, 'category', 80)
         && (!('priority' in data) || data.priority in ['low', 'medium', 'high'])
         && optionalDate(data, 'dueDate')
         && optionalText(data, 'notes', 1000)
+        && (!('recurrence' in data) || (data.recurrence in ['weekly', 'monthly', 'yearly'] && data.get('dueDate', '') != ''))
+        && optionalDate(data, 'remindOn')
+        && (!('links' in data) || (data.links is list && data.links.size() <= 5));
+    }
+
+    function validTask(data) {
+      return taskFields(data)
+        && data.completed == false
         && stampedNow(data, 'createdAt')
+        && stampedNow(data, 'updatedAt');
+    }
+
+    // An edit may change any task field and completion, but never the creation time or the source.
+    function validTaskEdit(data, existing) {
+      return taskFields(data)
+        && data.completed is bool
+        && data.createdAt == existing.createdAt
         && stampedNow(data, 'updatedAt');
     }
 
@@ -150,10 +167,7 @@ service cloud.firestore {
       match /tasks/{taskId} {
         allow read: if isOwner(uid);
         allow create: if canWrite(uid) && taskId.size() <= 128 && validTask(request.resource.data);
-        allow update: if canWrite(uid)
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['completed', 'updatedAt'])
-          && request.resource.data.completed is bool
-          && stampedNow(request.resource.data, 'updatedAt');
+        allow update: if canWrite(uid) && validTaskEdit(request.resource.data, resource.data);
         allow delete: if isOwner(uid);
       }
 
