@@ -303,3 +303,9 @@ button, .button, [role="button"], select { min-height: var(--gr-target); }
 .plain-table { width: 100%; border-collapse: collapse; }
 .plain-table th, .plain-table td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border, #e4e7ec); white-space: nowrap; }
 .plain-table thead th { font-size: 0.85rem; color: var(--muted, #667085); }
+
+/* Batch 5.3: documents checklist */
+.status-choice { border: 0; padding: 0; margin: 6px 0; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.chip.choice { min-height: 44px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.chip.choice.active { font-weight: 600; border-color: currentColor; }
+.date-note.soon, .date-note.past { font-weight: 600; }

@@ -27,6 +27,7 @@ import HelpPage from "../pages/HelpPage";
 import NextStepsPage from "../pages/NextStepsPage";
 import LifeHubPage from "../pages/LifeHubPage";
 import BudgetPage from "../pages/BudgetPage";
+import DocumentChecklistPage from "../pages/DocumentChecklistPage";
 import AdvisingPrepPage from "../pages/AdvisingPrepPage";
 
 afterEach(cleanup);
@@ -60,6 +61,7 @@ const pages = {
   "Appointment preparation": <AdvisingPrepPage profile={profile} contacts={[{ id: "c", name: "Dr. Rao", role: "dso" }]} cases={[{ id: "k", title: "OPT", kind: "opt-ead", status: "filed", timeline: [] }]} dates={[]} storage={undefined} />,
   "Arrival and daily life": <LifeHubPage profile={profile} tasks={[]} onAddTasks={noop} />,
   "Budget planner": <BudgetPage storage={undefined} />,
+  "Documents checklist": <DocumentChecklistPage storage={undefined} keyDates={[{ id: "d", kind: "passport", date: "2027-01-01" }]} />,
   Ask: <AssistantPage localMode documentsAllowed localChunks={[]} documents={[]} />,
 };
 
