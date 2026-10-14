@@ -1,6 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Check, ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
 import { dueStatus, localDateKey } from "../lib/reminders";
+import PageHeader from "../components/ui/PageHeader";
+import SubNav, { planLinks } from "../components/ui/SubNav";
+import { CalendarPlus } from "lucide-react";
 
 const dayMs = 24 * 60 * 60 * 1000;
 
@@ -39,7 +42,7 @@ export function defaultCalendarMonth(tasks = [], now = new Date()) {
   return new Date(Date.UTC(year, month - 1, 1));
 }
 
-export default function TasksPage({ tasks, onAdd, onToggle, onDelete, now = new Date() }) {
+export default function TasksPage({ tasks, onAdd, onToggle, onDelete, onExportCalendar, zeroCostMode = false, now = new Date() }) {
   const [title, setTitle] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [priority, setPriority] = useState("medium");
@@ -71,7 +74,13 @@ export default function TasksPage({ tasks, onAdd, onToggle, onDelete, now = new 
 
   return (
     <div className="page">
-      <header className="page-header"><div><span className="eyebrow">Action plan</span><h1>Tasks and deadlines</h1><p>Turn complex requirements into a manageable next step.</p></div></header>
+      <PageHeader
+        eyebrow="Plan"
+        title="Tasks and deadlines"
+        description="Everything you need to do, in order of when it is due. Add your own, or start from the journey planner."
+        action={onExportCalendar && <button type="button" className="button secondary" onClick={onExportCalendar}><CalendarPlus size={16} aria-hidden="true" /> Download calendar (.ics)</button>}
+      />
+      <SubNav label="Plan sections" links={zeroCostMode ? planLinks : []} />
 
       <form className="quick-add" onSubmit={submit}>
         <input aria-label="New task" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Add a task, deadline, or reminder" />

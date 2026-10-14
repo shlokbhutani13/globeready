@@ -9,6 +9,7 @@ export const planLinks = [
 export const updatesLinks = [["/news", "Updates"], ["/guides", "Guides"]];
 
 export default function SubNav({ label, links }) {
+  if (!links || links.length < 2) return null;
   return (
     <nav className="subnav" aria-label={label}>
       {links.map(([to, text]) => (

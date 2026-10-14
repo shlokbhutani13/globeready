@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Download, ShieldAlert, Trash2 } from "lucide-react";
 import ConsentPanel from "../components/ConsentPanel";
 import DisplaySettings from "../components/DisplaySettings";
+import InstallPanel from "../components/InstallPanel";
 import RestorePanel from "../components/RestorePanel";
 import PageHeader from "../components/ui/PageHeader";
 
@@ -43,6 +44,8 @@ export default function SettingsPage({ live = true, preferences = {}, onUpdatePr
       {consent !== undefined && <ConsentPanel consent={consent} onSave={onSaveConsent} aiAvailable={!zeroCostMode} />}
 
       <DisplaySettings />
+
+      {zeroCostMode && <InstallPanel />}
 
       {zeroCostMode && <section className="panel settings-section" aria-labelledby="free-runtime-title"><div className="panel-title"><h2 id="free-runtime-title">Free public beta availability</h2></div><ul className="availability-list"><li>Original-file backup is unavailable; only extracted text is saved.</li><li>Cloud AI answers are unavailable; Ask GlobeReady returns matching passages from your documents.</li><li>Email and push delivery are unavailable; check the app and official sources for changes.</li></ul></section>}
 

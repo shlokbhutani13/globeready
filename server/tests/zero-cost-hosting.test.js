@@ -85,4 +85,14 @@ describe("Firebase Hosting configuration", () => {
     expect(workflow).not.toMatch(/firebase\s+(projects:create|use --add)|billing|gcloud\s+projects\s+create/iu);
     expect(workflow).not.toMatch(/^\s+push:/mu);
   });
+
+  test("the service worker and manifest are always revalidated and never rewritten to the app shell", async () => {
+    const config = await readJson("firebase.zero-cost.json");
+    expect(headersFor(config, "/sw.js")["cache-control"]).toBe("no-cache");
+    expect(headersFor(config, "/manifest.webmanifest")["cache-control"]).toBe("no-cache");
+    expect(new RegExp(config.hosting.rewrites[0].regex, "u").test("/sw.js")).toBe(false);
+    const csp = cspDirectives(config);
+    expect(csp["worker-src"]).toEqual(["'self'"]);
+    expect(csp["manifest-src"]).toEqual(["'self'"]);
+  });
 });

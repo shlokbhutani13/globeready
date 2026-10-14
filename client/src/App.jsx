@@ -1,6 +1,16 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { friendlyError } from "./lib/friendly-error";
 import { createReminderReadStore, deriveReminders } from "./lib/reminders";
+import { deriveDateReminders, upcomingDates } from "./lib/key-dates";
+import { useZeroCostRecords } from "./lib/use-zero-cost-records";
+import { buildIcs, downloadIcs } from "./lib/ics";
+import { tasksFromItems } from "./lib/planner";
+import { guides } from "./data/guides";
+import KeyDatesPage from "./pages/KeyDatesPage";
+import ContactsPage from "./pages/ContactsPage";
+import JourneyPage from "./pages/JourneyPage";
+import TravelPage from "./pages/TravelPage";
+import SearchPage from "./pages/SearchPage";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import AppShell from "./components/AppShell";
 import LoginPage from "./pages/LoginPage";
@@ -113,9 +123,12 @@ export default function App() {
     window.addEventListener("focus", tick);
     return () => { clearInterval(timer); window.removeEventListener("focus", tick); };
   }, [auth.user?.uid]);
+  const records = useZeroCostRecords({ firestore: db, uid: auth.user?.uid, enabled: Boolean(auth.user) && zeroCostPublicMode, onError: (error) => setAppError(friendlyError(error)) });
   const localReminders = useMemo(
-    () => (zeroCostPublicMode ? deriveReminders(tasks, reminderClock).map((reminder) => ({ ...reminder, read: readReminderIds.has(reminder.id) })) : []),
-    [tasks, reminderClock, readReminderIds],
+    () => (zeroCostPublicMode
+      ? [...deriveReminders(tasks, reminderClock), ...deriveDateReminders(records.dates, reminderClock)].map((reminder) => ({ ...reminder, read: readReminderIds.has(reminder.id) }))
+      : []),
+    [tasks, records.dates, reminderClock, readReminderIds],
   );
 
   // Consent is loaded before any early return, so every render calls the same hooks in the same order.
@@ -199,6 +212,32 @@ export default function App() {
 
   const live = Boolean(auth.user);
   const zeroCostStore = live && zeroCostPublicMode ? createZeroCostDataStore({ firestore: db, uid: auth.user.uid }) : null;
+  const keyDateUpcoming = zeroCostPublicMode ? upcomingDates(records.dates, reminderClock) : [];
+  // Tasks created from a template, always through the same validated path as a task typed by hand.
+  const addTasksFromItems = async (items, { dueDate } = {}) => {
+    if (!zeroCostStore) throw new Error("Sign in to add tasks.");
+    const planned = tasksFromItems(items, tasks, profile, { dueDate });
+    for (const details of planned) await zeroCostStore.createTask(details);
+    const ids = items.filter((item) => item.id).map((item) => item.id);
+    if (ids.length && planned.length) {
+      const journey = records.planner.journey;
+      await zeroCostStore.savePlanner("journey", { have: [...new Set([...journey.have, ...ids])], custom: journey.custom });
+    }
+    return planned.length;
+  };
+  const exportCalendar = () => {
+    const result = buildIcs({ tasks, dates: zeroCostPublicMode ? records.dates : [] });
+    if (result.count === 0) { setAppError("There is nothing to export yet. Add a due date to a task or a key date first."); return; }
+    setAppError("");
+    downloadIcs(result);
+  };
+  const restoreContext = zeroCostStore ? {
+    uid: auth.user.uid,
+    store: zeroCostStore,
+    existing: {
+      profile, tasks, savedResources, savedNews: savedNews.map((entry) => entry.id), trackedDates: records.dates, contacts: records.contacts, planner: records.planner,
+    },
+  } : undefined;
   const savedNewsIds = new Set(savedNews.map((item) => item.id));
   const shownNotifications = zeroCostPublicMode ? localReminders : notifications;
   const unreadNotifications = shownNotifications.filter((notification) => !notification.read).length;
@@ -394,7 +433,7 @@ export default function App() {
       {appError && <div className="app-error" role="alert"><span>{appError}</span><button onClick={() => setAppError("")}>Dismiss</button></div>}
       <Routes>
         <Route element={<AppShell onSignOut={signOut} isAdmin={isAdmin} unreadNotifications={unreadNotifications} zeroCostMode={zeroCostPublicMode} />}>
-          <Route index element={<DashboardPage zeroCostMode={zeroCostPublicMode} profile={profile} tasks={tasks} topNews={topNews} unreadNotifications={unreadNotifications} onToggleTask={changeTask} showGettingStarted={showGettingStarted} onDismissGettingStarted={dismissGettingStarted} />} />
+          <Route index element={<DashboardPage zeroCostMode={zeroCostPublicMode} keyDates={keyDateUpcoming} profile={profile} tasks={tasks} topNews={topNews} unreadNotifications={unreadNotifications} onToggleTask={changeTask} showGettingStarted={showGettingStarted} onDismissGettingStarted={dismissGettingStarted} />} />
           <Route path="news" element={(
             <NewsPage
               items={newsItems}
@@ -415,13 +454,20 @@ export default function App() {
               zeroCostMode={zeroCostPublicMode}
             />
           )} />
-          <Route path="news/:id" element={<NewsDetailPage items={newsItems} loading={newsLoading} error={newsError} localMode={zeroCostPublicMode} />} />
+          <Route path="news/:id" element={<NewsDetailPage profile={profile} items={newsItems} loading={newsLoading} error={newsError} localMode={zeroCostPublicMode} />} />
           <Route path="documents" element={<DocumentsPage localProcessing={live && zeroCostPublicMode} processing={processing} onCancelProcessing={cancelProcessing} onDeleteAllText={deleteAllDocumentText} consent={live ? consent : undefined} onSaveConsent={saveConsentChoice} documents={documents} uploadProgress={uploadProgress} storageAvailable={!live || storageAvailable} onAdd={addDocument} onDelete={deleteDocument} onAnalyze={analyzeDocument} />} />
-          <Route path="tasks" element={<TasksPage tasks={tasks} onAdd={addTask} onToggle={changeTask} onDelete={deleteTask} />} />
+          <Route path="tasks" element={<TasksPage zeroCostMode={zeroCostPublicMode} tasks={tasks} onAdd={addTask} onToggle={changeTask} onDelete={deleteTask} onExportCalendar={exportCalendar} />} />
+          <Route path="search" element={<SearchPage news={newsItems} newsLoading={newsLoading} guides={guides} tasks={tasks} documents={documents} />} />
+          {zeroCostPublicMode && live && <>
+            <Route path="journey" element={<JourneyPage profile={profile} tasks={tasks} added={records.planner.journey.have} onAddTasks={addTasksFromItems} />} />
+            <Route path="dates" element={<KeyDatesPage dates={records.dates} onCreate={(input) => zeroCostStore.createTrackedDate(input)} onUpdate={(entry, input) => zeroCostStore.updateTrackedDate(entry.id, { ...input, createdAt: entry.createdAt })} onRemove={(id) => zeroCostStore.removeTrackedDate(id)} onExportCalendar={exportCalendar} now={reminderClock} />} />
+            <Route path="travel" element={<TravelPage have={records.planner.travel.have} custom={records.planner.travel.custom} onSaveChecklist={(value) => zeroCostStore.savePlanner("travel", value)} onAddTasks={addTasksFromItems} />} />
+            <Route path="contacts" element={<ContactsPage contacts={records.contacts} onCreate={(input, count) => zeroCostStore.createContact(input, count)} onUpdate={(entry, input) => zeroCostStore.updateContact(entry.id, { ...input, createdAt: entry.createdAt })} onRemove={(id) => zeroCostStore.removeContact(id)} />} />
+          </>}
           <Route path="guides" element={<GuidesPage onSave={saveGuide} onRemove={zeroCostStore ? (id) => zeroCostStore.removeResource(id) : undefined} savedResources={savedResources} savedUrls={savedResources.map((resource) => resource.url)} />} />
           <Route path="assistant" element={<AssistantPage localMode={zeroCostPublicMode} documentsAllowed={!zeroCostPublicMode || consent?.documents === true} localChunks={localChunks} documents={documents.filter((document) => document.analysisStatus === "indexed")} />} />
           <Route path="notifications" element={<NotificationsPage localMode={zeroCostPublicMode} notifications={shownNotifications} onMarkRead={markRead} onMarkAllRead={markAllRead} />} />
-          <Route path="profile" element={<ProfilePage profile={profile} onSave={updateProfile} />} />
+          <Route path="profile" element={<ProfilePage profile={profile} onSave={updateProfile} showTopics={zeroCostPublicMode} />} />
           <Route path="settings" element={(
             <SettingsPage
               live={live}
@@ -433,6 +479,7 @@ export default function App() {
               onDelete={deleteAccount}
               onShowGettingStarted={() => setShowGettingStarted(true)}
               zeroCostMode={zeroCostPublicMode}
+              restore={restoreContext}
               signInProviders={live && zeroCostPublicMode ? auth.signInProviders() : []}
             />
           )} />

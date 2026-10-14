@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import { Bookmark, ExternalLink } from "lucide-react";
 import { guides } from "../data/guides";
 import { friendlyError } from "../lib/friendly-error";
+import PageHeader from "../components/ui/PageHeader";
+import SubNav, { updatesLinks } from "../components/ui/SubNav";
 import Disclaimer from "../components/Disclaimer";
 
 const noSavedUrls = [];
@@ -42,7 +44,8 @@ export default function GuidesPage({ onSave = async () => {}, onRemove, savedUrl
   };
   return (
     <div className="page">
-      <header className="page-header"><div><span className="eyebrow">Trusted resources</span><h1>International student guides</h1><p>Start with official sources, then confirm university-specific requirements.</p></div></header>
+      <PageHeader eyebrow="Updates and guides" title="International student guides" description="Start with official sources, then confirm university-specific requirements. Save the ones you want to come back to." />
+      <SubNav label="Updates sections" links={updatesLinks} />
       <div className="filter-row">{categories.map((category) => <button className={filter === category ? "active" : ""} onClick={() => setFilter(category)} key={category}>{category}</button>)}</div>
       {error && <div className="inline-error" role="alert">{error}</div>}
       {filter === "Saved" && shown.length === 0 && <div className="empty-state"><h3>No saved guides yet</h3><p>Choose Save on a guide and it will appear here.</p></div>}

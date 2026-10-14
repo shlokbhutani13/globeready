@@ -1,4 +1,5 @@
 import React from "react";
+import { MemoryRouter } from "react-router-dom";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
@@ -9,7 +10,7 @@ afterEach(cleanup);
 describe("GuidesPage", () => {
   test("saves an official guide", async () => {
     const onSave = vi.fn().mockResolvedValue(undefined);
-    render(<GuidesPage onSave={onSave} />);
+    render(<MemoryRouter><GuidesPage onSave={onSave} /></MemoryRouter>);
 
     fireEvent.click(screen.getByRole("button", { name: "Save Set up U.S. banking" }));
 
@@ -23,7 +24,7 @@ describe("GuidesPage", () => {
     const onRemove = vi.fn().mockResolvedValue(undefined);
     const { guides } = await import("../data/guides");
     const first = guides[0];
-    render(<GuidesPage onSave={vi.fn()} onRemove={onRemove} savedUrls={[first.url]} savedResources={[{ id: "r1", url: first.url }]} />);
+    render(<MemoryRouter><GuidesPage onSave={vi.fn()} onRemove={onRemove} savedUrls={[first.url]} savedResources={[{ id: "r1", url: first.url }]} /></MemoryRouter>);
     fireEvent.click(screen.getByRole("button", { name: "Saved" }));
     expect(screen.getAllByRole("article")).toHaveLength(1);
     fireEvent.click(screen.getByRole("button", { name: `Remove ${first.title} from saved` }));

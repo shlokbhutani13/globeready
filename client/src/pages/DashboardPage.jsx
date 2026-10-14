@@ -13,7 +13,7 @@ function greetingFor(date = new Date()) {
 
 // Home answers three questions: what changed, what is next, and what Ask can help with. Everything else
 // lives one tap deeper, so an empty day stays calm instead of filling with cards.
-export default function DashboardPage({ profile = {}, tasks = [], topNews = [], unreadNotifications = 0, onToggleTask, showGettingStarted = false, onDismissGettingStarted, zeroCostMode = false }) {
+export default function DashboardPage({ profile = {}, tasks = [], topNews = [], unreadNotifications = 0, onToggleTask, showGettingStarted = false, onDismissGettingStarted, zeroCostMode = false, keyDates = [] }) {
   const navigate = useNavigate();
   const firstName = profile.fullName?.split(" ")[0] || "there";
   const openTasks = tasks.filter((task) => !task.completed);
@@ -63,9 +63,25 @@ export default function DashboardPage({ profile = {}, tasks = [], topNews = [], 
         </div>
       </section>
 
+      {zeroCostMode && (
+        <section className="home-section" aria-labelledby="home-dates-title">
+          <span className="eyebrow" id="home-dates-title">Key dates</span>
+          {keyDates.length > 0 ? (
+            <ul className="home-dates">
+              {keyDates.map(({ entry, status }) => (
+                <li key={entry.id}><Link to="/dates"><strong>{entry.label}</strong><span>{entry.date}</span><span className={`due-status ${status.kind}`}>{status.label}</span></Link></li>
+              ))}
+            </ul>
+          ) : (
+            <p className="home-quiet">No dates coming up. <Link to="/dates">Add your passport, visa or I-20 dates</Link> to get reminders.</p>
+          )}
+          <div className="home-links"><Link to="/journey">Journey planner</Link><Link to="/travel">Travel readiness</Link><Link to="/contacts">Contacts</Link></div>
+        </section>
+      )}
+
       <button className="home-ask" type="button" onClick={() => navigate("/assistant")}>
-        <span>Ask GlobeReady</span>
-        <small>Questions about your documents, deadlines, or recent updates</small>
+        <span>{zeroCostMode ? "Search your documents" : "Ask GlobeReady"}</span>
+        <small>{zeroCostMode ? "Find exact passages in the documents you saved, with the page they came from" : "Questions about your documents, deadlines, or recent updates"}</small>
       </button>
 
       <Disclaimer compact />
