@@ -36,6 +36,12 @@ export function tasksFromItems(items, existingTasks = [], profile = {}, { dueDat
   return created;
 }
 
+// A step counts as planned when it was added from a template (by id) or the student already has a task with that title.
+export function isPlanned(item, tasks = [], addedIds = []) {
+  const title = normalize(item.title ?? item.label);
+  return addedIds.includes(item.id) || tasks.some((task) => normalize(task.title) === title);
+}
+
 export function stageProgress(items, haveIds = []) {
   const have = new Set(haveIds);
   const total = items.length;
