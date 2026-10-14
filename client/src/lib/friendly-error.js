@@ -8,6 +8,17 @@ const byCode = {
   "network-request-failed": "GlobeReady could not reach its servers. Check your internet connection and try again.",
   unauthenticated: "Your sign-in has expired. Sign in again to continue.",
   "requires-recent-login": "For your security, sign in again and retry.",
+  "invalid-credential": "That email and password do not match. Check them, or use Reset password.",
+  "wrong-password": "That email and password do not match. Check them, or use Reset password.",
+  "user-not-found": "That email and password do not match. Check them, or use Reset password.",
+  "email-already-in-use": "An account with this email already exists. Sign in instead, or use Reset password.",
+  "weak-password": "Choose a password with at least 6 characters.",
+  "invalid-email": "Enter a valid email address.",
+  "user-disabled": "This account has been disabled.",
+  "popup-closed-by-user": "The Google sign-in window was closed before finishing. Try again.",
+  "cancelled-popup-request": "The Google sign-in window was closed before finishing. Try again.",
+  "popup-blocked": "Your browser blocked the Google sign-in window. Allow pop-ups for this site and try again.",
+  "unauthorized-domain": "Sign-in is not enabled for this web address yet.",
   "too-many-requests": "Too many attempts. Wait a few minutes and try again.",
 };
 
