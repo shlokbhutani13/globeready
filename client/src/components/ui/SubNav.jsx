@@ -6,7 +6,7 @@ import { NavLink } from "react-router-dom";
 export const planLinks = [
   ["/tasks", "Tasks"], ["/journey", "Journey"], ["/dates", "Key dates"], ["/travel", "Travel"], ["/contacts", "Contacts"],
 ];
-export const updatesLinks = [["/news", "Updates"], ["/rules", "Rules and forms"], ["/guides", "Guides"]];
+export const updatesLinks = [["/news", "Updates"], ["/rules", "Rules and forms"], ["/guides", "Guides"], ["/resources", "Safety and life"]];
 
 export default function SubNav({ label, links }) {
   if (!links || links.length < 2) return null;
