@@ -1,18 +1,40 @@
 # Release readiness: production hardening pass
 
+## Zero-cost public-beta repair pass (2026-10-14)
+
+An independent review of `e188dd4` found that the beta's tests passed while deployment-only behavior and large-input
+cases were broken. This pass repaired them on `codex/globeready-zero-cost-public`. Nothing was pushed, merged,
+deployed, or provisioned, and no Firebase project or billing setting was touched.
+
+| Review finding | Repair | Evidence |
+| --- | --- | --- |
+| H1/H2: the CSP blocked WebAssembly OCR and Google's sign-in script | `firebase.zero-cost.json` allows `'wasm-unsafe-eval'` and `https://apis.google.com`; nothing else from third parties | Headless Chromium with the exact headers: PDF and OCR extraction succeed, zero CSP violations, Google script not blocked |
+| M5: OCR code and model came from a CDN | Worker, core, and English model are published from `/ocr/<hash>/`; CDN hosts removed from the CSP | Same browser run: OCR made no third-party request; build test asserts the file set and app reference |
+| H3: documents were silently cut at 100 chunks | Every page is indexed or the document is refused; byte budget; page counts shown | `local-document-policy`, `local-document-extraction` tests |
+| H4: Ask skipped documents and showed unrelated passages | All chunks ranked, best per document first, minimum coverage, quotes not answers, server referrals | `local-assistant`, `assistant-rag` tests |
+| M1: data deleted before identity could be confirmed; 500-record dead end | Password or Google confirmation first; repeated batches; retryable state | `reauthenticate`, `zero-cost-account` tests; emulator test deletes 1,050+ records |
+| M2: zero-cost loosened the shared production rules | Production `firebase.json` and `firestore.rules` restored to `main`; separate strict `firestore.zero-cost.rules` | 9 new zero-cost rules tests (mutation-checked) and a production regression test; the real client data layer passes the zero-cost rules in the emulator |
+| M3: no abuse protection | Verified email before writes, 50-document cap, strict validation | Rules tests; residual risk documented in `docs/ZERO_COST_PUBLIC.md` |
+| M4: save buttons did nothing | Saved updates stored as `users/{uid}/savedNews/{id}` and included in export and deletion | Data-layer, rules, and emulator tests |
+| M6: Ask kept searching after consent was withdrawn | Ask is gated on current consent; "Delete all saved document text" | `assistant-rag`, `documents` tests |
+| L1–L7 | No-cache HTML, real 404s for missing assets, one-time stale-build reload; ignored env files; hash described honestly and committed files checked against the reviewed input; deterministic weekly proposals; image bounds, progress, cancel; consent sync; local dates | Hosting, artifact, `stale-build`, `zero-cost-repairs` tests |
+
+Also found and fixed during the repair: the branch's CSP in the shared `firebase.json` would have blocked the
+full-production client's own API origin.
+
+Verification on the final tree: server 953 passed, 55 skipped; client 177 passed; Firestore/Auth/Storage emulator
+suites 63 passed (Java 21); server lint and syntax checks; both client builds; both production audits 0
+vulnerabilities; app bundle 3.2 MB plus 15 MB of OCR files; no source maps or emulator endpoints; workflow YAML parses;
+`git diff --check` clean.
+
+Still requires a real free Firebase preview: Google sign-in through the real pop-up, email verification delivery,
+preview-domain authorization, Firebase Hosting's actual header and MIME behavior, live quota behavior, and the full
+disposable-account journey in `docs/ZERO_COST_PUBLIC.md`.
+
 ## Zero-cost public-beta checkpoint (2026-10-13)
 
-The `codex/globeready-zero-cost-public` branch adds an explicit static public-beta runtime without provisioning or paid infrastructure. It is ready for no-cost Firebase configuration and preview deployment, subject to the external actions in `docs/ZERO_COST_PUBLIC.md`.
-
-- Firebase Auth and owner-scoped Firestore are used directly; API, Storage, emulator, and demo configuration fail closed in this build mode.
-- Original files remain in the browser. Only bounded extracted text and metadata are saved after complete extraction.
-- Ask GlobeReady performs deterministic local passage matching and never sends private text to a model.
-- News is a hashed, reviewed static artifact. Weekly automation proposes official candidates in a PR and cannot publish directly.
-- Export and cleanup-first deletion run in the browser. Identity deletion happens only after supported Firestore cleanup succeeds.
-- Hosting headers, SPA routing, artifact scans, size budget, preview-first manual deployment, and protected live approval are checked by repository tests and workflow configuration.
-- No Firebase project, paid plan, service, deployment, domain, or billing setting was created or changed during implementation.
-
-This does not alter the paid/full-production provisioning inventory below. Live Google sign-in, real Firestore quotas/rules, Hosting CSP behavior, and the complete disposable-account journey still require preview verification after the user supplies an existing free Firebase project and scoped deploy credential.
+The `codex/globeready-zero-cost-public` branch added an explicit static public-beta runtime without provisioning or
+paid infrastructure. The repair pass above supersedes this checkpoint's readiness claims.
 
 **Verified starting checkpoint:** `5f669abb0b629378d71f6e36cced072b1e4369d7` (local and remote feature branch).
 `origin/main` was not changed and nothing was merged. Nothing in this pass was pushed, deployed, or provisioned.
