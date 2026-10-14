@@ -168,3 +168,4 @@ input,select,textarea{color:#344054}.auth-form input,.profile-form input,.profil
 .offline-banner{background:#fffaeb;border-bottom:1px solid #fedf89;color:#93370d;padding:10px 20px;font-size:14px}
 .inline-notice{background:#ecfdf3;border:1px solid #abefc6;color:#067647;border-radius:8px;padding:10px 12px;font-size:14px}
 .saved-toggle{margin:0 0 16px}.saved-toggle .active{border-color:#315f8f;color:#315f8f}
+.getting-started-links{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
