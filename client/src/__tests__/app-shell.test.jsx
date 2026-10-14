@@ -27,10 +27,25 @@ test("Plan stays current across its sub-pages, and the skip link targets the mai
   expect(screen.getByRole("main")).toHaveAttribute("id", "main-content");
 });
 
+test.each([
+  ["/cases", "Plan"],
+  ["/university", "Plan"],
+  ["/for-you", "Updates"],
+  ["/rules", "Updates"],
+  ["/resources", "Updates"],
+])("%s keeps its main destination current", (path, destination) => {
+  shell({}, path);
+  for (const name of ["Main navigation", "Primary navigation"]) {
+    const nav = screen.getByRole("navigation", { name });
+    expect(within(nav).getByRole("link", { name: destination })).toHaveAttribute("aria-current", "page");
+  }
+  cleanup();
+});
+
 test("search is a labelled landmark and reminders show an unread count in text", () => {
   shell({ unreadNotifications: 3 });
   expect(screen.getByRole("search")).toBeInTheDocument();
-  expect(screen.getByLabelText(/search updates, guides, tasks/i)).toBeInTheDocument();
+  expect(screen.getByLabelText(/search updates, rules, resources, cases, guides, tasks and document names/i)).toBeInTheDocument();
   expect(screen.getAllByRole("link", { name: "Reminders (3 unread)" }).length).toBeGreaterThan(0);
 });
 

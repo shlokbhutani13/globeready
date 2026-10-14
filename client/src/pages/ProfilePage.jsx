@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Save } from "lucide-react";
 import { universityIdFor } from "../lib/news-data";
+import { domainPattern } from "../lib/university";
 
 const topicLabels = {
   general: "General", status: "Maintaining status", "forms-fees": "Forms and fees", employment: "Work and training",
@@ -20,8 +21,9 @@ export default function ProfilePage({ profile, onSave, showTopics = false }) {
     setError("");
     setSaved(false);
     const domain = (form.officialUniversityDomain || "").trim().toLowerCase();
-    if (domain && !/^[a-z0-9.-]+\.edu$/.test(domain)) {
-      setError("Enter the school's website domain, such as school.edu.");
+    const validDomain = showTopics ? domainPattern.test(domain) : /^[a-z0-9.-]+\.edu$/u.test(domain);
+    if (domain && !validDomain) {
+      setError(showTopics ? "Enter the school's website domain without https:// or a path, such as school.edu or university.ac.uk." : "Enter the school's official .edu domain, such as school.edu.");
       return;
     }
     if (form.startDate && form.graduationDate && form.graduationDate < form.startDate) {
@@ -45,7 +47,7 @@ export default function ProfilePage({ profile, onSave, showTopics = false }) {
       <form className="panel profile-form" onSubmit={submit}>
         <label>Full name<input {...field("fullName")} /></label><label>Home country<input {...field("homeCountry")} /></label>
         <label>University<input {...field("university")} /></label><label>Program<input {...field("program")} /></label>
-        <label>Official university website domain (optional)<input {...field("officialUniversityDomain")} placeholder="school.edu" /></label>
+        <label>Official university website domain (optional)<input {...field("officialUniversityDomain")} placeholder={showTopics ? "school.edu or university.ac.uk" : "school.edu"} /></label>
         <p className="muted profile-note">A domain is reviewed by GlobeReady before its updates are shown as covered. Until then your school is marked as verification pending.</p>
         <label>Degree level<select {...field("degreeLevel")}><option value="">Select…</option><option>Undergraduate</option><option value="Master's">Master's</option><option>Doctoral</option><option>Non-degree / exchange</option></select></label>
         <label>Visa type<select {...field("visaType")}><option>F-1</option><option>J-1</option><option>Other</option></select></label>

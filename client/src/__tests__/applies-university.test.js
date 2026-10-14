@@ -77,7 +77,10 @@ describe("university coverage", () => {
     expect(universityCoverage({ university: "X", officialUniversityDomain: "evil.com/phish" }).status).toBe("general-only");
     expect(domainPattern.test("school.edu")).toBe(true);
     expect(domainPattern.test("cs.school.edu")).toBe(true);
-    expect(domainPattern.test("school.com")).toBe(false);
+    expect(domainPattern.test("www.ox.ac.uk")).toBe(true);
+    expect(domainPattern.test("university.ca")).toBe(true);
+    expect(domainPattern.test("school")).toBe(false);
+    expect(domainPattern.test("127.0.0.1")).toBe(false);
     expect(domainPattern.test("https://school.edu")).toBe(false);
   });
 });
