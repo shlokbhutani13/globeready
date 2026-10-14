@@ -1,5 +1,8 @@
+import { readFile } from "node:fs/promises";
 import { describe, expect, test } from "vitest";
-import { buildPublicArtifacts } from "../scripts/build-public-news-artifact.mjs";
+import { buildProposals, buildPublicArtifacts } from "../scripts/build-public-news-artifact.mjs";
+
+const root = new URL("../../", import.meta.url);
 
 const reviewed = {
   id: "uscis-opt", sourceId: "uscis", sourceVerified: true, editorialState: "approved",
@@ -27,9 +30,38 @@ describe("public news artifact generator", () => {
   });
 
   test("bounds public output and emits only safe coverage fields", () => {
-    const coverage = [{ id: "uscis", name: "USCIS", status: "active", officialUrl: "https://www.uscis.gov", secret: "x" }];
+    const coverage = [{ id: "uscis", name: "USCIS", status: "active", officialUrl: "https://www.uscis.gov", lastVerifiedAt: "2026-10-13T12:00:00.000Z", secret: "x" }];
     const { news, coverage: result } = buildPublicArtifacts({ items: [reviewed], coverage, generatedAt: "2026-10-13T12:00:00.000Z" });
     expect(Buffer.byteLength(JSON.stringify(news))).toBeLessThan(1_000_000);
-    expect(result.entries).toEqual([{ id: "uscis", name: "USCIS", status: "active", officialUrl: "https://www.uscis.gov" }]);
+    expect(result.entries).toEqual([{ id: "uscis", name: "USCIS", status: "active", officialUrl: "https://www.uscis.gov", lastVerifiedAt: "2026-10-13T12:00:00.000Z" }]);
+  });
+  test("never gives an unmonitored source a review date, and requires one for active sources", () => {
+    const build = (entry) => () => buildPublicArtifacts({ items: [], coverage: [entry], generatedAt: "2026-10-13T12:00:00.000Z" });
+    expect(build({ id: "uscis", status: "planned", lastVerifiedAt: "2026-10-13T12:00:00.000Z" })).toThrow(/not monitored/i);
+    expect(build({ id: "uscis", status: "active" })).toThrow(/last reviewed/i);
+    expect(build({ id: "uscis", status: "live" })).toThrow(/status/i);
+    expect(build({ id: "uscis", status: "planned" })).not.toThrow();
+  });
+
+  test("the published static files are exactly what the reviewed input generates", async () => {
+    const input = JSON.parse(await readFile(new URL("server/data/reviewed-public-news.json", root), "utf8"));
+    const expected = buildPublicArtifacts(input);
+    for (const [name, value] of [["news", expected.news], ["coverage", expected.coverage]]) {
+      const published = await readFile(new URL(`client/public/data/${name}.json`, root), "utf8");
+      expect(published, `client/public/data/${name}.json is stale; run npm run news:public -- --input data/reviewed-public-news.json`)
+        .toBe(`${JSON.stringify(value, null, 2)}\n`);
+    }
+  });
+
+  test("weekly proposals are deterministic and skip stories already reviewed", () => {
+    const payload = { results: [
+      { document_number: "2026-14439", title: "Reviewed rule", html_url: "https://www.federalregister.gov/d/2026-14439", publication_date: "2026-07-17", type: "Rule" },
+      { document_number: "2026-20001", title: "New notice", html_url: "https://www.federalregister.gov/d/2026-20001", publication_date: "2026-10-01", type: "Notice" },
+      { document_number: "2026-20002", title: "Off-site", html_url: "https://example.com/x", publication_date: "2026-10-02", type: "Notice" },
+    ] };
+    const first = buildProposals(payload, new Set(["federal-register-2026-14439"]));
+    expect(first.map((item) => item.externalId)).toEqual(["2026-20001"]);
+    expect(buildProposals({ results: [...payload.results].reverse() }, new Set(["federal-register-2026-14439"]))).toEqual(first);
+    expect(JSON.stringify(first)).not.toMatch(/generatedAt/u);
   });
 });

@@ -27,7 +27,7 @@ jobs:
         run: npm ci
       - name: Collect official candidates for human review only
         working-directory: server
-        run: npm run news:public -- --discover-output data/news-proposals.json
+        run: npm run news:public -- --discover-output data/news-proposals.json --reviewed data/reviewed-public-news.json
       - name: Open or update the review pull request
         uses: peter-evans/create-pull-request@v8
         with:
@@ -38,4 +38,6 @@ jobs:
           body: |
             Automated candidate collection only. Nothing in this pull request is published to the app.
             A human must verify the official source, legal state, dates, summary, and relevance, then deliberately update `server/data/reviewed-public-news.json`.
+            Already-reviewed stories are omitted, so this pull request changes only when there is something new.
+            Pull requests opened by GitHub Actions do not start CI automatically; push a commit or re-run CI before merging.
           labels: news-review
