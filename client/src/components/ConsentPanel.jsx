@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { ShieldCheck } from "lucide-react";
 
 // Shows the consent wording the server returned, and records the student's choice through onSave.
@@ -8,6 +8,11 @@ export default function ConsentPanel({ consent, onSave, compact = false, aiAvail
   const [error, setError] = useState("");
   const [documents, setDocuments] = useState(Boolean(consent?.documents));
   const [aiGeneration, setAiGeneration] = useState(Boolean(consent?.aiGeneration));
+  // Consent usually loads after the panel first renders; keep the checkboxes in step with the stored choice.
+  useEffect(() => {
+    setDocuments(Boolean(consent?.documents));
+    setAiGeneration(Boolean(consent?.aiGeneration));
+  }, [consent?.documents, consent?.aiGeneration]);
 
   if (!consent) {
     return <p className="muted">Checking your privacy choices…</p>;

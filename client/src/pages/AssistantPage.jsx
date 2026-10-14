@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Link } from "react-router-dom";
 import { ArrowUp, Bot, ExternalLink, History, RefreshCcw, Sparkles } from "lucide-react";
 import Disclaimer from "../components/Disclaimer";
 import { apiRequest } from "../lib/api";
@@ -12,12 +13,17 @@ export function assistantMessageFromResponse(answer) {
     url: answer.sources?.[0]?.url,
     documentCitations: answer.documentCitations || [],
     evidence: answer.evidence || null,
+    kind: answer.kind || "answer",
+    passages: answer.passages || [],
     notice: answer.notice || "",
     referral: answer.referral?.message || "",
   };
 }
 
-export default function AssistantPage({ requestAnswer = apiRequest, documents = [], localMode = false, localChunks = [] }) {
+const localSuggestions = ["What is my program end date?", "When does my lease end?", "What is my SEVIS ID?"];
+const serverSuggestions = ["What should I bring to an SSN appointment?", "Explain my I-20 travel signature", "How do I choose a bank account?"];
+
+export default function AssistantPage({ requestAnswer = apiRequest, documents = [], localMode = false, localChunks = [], documentsAllowed = true }) {
   const [question, setQuestion] = useState("");
   const [documentId, setDocumentId] = useState("");
   const [messages, setMessages] = useState([]);
@@ -27,8 +33,9 @@ export default function AssistantPage({ requestAnswer = apiRequest, documents = 
   const [lastQuestion, setLastQuestion] = useState("");
   const [history, setHistory] = useState(null);
 
+  const blocked = localMode && !documentsAllowed;
   const send = async (text) => {
-    if (!text.trim()) return;
+    if (!text.trim() || blocked) return;
     setLastQuestion(text);
     setError("");
     setBusy(true);
@@ -89,7 +96,7 @@ export default function AssistantPage({ requestAnswer = apiRequest, documents = 
     <div className="assistant-page">
       <header className="assistant-header">
         <span><Bot size={19} /></span>
-        <div><h1>GlobeReady Assistant</h1><p>{localMode ? "Verbatim answers from your documents — retrieval runs privately in this browser" : "Answers from your uploaded documents and trusted official resources"}</p></div>
+        <div><h1>{localMode ? "Search your documents" : "GlobeReady Assistant"}</h1><p>{localMode ? "Finds exact passages in your saved document text. The search runs privately in this browser and never writes an answer for you." : "Answers from your uploaded documents and trusted official resources"}</p></div>
         {!localMode && <button type="button" className="text-button history-toggle" onClick={openHistory}><History size={14} /> History</button>}
       </header>
       {history && (
@@ -101,8 +108,17 @@ export default function AssistantPage({ requestAnswer = apiRequest, documents = 
         </div>
       )}
       <div className="conversation">
-        {messages.length === 0 && <div className="assistant-empty"><span><Sparkles size={25} /></span><h2>What can I help you prepare for?</h2><p>Ask about documents, university arrival, SSN, banking, healthcare, housing, CPT, or OPT.</p><div>{["What should I bring to an SSN appointment?", "Explain my I-20 travel signature", "How do I choose a bank account?"].map((item) => <button key={item} onClick={() => setQuestion(item)}>{item}</button>)}</div></div>}
-        {messages.map((message, index) => <div className={`message ${message.role}`} key={index}>
+        {blocked && <div className="assistant-empty" role="status"><span><Sparkles size={25} /></span><h2>Document reading is off</h2><p>Ask searches your saved document text only while document reading is on. Turn it on in <Link to="/documents">Documents</Link>, or delete your saved text there.</p></div>}
+        {!blocked && messages.length === 0 && <div className="assistant-empty"><span><Sparkles size={25} /></span><h2>{localMode ? "Which passage are you looking for?" : "What can I help you prepare for?"}</h2><p>{localMode ? "Use the words your document uses. Results are exact quotes with the document and page, not an answer." : "Ask about documents, university arrival, SSN, banking, healthcare, housing, CPT, or OPT."}</p><div>{(localMode ? localSuggestions : serverSuggestions).map((item) => <button key={item} onClick={() => setQuestion(item)}>{item}</button>)}</div></div>}
+        {messages.map((message, index) => message.kind === "passages" ? <div className="message assistant passages" key={index}>
+          <h2 className="passages-title">{message.passages.length ? `${message.passages.length} matching passage${message.passages.length === 1 ? "" : "s"} from your documents` : "No matching passage"}</h2>
+          {message.passages.map((passage, passageIndex) => <figure className="passage" key={`${passage.documentId}-${passageIndex}`}>
+            <blockquote>{passage.excerpt}</blockquote>
+            <figcaption>{passage.documentName}{passage.page ? ` · page ${passage.page}` : ""}</figcaption>
+          </figure>)}
+          {message.notice && <p className="assistant-notice" role="note">{message.notice}</p>}
+          {message.referral && <p className="assistant-referral">{message.referral}</p>}
+        </div> : <div className={`message ${message.role}`} key={index}>
           <div>{message.text}</div>
           {message.notice && <p className="assistant-notice" role="note">{message.notice}</p>}
           {message.referral && <p className="assistant-referral">{message.referral}</p>}
@@ -116,7 +132,7 @@ export default function AssistantPage({ requestAnswer = apiRequest, documents = 
           </div>
         )}
       </div>
-      <form className="assistant-composer" onSubmit={ask}>{documents.length > 0 && <select aria-label="Document scope" value={documentId} onChange={(event) => setDocumentId(event.target.value)}><option value="">All indexed documents</option>{documents.map((document) => <option key={document.id} value={document.id}>{document.name}</option>)}</select>}<input aria-label="Ask GlobeReady" value={question} onChange={(event) => setQuestion(event.target.value)} placeholder="Ask a question about your student journey" /><button aria-label="Send question" disabled={busy}><ArrowUp size={18} /></button></form>
+      <form className="assistant-composer" onSubmit={ask}>{documents.length > 0 && <select aria-label="Document scope" value={documentId} onChange={(event) => setDocumentId(event.target.value)}><option value="">All indexed documents</option>{documents.map((document) => <option key={document.id} value={document.id}>{document.name}</option>)}</select>}<input aria-label="Ask GlobeReady" disabled={blocked} value={question} onChange={(event) => setQuestion(event.target.value)} placeholder={localMode ? "Search your documents, for example: program end date" : "Ask a question about your student journey"} /><button aria-label="Send question" disabled={busy || blocked}><ArrowUp size={18} /></button></form>
       <Disclaimer compact />
     </div>
   );

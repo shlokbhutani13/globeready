@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { ArrowRight, BookOpenCheck, FileLock2, Globe2, Sparkles } from "lucide-react";
 
-export default function LoginPage({ onDemo, auth, localUser = false, demoAvailable = false }) {
+export default function LoginPage({ onDemo, auth, localUser = false, demoAvailable = false, zeroCost = false }) {
   const [mode, setMode] = useState("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -25,9 +25,9 @@ export default function LoginPage({ onDemo, auth, localUser = false, demoAvailab
           <h1>Everything important,<br />in one clear place.</h1>
           <p>Keep documents, deadlines, verified updates, and reliable answers organized throughout your student journey.</p>
           <div className="login-benefits">
-            <span><FileLock2 /> Secure document vault</span>
+            <span><FileLock2 /> {zeroCost ? "Documents are read on your device" : "Secure document vault"}</span>
             <span><BookOpenCheck /> Trusted student guidance</span>
-            <span><Sparkles /> AI explanations with sources</span>
+            <span><Sparkles /> {zeroCost ? "Exact passages with page citations" : "AI explanations with sources"}</span>
           </div>
         </div>
         <small>Information support, not legal advice.</small>
@@ -51,7 +51,10 @@ export default function LoginPage({ onDemo, auth, localUser = false, demoAvailab
           <button className="text-button" disabled={!email || !auth.firebaseConfigured} onClick={() => auth.resetPassword(email).catch((reason) => setError(reason.message))}>Reset password</button>
           <small>{localUser
             ? "Local development: accounts, documents, and records are stored by the local emulators on this computer. Nothing is sent to Firebase or Google."
-            : auth.firebaseConfigured ? "Authentication is connected. Documents use your Firebase project." : "Connect Firebase to enable live accounts and cloud document storage."}</small>
+            : zeroCost ? (auth.firebaseConfigured
+              ? "Free public beta. New email accounts verify your email before saving anything. Original files are never uploaded; only extracted text you choose to keep is saved."
+              : "Sign-in is not configured for this deployment yet.")
+              : auth.firebaseConfigured ? "Authentication is connected. Documents use your Firebase project." : "Connect Firebase to enable live accounts and cloud document storage."}</small>
         </div>
       </section>
     </main>

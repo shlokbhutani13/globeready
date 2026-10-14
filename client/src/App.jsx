@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import AppShell from "./components/AppShell";
 import LoginPage from "./pages/LoginPage";
@@ -13,6 +13,7 @@ import NewsPage from "./pages/NewsPage";
 import NotificationsPage from "./pages/NotificationsPage";
 import NewsAdminPage from "./pages/NewsAdminPage";
 import NewsDetailPage from "./pages/NewsDetailPage";
+import VerifyEmailPage from "./pages/VerifyEmailPage";
 import { useAuth } from "./lib/auth-context";
 import { apiDownload, apiRequest } from "./lib/api";
 import { deleteAccountWithReauth } from "./lib/account-deletion";
@@ -27,7 +28,7 @@ import {
   saveNews, subscribeNews, subscribeNewsPreferences, subscribeNotifications, subscribeSavedNews,
   syncNotifications, universityIdFor, unsaveNews, updateNewsPreferences,
 } from "./lib/news-data";
-import { createZeroCostDataStore } from "./lib/zero-cost-data";
+import { createZeroCostDataStore, nextDocumentSlot } from "./lib/zero-cost-data";
 import { extractLocalDocument } from "./lib/local-documents/extract";
 import { loadStaticCoverage, subscribeStaticNews } from "./lib/static-news";
 import { deleteZeroCostAccount, downloadZeroCostExport, exportZeroCostAccount } from "./lib/zero-cost-account";
@@ -46,7 +47,7 @@ const initialDocuments = [
 const zeroCostConsentText = {
   documents: "GlobeReady extracts text on this device, then saves only the text and document metadata to your account.",
   aiGeneration: "Cloud AI is unavailable in the free public beta. Ask GlobeReady uses deterministic passage matching in your browser.",
-  withdraw: "You can turn document reading off at any time. Delete saved document text from the Vault.",
+  withdraw: "You can turn document reading off at any time. Ask stops searching your saved text immediately, and you can delete all saved document text from the Vault.",
 };
 
 export default function App() {
@@ -57,6 +58,9 @@ export default function App() {
   const [documents, setDocuments] = useState(initialDocuments);
   const [savedResources, setSavedResources] = useState([]);
   const [uploadProgress, setUploadProgress] = useState(0);
+  // Browser-only processing state for the zero-cost beta: { percent, label } while a file is being read.
+  const [processing, setProcessing] = useState(null);
+  const processingController = useRef(null);
   const [appError, setAppError] = useState("");
 
   const [newsItems, setNewsItems] = useState([]);
@@ -138,7 +142,9 @@ export default function App() {
       (items, meta) => { setNewsItems(items); setSourceHealth(meta.sourceHealth); setNewsLoading(false); setNewsError(""); },
       (error) => { setNewsLoading(false); setNewsError(error?.message || "Could not load updates."); },
     );
-    const stopSavedNews = zeroCostPublicMode ? () => {} : subscribeSavedNews(auth.user.uid, setSavedNews, () => {});
+    const stopSavedNews = zeroCostPublicMode
+      ? createZeroCostDataStore({ firestore: db, uid: auth.user.uid }).subscribeSavedNewsIds((ids) => setSavedNews(ids.map((id) => ({ id }))), () => {})
+      : subscribeSavedNews(auth.user.uid, setSavedNews, () => {});
     const stopPreferences = zeroCostPublicMode ? () => {} : subscribeNewsPreferences(auth.user.uid, setNewsPreferences, () => {});
     const stopNotifications = zeroCostPublicMode ? () => {} : subscribeNotifications(auth.user.uid, setNotifications, () => {});
 
@@ -167,13 +173,19 @@ export default function App() {
   }, [auth.user, profile.university]);
 
   if (auth.loading) return <div className="app-loading">Preparing GlobeReady…</div>;
-  if (!auth.user && !demo) return <LoginPage onDemo={() => setDemo(true)} auth={auth} localUser={localUserMode} demoAvailable={demoMode} />;
+  if (!auth.user && !demo) return <LoginPage onDemo={() => setDemo(true)} auth={auth} localUser={localUserMode} demoAvailable={demoMode} zeroCost={zeroCostPublicMode} />;
+  // The zero-cost rules accept writes only from verified email addresses (Google accounts arrive verified).
+  if (auth.user && zeroCostPublicMode && !auth.emailVerified) return <VerifyEmailPage auth={auth} />;
 
   const live = Boolean(auth.user);
   const zeroCostStore = live && zeroCostPublicMode ? createZeroCostDataStore({ firestore: db, uid: auth.user.uid }) : null;
   const savedNewsIds = new Set(savedNews.map((item) => item.id));
   const unreadNotifications = notifications.filter((notification) => !notification.read).length;
   const topNews = rankNewsItems(newsItems, profile).slice(0, 2);
+  // Ask searches stored text only while document reading is on; withdrawing consent stops it immediately.
+  const localChunks = zeroCostPublicMode && consent?.documents === true
+    ? documents.flatMap((document) => (document.chunks || []).map((chunk) => ({ ...chunk, documentId: document.id, documentName: document.name })))
+    : [];
 
   const addTask = async (input) => {
     const details = typeof input === "string" ? { title: input, dueDate: "", priority: "medium" } : input;
@@ -200,14 +212,24 @@ export default function App() {
     if (live) {
       setAppError("");
       if (zeroCostStore) {
-        setUploadProgress(1);
+        if (processingController.current) return;
+        const controller = new AbortController();
+        processingController.current = controller;
+        setProcessing({ percent: 0, label: "Starting" });
         try {
-          const id = crypto.randomUUID();
-          await extractLocalDocument(file, { id, persist: ({ metadata, chunks }) => zeroCostStore.replaceDocumentIndex({ id, metadata, chunks }) });
-          setUploadProgress(100);
+          const id = nextDocumentSlot(documents.map((document) => document.id));
+          await extractLocalDocument(file, {
+            id,
+            signal: controller.signal,
+            onProgress: (update) => setProcessing((current) => (current ? update : current)),
+            persist: (result) => zeroCostStore.saveLocalDocument(result),
+          });
         } catch (error) {
-          setAppError(error.message);
-        } finally { setTimeout(() => setUploadProgress(0), 500); }
+          if (error?.name !== "AbortError") setAppError(error.message);
+        } finally {
+          processingController.current = null;
+          setProcessing(null);
+        }
         return;
       }
       if (!storageAvailable) {
@@ -224,6 +246,12 @@ export default function App() {
     } else {
       setDocuments([...documents, { id: crypto.randomUUID(), name: file.name, category: "Other", storageMode: "safe demo metadata" }]);
     }
+  };
+  const cancelProcessing = () => processingController.current?.abort();
+  const deleteAllDocumentText = async () => {
+    if (!zeroCostStore) return;
+    setAppError("");
+    await zeroCostStore.removeAllLocalDocuments().catch((error) => setAppError(error.message));
   };
   const deleteDocument = async (document) => live
     ? (zeroCostStore ? zeroCostStore.removeLocalDocument(document.id) : removeDocument(
@@ -270,14 +298,22 @@ export default function App() {
     const next = await saveConsent({ version: consent?.version, ...choice });
     setConsent(next);
   };
-  const deleteAccount = async () => {
-    await deleteAccountWithReauth({
-      removeAccount: () => zeroCostPublicMode
-        ? deleteZeroCostAccount({ firestore: db, uid: auth.user.uid, deleteIdentity: auth.deleteCurrentUser })
-        : apiRequest("/api/account", { method: "DELETE", body: JSON.stringify({ confirmation: "DELETE MY ACCOUNT" }) }),
-      hasGoogleProvider: auth.hasGoogleProvider,
-      reauthenticateGoogle: auth.reauthenticateGoogle,
-    });
+  const deleteAccount = async ({ password = "" } = {}) => {
+    if (zeroCostPublicMode) {
+      // Identity is confirmed first (inside the click, so a Google pop-up is allowed); nothing is deleted before that.
+      await deleteZeroCostAccount({
+        firestore: db,
+        uid: auth.user.uid,
+        reauthenticate: () => auth.reauthenticateForDeletion(password),
+        deleteIdentity: auth.deleteCurrentUser,
+      });
+    } else {
+      await deleteAccountWithReauth({
+        removeAccount: () => apiRequest("/api/account", { method: "DELETE", body: JSON.stringify({ confirmation: "DELETE MY ACCOUNT" }) }),
+        hasGoogleProvider: auth.hasGoogleProvider,
+        reauthenticateGoogle: auth.reauthenticateGoogle,
+      });
+    }
     await auth.signOutUser().catch(() => {});
     setDemo(false);
   };
@@ -296,9 +332,12 @@ export default function App() {
     await (zeroCostStore ? zeroCostStore.saveResource(guide) : saveResource(auth.user.uid, guide));
   };
   const toggleSaveNews = async (item) => {
-    if (!live || zeroCostPublicMode) return;
+    if (!live) return;
     try {
-      if (savedNewsIds.has(item.id)) await unsaveNews(item.id);
+      if (zeroCostStore) {
+        if (savedNewsIds.has(item.id)) await zeroCostStore.unsaveNews(item.id);
+        else await zeroCostStore.saveNews(item.id);
+      } else if (savedNewsIds.has(item.id)) await unsaveNews(item.id);
       else await saveNews(item.id);
     } catch (error) {
       setAppError(error.message);
@@ -348,10 +387,10 @@ export default function App() {
             />
           )} />
           <Route path="news/:id" element={<NewsDetailPage items={newsItems} localMode={zeroCostPublicMode} />} />
-          <Route path="documents" element={<DocumentsPage localProcessing={live && zeroCostPublicMode} consent={live ? consent : undefined} onSaveConsent={saveConsentChoice} documents={documents} uploadProgress={uploadProgress} storageAvailable={!live || storageAvailable} onAdd={addDocument} onDelete={deleteDocument} onAnalyze={analyzeDocument} />} />
+          <Route path="documents" element={<DocumentsPage localProcessing={live && zeroCostPublicMode} processing={processing} onCancelProcessing={cancelProcessing} onDeleteAllText={deleteAllDocumentText} consent={live ? consent : undefined} onSaveConsent={saveConsentChoice} documents={documents} uploadProgress={uploadProgress} storageAvailable={!live || storageAvailable} onAdd={addDocument} onDelete={deleteDocument} onAnalyze={analyzeDocument} />} />
           <Route path="tasks" element={<TasksPage tasks={tasks} onAdd={addTask} onToggle={changeTask} onDelete={deleteTask} />} />
           <Route path="guides" element={<GuidesPage onSave={saveGuide} savedUrls={savedResources.map((resource) => resource.url)} />} />
-          <Route path="assistant" element={<AssistantPage localMode={zeroCostPublicMode} localChunks={documents.flatMap((document) => (document.chunks || []).map((chunk) => ({ ...chunk, documentId: document.id, documentName: document.name })))} documents={documents.filter((document) => document.analysisStatus === "indexed")} />} />
+          <Route path="assistant" element={<AssistantPage localMode={zeroCostPublicMode} documentsAllowed={!zeroCostPublicMode || consent?.documents === true} localChunks={localChunks} documents={documents.filter((document) => document.analysisStatus === "indexed")} />} />
           <Route path="notifications" element={<NotificationsPage notifications={notifications} onMarkRead={markRead} onMarkAllRead={markAllRead} />} />
           <Route path="profile" element={<ProfilePage profile={profile} onSave={updateProfile} />} />
           <Route path="settings" element={(
@@ -365,6 +404,7 @@ export default function App() {
               onDelete={deleteAccount}
               onShowGettingStarted={() => setShowGettingStarted(true)}
               zeroCostMode={zeroCostPublicMode}
+              signInProviders={live && zeroCostPublicMode ? auth.signInProviders() : []}
             />
           )} />
           <Route path="admin/news" element={isAdmin ? <NewsAdminPage isAdmin={isAdmin} /> : <Navigate to="/" replace />} />

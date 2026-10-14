@@ -1,37 +1,52 @@
 import {
-  collection, deleteDoc, doc, getDoc, getDocs, limit, query, writeBatch,
+  collection, deleteDoc, doc, getDoc, getDocs, limit, query, startAfter, writeBatch,
 } from "firebase/firestore";
 
-const collections = ["tasks", "documents", "savedResources"];
-const maxRecordsPerCollection = 500;
+// Everything the zero-cost beta stores for a student, all owner-scoped under users/{uid}.
+export const zeroCostCollections = ["tasks", "documents", "savedResources", "savedNews"];
+const pageSize = 400;
 const maxExportBytes = 10 * 1024 * 1024;
-const defaultSdk = { collection, deleteDoc, doc, getDoc, getDocs, limit, query, writeBatch };
+const encoder = new TextEncoder();
+const defaultSdk = { collection, deleteDoc, doc, getDoc, getDocs, limit, query, startAfter, writeBatch };
 
 function requireAccount(firestore, uid) {
   if (!firestore || typeof uid !== "string" || !uid.trim()) throw new Error("An authenticated student is required.");
 }
 
-async function readCollection(firestore, uid, name, sdk) {
-  const snapshot = await sdk.getDocs(sdk.query(sdk.collection(firestore, "users", uid, name), sdk.limit(maxRecordsPerCollection + 1)));
-  if (snapshot.docs.length > maxRecordsPerCollection) throw new Error(`${name} exceeds the 500-record browser limit. Contact support before exporting or deleting.`);
-  return snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
+async function readCollection(firestore, uid, name, sdk, onRecord) {
+  let cursor = null;
+  for (;;) {
+    // Without an explicit orderBy, Firestore returns documents in ID order, and startAfter(snapshot) continues it.
+    const constraints = [sdk.limit(pageSize)];
+    if (cursor) constraints.push(sdk.startAfter(cursor));
+    const snapshot = await sdk.getDocs(sdk.query(sdk.collection(firestore, "users", uid, name), ...constraints));
+    snapshot.docs.forEach((item) => onRecord({ id: item.id, ...item.data() }));
+    if (snapshot.docs.length < pageSize) return;
+    cursor = snapshot.docs.at(-1);
+  }
 }
 
 export async function exportZeroCostAccount({ firestore, uid, sdk = defaultSdk, now = () => new Date() }) {
   requireAccount(firestore, uid);
   const profileSnapshot = await sdk.getDoc(sdk.doc(firestore, "users", uid));
-  const [tasks, documents, savedResources] = await Promise.all(collections.map((name) => readCollection(firestore, uid, name, sdk)));
+  let bytes = 0;
   const archive = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     exportedAt: now().toISOString(),
     uid,
     profile: profileSnapshot.exists() ? profileSnapshot.data() : {},
-    tasks,
-    documents,
-    savedResources,
     notice: "Original document files are not stored by the free public beta and are not included.",
   };
-  if (new TextEncoder().encode(JSON.stringify(archive)).byteLength > maxExportBytes) throw new Error("The account export exceeds the 10 MB browser limit.");
+  for (const name of zeroCostCollections) {
+    archive[name] = [];
+    await readCollection(firestore, uid, name, sdk, (record) => {
+      bytes += encoder.encode(JSON.stringify(record)).byteLength;
+      if (bytes > maxExportBytes) {
+        throw new Error("Your data is larger than the 10 MB browser export limit. Delete document text you no longer need, then export again.");
+      }
+      archive[name].push(record);
+    });
+  }
   return archive;
 }
 
@@ -48,21 +63,29 @@ export function downloadZeroCostExport(archive, { documentImpl = document, urlIm
   return blob;
 }
 
-export async function deleteZeroCostAccount({ firestore, uid, deleteIdentity, sdk = defaultSdk }) {
+// Deletion order: confirm identity first (nothing is deleted if that fails), then delete every record in repeated
+// batches, then the profile, then the sign-in identity. A failure after confirmation leaves a retryable state.
+export async function deleteZeroCostAccount({ firestore, uid, reauthenticate, deleteIdentity, sdk = defaultSdk }) {
   requireAccount(firestore, uid);
-  if (typeof deleteIdentity !== "function") throw new Error("Identity deletion is unavailable.");
+  if (typeof reauthenticate !== "function" || typeof deleteIdentity !== "function") throw new Error("Account deletion is unavailable.");
+  await reauthenticate();
   try {
-    for (const name of collections) {
-      const records = await readCollection(firestore, uid, name, sdk);
-      if (!records.length) continue;
-      const batch = sdk.writeBatch(firestore);
-      records.forEach((record) => batch.delete(sdk.doc(firestore, "users", uid, name, record.id)));
-      await batch.commit();
+    for (const name of zeroCostCollections) {
+      for (let round = 0; ; round += 1) {
+        if (round >= 1_000) throw new Error("Deletion did not finish.");
+        const snapshot = await sdk.getDocs(sdk.query(sdk.collection(firestore, "users", uid, name), sdk.limit(pageSize)));
+        if (!snapshot.docs.length) break;
+        const batch = sdk.writeBatch(firestore);
+        snapshot.docs.forEach((item) => batch.delete(sdk.doc(firestore, "users", uid, name, item.id)));
+        await batch.commit();
+      }
     }
     await sdk.deleteDoc(sdk.doc(firestore, "users", uid));
+    await deleteIdentity();
   } catch (error) {
-    error.retryable = true;
-    throw error;
+    throw Object.assign(
+      new Error(`Deletion stopped before finishing (${error?.message || "unknown error"}). Some data may remain. Try again; it continues where it stopped.`),
+      { retryable: true, cause: error },
+    );
   }
-  await deleteIdentity();
 }
