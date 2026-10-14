@@ -2,8 +2,8 @@ import React, { useEffect, useRef, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Bell, Bot, FileText, Globe2, Home, ListChecks, LogOut, Menu, Newspaper, Search, Settings, ShieldCheck, UserRound } from "lucide-react";
 
-const planPaths = ["/tasks", "/journey", "/dates", "/travel", "/contacts"];
-const updatesPaths = ["/news", "/guides"];
+const planPaths = ["/tasks", "/journey", "/dates", "/cases", "/travel", "/contacts", "/university"];
+const updatesPaths = ["/news", "/for-you", "/rules", "/guides", "/resources"];
 
 // Five predictable destinations. Plan and Updates each open a short tab bar for the pages that belong to them, so
 // every feature is one step from a main destination. Account actions live in the footer (desktop) and Account menu (phone).
@@ -23,9 +23,9 @@ function SearchBox() {
   const [value, setValue] = useState(params.get("q") || "");
   return (
     <form className="topbar-search" role="search" onSubmit={(event) => { event.preventDefault(); if (value.trim()) navigate(`/search?q=${encodeURIComponent(value.trim())}`); }}>
-      <label className="sr-only" htmlFor="global-search">Search updates, guides, tasks and document names</label>
+      <label className="sr-only" htmlFor="global-search">Search updates, rules, resources, cases, guides, tasks and document names</label>
       <Search size={16} aria-hidden="true" />
-      <input id="global-search" type="search" value={value} onChange={(event) => setValue(event.target.value)} placeholder="Search updates, guides, tasks…" />
+      <input id="global-search" type="search" value={value} onChange={(event) => setValue(event.target.value)} placeholder="Search updates, rules, tasks…" />
     </form>
   );
 }

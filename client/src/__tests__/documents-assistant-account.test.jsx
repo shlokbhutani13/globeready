@@ -128,6 +128,27 @@ describe("profile: university domain and time zone", () => {
       timeZone: expect.any(String),
     }));
   });
+
+  test("the zero-cost university workspace accepts an international university domain", () => {
+    const onSave = vi.fn();
+    render(<ProfilePage profile={{ fullName: "Maya", university: "University of Oxford" }} onSave={onSave} showTopics />);
+
+    fireEvent.change(screen.getByLabelText("Official university website domain (optional)"), {
+      target: { value: "www.ox.ac.uk" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /save profile/i }));
+
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ officialUniversityDomain: "www.ox.ac.uk" }));
+  });
+
+  test("the production connector flow still refuses a non-.edu domain", () => {
+    const onSave = vi.fn();
+    render(<ProfilePage profile={{ fullName: "Maya", university: "University of Oxford" }} onSave={onSave} />);
+    fireEvent.change(screen.getByLabelText("Official university website domain (optional)"), { target: { value: "www.ox.ac.uk" } });
+    fireEvent.click(screen.getByRole("button", { name: /save profile/i }));
+    expect(onSave).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert")).toHaveTextContent(/\.edu/iu);
+  });
 });
 
 describe("account settings: export, preferences, and confirmed deletion", () => {

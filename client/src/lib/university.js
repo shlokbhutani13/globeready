@@ -14,7 +14,9 @@ export const officeTypes = [
   { id: "tax", label: "Tax help for international students", query: "international student tax help" },
 ];
 
-export const domainPattern = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*\.edu$/u;
+// A student may attend a university outside the United States or one whose official site is not under .edu.
+// This accepts a plain public DNS name only—never a URL, IP address, path, credentials, port, or localhost name.
+export const domainPattern = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/u;
 
 export const siteSearchUrl = (domain, query) => `https://www.google.com/search?q=${encodeURIComponent(`site:${domain} ${query}`)}`;
 
