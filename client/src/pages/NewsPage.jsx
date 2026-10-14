@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { RefreshCcw } from "lucide-react";
 import PageHelp from "../components/PageHelp";
 import PageHeader from "../components/ui/PageHeader";
@@ -11,6 +11,9 @@ import DigestSettings from "../components/DigestSettings";
 import TopStoriesReader from "../components/TopStoriesReader";
 import NewsToolbar, { sourcesFromItems } from "../components/NewsToolbar";
 import NewsArchive from "../components/NewsArchive";
+import NewsDiscovery from "../components/NewsDiscovery";
+import { applyDiscovery, discoveryOptions, isUnread, isUpdatedSinceSeen, loadSearches, loadSeen, markSeen, mergeFilters, removeSearch, saveSearch, splitFilters } from "../lib/news-discovery";
+import { localDateKey } from "../lib/reminders";
 
 export const topicOptions = [
   "general", "status", "forms-fees", "employment", "travel-entry",
@@ -29,12 +32,21 @@ export default function NewsPage({
   coverage = null, coverageLedger = null, sourceHealth = null, profile = {},
   preferences = {}, digests = [], onUpdatePreferences,
   onLoadMore, hasMore = false,
-  zeroCostMode = false,
+  zeroCostMode = false, storageScope = "", storage = typeof localStorage === "undefined" ? undefined : localStorage,
 }) {
   const [showPreferences, setShowPreferences] = useState(false);
   const [savedOnly, setSavedOnly] = useState(false);
+  const [flags, setFlags] = useState({});
+  const [seen, setSeen] = useState(() => (zeroCostMode ? loadSeen(storage, storageScope) : {}));
+  const [searches, setSearches] = useState(() => (zeroCostMode ? loadSearches(storage, storageScope) : []));
   const allRanked = rankNewsItems(items, profile);
-  const ranked = savedOnly ? allRanked.filter((item) => savedIds.has(item.id)) : allRanked;
+  const discovered = zeroCostMode ? applyDiscovery(allRanked, flags, { profile, seen, today: localDateKey(new Date()) }) : allRanked;
+  const ranked = savedOnly ? discovered.filter((item) => savedIds.has(item.id)) : discovered;
+  const options = useMemo(() => discoveryOptions(items), [items]);
+  const unreadCount = items.filter((item) => isUnread(item, seen) || isUpdatedSinceSeen(item, seen)).length;
+  const setFlag = (name, value) => setFlags((current) => ({ ...current, [name]: value || undefined }));
+  const currentSearch = () => mergeFilters(filters, flags);
+  const applySearch = (entry) => { const { feed, flags: saved } = splitFilters(entry.filters); onFilterChange?.(feed); setFlags(saved); };
 
   const toggleTopic = (topic) => {
     const current = preferences.topics || [];
@@ -54,6 +66,16 @@ export default function NewsPage({
       <PageHelp id="news" />
 
       <NewsToolbar filters={filters} onChange={onFilterChange} sources={zeroCostMode ? sourcesFromItems(items) : undefined} />
+
+      {zeroCostMode && (
+        <NewsDiscovery
+          options={options} filters={filters} onFilter={(next) => onFilterChange?.({ ...filters, ...next })} flags={flags} onFlag={setFlag}
+          searches={searches} unreadCount={unreadCount}
+          onSave={(name) => setSearches(saveSearch(storage, storageScope, name, currentSearch()))}
+          onApply={applySearch} onRemove={(id) => setSearches(removeSearch(storage, storageScope, id))}
+          onMarkAllSeen={() => setSeen(markSeen(storage, storageScope, items))}
+        />
+      )}
 
       {onToggleSave && <div className="saved-toggle"><button type="button" className={`button secondary ${savedOnly ? "active" : ""}`} aria-pressed={savedOnly} onClick={() => setSavedOnly((value) => !value)}>{savedOnly ? "Showing saved updates" : `Show saved updates (${savedIds.size})`}</button></div>}
 
@@ -126,7 +148,7 @@ export default function NewsPage({
       {!loading && !error && ranked.length > 0 && (
         <>
           <section className="top-stories-section"><div className="section-heading"><div><span className="eyebrow">Quick briefing</span><h2>Top stories</h2></div></div><TopStoriesReader items={ranked.slice(0, 6)} savedIds={savedIds} onToggleSave={onToggleSave} /></section>
-          <NewsArchive items={ranked} profile={profile} savedIds={savedIds} onToggleSave={onToggleSave} onLoadMore={onLoadMore} hasMore={hasMore} />
+          <NewsArchive items={ranked} seen={zeroCostMode ? seen : undefined} profile={profile} savedIds={savedIds} onToggleSave={onToggleSave} onLoadMore={onLoadMore} hasMore={hasMore} />
         </>
       )}
 

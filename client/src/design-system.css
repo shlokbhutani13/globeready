@@ -270,3 +270,10 @@ button, .button, [role="button"], select { min-height: var(--gr-target); }
 .glossary-list dt { font-weight: 600; margin-top: 12px; }
 .glossary-list dd { margin: 4px 0 0; }
 @media (max-width: 640px) { .setup-step { flex-direction: column; align-items: stretch; } }
+
+/* Batch 4.2: news discovery */
+.news-discovery .check-group { display: grid; gap: 4px; margin: 8px 0; }
+.saved-search-form { display: flex; gap: 12px; align-items: end; flex-wrap: wrap; margin-top: 12px; }
+.saved-searches { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.saved-searches li { display: inline-flex; align-items: center; gap: 4px; }
+.news-explainer h3 { margin: 12px 0 4px; font-size: 1rem; }
