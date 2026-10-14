@@ -1,6 +1,10 @@
 node_modules/
 .env
 .env.local
+# Real environment files. Committed examples end in .example; .env.demo and .env.local-user hold no secrets.
+.env.*.local
+.env.production
+.env.zero-cost-public
 dist/
 .DS_Store
 *.log

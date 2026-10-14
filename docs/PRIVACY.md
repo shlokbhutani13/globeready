@@ -10,6 +10,20 @@ matches your deployment before accepting identity documents.
 - **Local-user mode** keeps data in the local emulators, under `.local/`. Nothing leaves the computer. The Google button
   is a mock identity, not a Google account (`docs/MODES.md`).
 
+## Zero-cost public beta
+
+The free beta (`docs/ZERO_COST_PUBLIC.md`) has no server and stores less:
+
+- **Never stored:** original document files. PDFs and photos are read in the browser; the bytes are discarded after
+  extraction. OCR code and the English model are served from GlobeReady's own site, so no third party receives an image.
+- **Stored in Firestore under the student's UID:** profile fields, privacy choices, tasks, saved guides, saved update
+  IDs, and, only while document reading is on, the extracted text of up to 50 documents with page numbers.
+- **Never sent to an AI provider:** Ask GlobeReady ranks stored passages in the browser and quotes them.
+- **Withdrawing document reading** stops Ask from searching saved text at once and blocks new documents. Saved text is
+  kept until the student deletes it; the Documents page offers "Delete all saved document text".
+- **Export** downloads every stored record as JSON. **Deletion** confirms the student's password or Google account
+  first, then deletes every record in batches, the profile, and the sign-in identity. Nothing is backed up.
+
 ## What production stores
 
 | Data | Where | Who can read it |

@@ -39,7 +39,7 @@ Unsupported, scanned, oversized, encrypted, malformed, or memory-intensive docum
 
 ## Updates and scheduled collection
 
-Public news is a signed-in read-only static artifact bundled with the client. A repository script runs the existing bounded official-source adapters, validates URLs and content, applies the existing publication policy, and emits deterministic JSON plus a coverage manifest. It must never include private review data or unreviewed AI summaries.
+Public news is a read-only static artifact bundled with the client and served publicly (it contains only reviewed public information). *Corrected 2026-10-14: the file is public, not signed-in only, and it carries a content hash, not a signature.* A repository script runs the existing bounded official-source adapters, validates URLs and content, applies the existing publication policy, and emits deterministic JSON plus a coverage manifest. It must never include private review data or unreviewed AI summaries.
 
 A scheduled GitHub Actions workflow may run within the repository's included Actions allowance. It fetches only approved official sources, validates the artifact, and opens or updates a review pull request when content changes. It does not publish directly to students. Merging the reviewed artifact triggers the normal static deployment. Schedule delay, workflow suspension, parser failure, and stale data are visible through generated freshness metadata.
 
