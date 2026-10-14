@@ -31,7 +31,7 @@ function pagesLabel(document) {
   const missing = document.pageCount - (document.pagesWithText ?? document.pageCount);
   return missing > 0
     ? `${pages} read · ${missing} had no readable text (scanned or image-only) and cannot be searched`
-    : `All ${pages} read`;
+    : document.pageCount === 1 ? "1 page read" : `All ${document.pageCount} pages read`;
 }
 
 export default function DocumentsPage({

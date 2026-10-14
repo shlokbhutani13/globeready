@@ -3,7 +3,7 @@ import React from "react";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
-import TasksPage, { buildCalendarMonth } from "../pages/TasksPage";
+import TasksPage, { buildCalendarMonth, defaultCalendarMonth } from "../pages/TasksPage";
 import NotificationsPage from "../pages/NotificationsPage";
 
 afterEach(cleanup);
@@ -53,15 +53,41 @@ describe("TasksPage", () => {
       { id: "1", title: "Due today", dueDate: "2026-08-01", completed: false },
       { id: "2", title: "Due later", dueDate: "2026-08-20", completed: false },
     ];
-    render(<TasksPage tasks={tasks} onAdd={() => {}} onToggle={() => {}} onDelete={() => {}} />);
+    render(<TasksPage tasks={tasks} now={new Date(2026, 7, 1)} onAdd={() => {}} onToggle={() => {}} onDelete={() => {}} />);
 
-    expect(screen.getByText("Due today")).toBeInTheDocument();
+    expect(screen.getByText("Due today", { selector: "strong" })).toBeInTheDocument();
     expect(screen.getByText("Due later")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /2026-08-01, 1 task/i }));
 
-    expect(screen.getByText("Due today")).toBeInTheDocument();
+    expect(screen.getByText("Due today", { selector: "strong" })).toBeInTheDocument();
     expect(screen.queryByText("Due later")).not.toBeInTheDocument();
+  });
+});
+
+describe("TasksPage calendar and deadlines", () => {
+  test("opens on the next open deadline's month, or the current month when nothing is upcoming", () => {
+    expect(defaultCalendarMonth([], new Date(2026, 9, 14)).toISOString().slice(0, 7)).toBe("2026-10");
+    expect(defaultCalendarMonth([{ dueDate: "2026-08-01" }], new Date(2026, 9, 14)).toISOString().slice(0, 7)).toBe("2026-10");
+    expect(defaultCalendarMonth([{ dueDate: "2026-12-05" }, { dueDate: "2026-11-02", completed: true }], new Date(2026, 9, 14)).toISOString().slice(0, 7)).toBe("2026-12");
+  });
+
+  test("moves to the right month when tasks load after the page opens", () => {
+    const { rerender } = render(<TasksPage tasks={[{ id: "demo", title: "Old", dueDate: "2026-08-01" }]} now={new Date(2026, 9, 14)} onAdd={() => {}} onToggle={() => {}} onDelete={() => {}} />);
+    expect(screen.getByRole("heading", { name: "October 2026" })).toBeInTheDocument();
+    rerender(<TasksPage tasks={[{ id: "t", title: "File I-765", dueDate: "2026-11-03" }]} now={new Date(2026, 9, 14)} onAdd={() => {}} onToggle={() => {}} onDelete={() => {}} />);
+    expect(screen.getByRole("heading", { name: "November 2026" })).toBeInTheDocument();
+  });
+
+  test("labels overdue and due-soon tasks, and offers to undo a completed task", () => {
+    render(<TasksPage now={new Date(2026, 9, 14)} onAdd={() => {}} onToggle={() => {}} onDelete={() => {}} tasks={[
+      { id: "1", title: "Pay SEVIS fee", dueDate: "2026-10-12", completed: false },
+      { id: "2", title: "Renew passport", dueDate: "2026-10-15", completed: false },
+      { id: "3", title: "Book flight", dueDate: "2026-10-01", completed: true },
+    ]} />);
+    expect(screen.getByText("Overdue by 2 days")).toBeInTheDocument();
+    expect(screen.getByText("Due tomorrow")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Mark Book flight as not done" })).toHaveAttribute("aria-pressed", "true");
   });
 });
 

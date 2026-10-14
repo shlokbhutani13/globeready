@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Check, ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
+import { dueStatus, localDateKey } from "../lib/reminders";
 
 const dayMs = 24 * 60 * 60 * 1000;
 
@@ -30,15 +31,29 @@ export function buildCalendarMonth(tasks, monthDate) {
   return days;
 }
 
-export default function TasksPage({ tasks, onAdd, onToggle, onDelete }) {
+// The calendar opens on the month of the next open deadline, or the current month when nothing is upcoming.
+export function defaultCalendarMonth(tasks = [], now = new Date()) {
+  const today = localDateKey(now);
+  const next = tasks.filter((task) => !task.completed && task.dueDate && task.dueDate >= today).map((task) => task.dueDate).sort()[0];
+  const [year, month] = (next || today).split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, 1));
+}
+
+export default function TasksPage({ tasks, onAdd, onToggle, onDelete, now = new Date() }) {
   const [title, setTitle] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [priority, setPriority] = useState("medium");
-  const [monthDate, setMonthDate] = useState(() => {
-    const firstDue = tasks.map((task) => task.dueDate).filter(Boolean).sort()[0];
-    const base = firstDue ? new Date(`${firstDue}T00:00:00Z`) : new Date();
-    return new Date(Date.UTC(base.getUTCFullYear(), base.getUTCMonth(), 1));
-  });
+  const defaultMonth = defaultCalendarMonth(tasks, now);
+  const [monthDate, setMonthDate] = useState(defaultMonth);
+  // Tasks often arrive after the page opens; follow the default month until the student changes month themselves.
+  const navigated = useRef(false);
+  useEffect(() => {
+    if (!navigated.current) setMonthDate(defaultMonth);
+  }, [defaultMonth.getTime()]);
+  const changeMonth = (delta) => {
+    navigated.current = true;
+    setMonthDate(new Date(Date.UTC(monthDate.getUTCFullYear(), monthDate.getUTCMonth() + delta, 1)));
+  };
   const [selectedDate, setSelectedDate] = useState("");
 
   const calendarDays = useMemo(() => buildCalendarMonth(tasks, monthDate), [tasks, monthDate]);
@@ -73,8 +88,8 @@ export default function TasksPage({ tasks, onAdd, onToggle, onDelete }) {
         <div className="panel-title">
           <h2>{monthLabel}</h2>
           <div className="action-row">
-            <button className="icon-button" aria-label="Previous month" onClick={() => setMonthDate(new Date(Date.UTC(monthDate.getUTCFullYear(), monthDate.getUTCMonth() - 1, 1)))}><ChevronLeft size={16} /></button>
-            <button className="icon-button" aria-label="Next month" onClick={() => setMonthDate(new Date(Date.UTC(monthDate.getUTCFullYear(), monthDate.getUTCMonth() + 1, 1)))}><ChevronRight size={16} /></button>
+            <button className="icon-button" aria-label="Previous month" onClick={() => changeMonth(-1)}><ChevronLeft size={16} /></button>
+            <button className="icon-button" aria-label="Next month" onClick={() => changeMonth(1)}><ChevronRight size={16} /></button>
           </div>
         </div>
         <div className="calendar-grid" role="group" aria-label="Calendar of task due dates">
@@ -98,7 +113,10 @@ export default function TasksPage({ tasks, onAdd, onToggle, onDelete }) {
 
       <section className="panel task-list">
         {visibleTasks.length === 0 && <p className="muted">No tasks for this view.</p>}
-        {visibleTasks.map((task) => <div className={`task-row ${task.completed ? "done" : ""}`} key={task.id}><button className="check-button" aria-label={`Complete ${task.title}`} onClick={() => onToggle(task.id)}>{task.completed && <Check size={15} />}</button><div><strong>{task.title}</strong><small>{task.category || "General"} · {task.priority || "medium"} priority</small></div><time>{task.dueDate || "No deadline"}</time><button className="icon-button" aria-label={`Delete ${task.title}`} onClick={() => onDelete(task.id)}><Trash2 size={16} /></button></div>)}
+        {visibleTasks.map((task) => {
+          const status = dueStatus(task, now);
+          return <div className={`task-row ${task.completed ? "done" : ""}`} key={task.id}><button className="check-button" aria-pressed={Boolean(task.completed)} aria-label={task.completed ? `Mark ${task.title} as not done` : `Complete ${task.title}`} onClick={() => onToggle(task.id)}>{task.completed && <Check size={15} />}</button><div><strong>{task.title}</strong><small>{task.category || "General"} · {task.priority || "medium"} priority{status && status.kind !== "later" ? <> · <span className={`due-status ${status.kind}`}>{status.label}</span></> : null}</small></div><time>{task.dueDate || "No deadline"}</time><button className="icon-button" aria-label={`Delete ${task.title}`} onClick={() => onDelete(task.id)}><Trash2 size={16} /></button></div>;
+        })}
       </section>
     </div>
   );

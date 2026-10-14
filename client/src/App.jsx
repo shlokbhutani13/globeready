@@ -386,7 +386,7 @@ export default function App() {
               zeroCostMode={zeroCostPublicMode}
             />
           )} />
-          <Route path="news/:id" element={<NewsDetailPage items={newsItems} localMode={zeroCostPublicMode} />} />
+          <Route path="news/:id" element={<NewsDetailPage items={newsItems} loading={newsLoading} error={newsError} localMode={zeroCostPublicMode} />} />
           <Route path="documents" element={<DocumentsPage localProcessing={live && zeroCostPublicMode} processing={processing} onCancelProcessing={cancelProcessing} onDeleteAllText={deleteAllDocumentText} consent={live ? consent : undefined} onSaveConsent={saveConsentChoice} documents={documents} uploadProgress={uploadProgress} storageAvailable={!live || storageAvailable} onAdd={addDocument} onDelete={deleteDocument} onAnalyze={analyzeDocument} />} />
           <Route path="tasks" element={<TasksPage tasks={tasks} onAdd={addTask} onToggle={changeTask} onDelete={deleteTask} />} />
           <Route path="guides" element={<GuidesPage onSave={saveGuide} savedUrls={savedResources.map((resource) => resource.url)} />} />
