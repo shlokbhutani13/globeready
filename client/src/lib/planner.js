@@ -1,4 +1,5 @@
 import { localDateKey } from "./reminders";
+import { isCalendarDate } from "./calendar-date";
 
 const dayMs = 86_400_000;
 
@@ -6,7 +7,7 @@ const dayMs = 86_400_000;
 // student has not entered that date, so nothing is invented.
 export function suggestedDueDate(item, profile = {}) {
   const base = item.anchor === "start" ? profile.startDate : item.anchor === "graduation" ? profile.graduationDate : "";
-  if (!base || !/^\d{4}-\d{2}-\d{2}$/u.test(base)) return "";
+  if (!isCalendarDate(base)) return "";
   const time = Date.parse(`${base}T00:00:00Z`);
   if (Number.isNaN(time)) return "";
   return new Date(time + (item.offsetDays || 0) * dayMs).toISOString().slice(0, 10);

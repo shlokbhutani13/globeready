@@ -61,6 +61,7 @@ describe("zero-cost Firestore data adapter", () => {
   test("explains profile values the rules would refuse", () => {
     expect(() => validProfileFields({ fullName: "x".repeat(201) })).toThrow(/Full name must be 200 characters/i);
     expect(() => validProfileFields({ startDate: "next week" })).toThrow(/Start date must be a date/i);
+    expect(() => validProfileFields({ startDate: "2026-02-31" })).toThrow(/Start date must be.*real date/i);
     expect(validProfileFields({ graduationDate: "" })).toEqual({ graduationDate: "" });
   });
 
@@ -72,6 +73,7 @@ describe("zero-cost Firestore data adapter", () => {
     expect(calls[0][2]).toMatchObject({ title: "File form", source: "user", completed: false });
     expect(calls[1][1]).toBe("users/student-1/savedResources");
     await expect(store.createTask({ title: "x", dueDate: "soon" })).rejects.toThrow(/due date/i);
+    await expect(store.createTask({ title: "x", dueDate: "2026-02-31" })).rejects.toThrow(/real date/i);
     await store.removeResource("r1");
     expect(calls.at(-1)).toEqual(expect.arrayContaining(["delete"]));
   });
@@ -124,6 +126,7 @@ describe("zero-cost Firestore data adapter", () => {
     expect(calls[0][1]).toBe("users/student-1/trackedDates");
     expect(calls[0][2]).toMatchObject({ label: "Passport expires", kind: "passport", date: "2028-03-01", remindDays: 90, notes: "" });
     await expect(store.createTrackedDate({ label: "x", kind: "passport", date: "03/01/2028" })).rejects.toThrow(/date/i);
+    await expect(store.createTrackedDate({ label: "x", kind: "passport", date: "2026-02-31" })).rejects.toThrow(/real date/i);
     await expect(store.createTrackedDate({ label: "x", kind: "bogus", date: "2028-03-01" })).rejects.toThrow(/type/i);
     await expect(store.createTrackedDate({ label: "x", kind: "visa", date: "2028-03-01", remindDays: 400 })).rejects.toThrow(/remind/i);
     await store.updateTrackedDate("d1", { label: "Visa", kind: "visa", date: "2027-01-01", remindDays: 30, createdAt: "KEEP" });

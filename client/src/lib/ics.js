@@ -1,9 +1,11 @@
 // Builds an iCalendar (.ics) file in the browser. Nothing is uploaded; the file works in Google Calendar, Apple
 // Calendar and Outlook. All entries are all-day events on the dates the student entered.
+import { isCalendarDate } from "./calendar-date";
+
 const encoder = new TextEncoder();
 
 export function escapeText(value) {
-  return String(value ?? "").replace(/\\/gu, "\\\\").replace(/;/gu, "\;").replace(/,/gu, "\\,").replace(/\r?\n/gu, "\\n");
+  return String(value ?? "").replace(/\\/gu, "\\\\").replace(/;/gu, "\\;").replace(/,/gu, "\\,").replace(/\r?\n/gu, "\\n");
 }
 
 // Content lines are folded at 75 octets, continuing with a leading space, as RFC 5545 requires.
@@ -26,7 +28,6 @@ export function foldLine(line) {
 const compact = (date) => date.replaceAll("-", "");
 const stamp = (now) => now.toISOString().replace(/[-:]/gu, "").replace(/\.\d{3}/u, "");
 const nextDay = (date) => new Date(Date.parse(`${date}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10);
-const validDate = (date) => typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/u.test(date) && !Number.isNaN(Date.parse(`${date}T00:00:00Z`));
 
 function event({ uid, date, summary, description, category, now, alarmDays }) {
   const lines = [
@@ -51,7 +52,7 @@ export function buildIcs({ tasks = [], dates = [], now = new Date(), includeComp
   const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//GlobeReady//Student deadlines//EN", "CALSCALE:GREGORIAN", "METHOD:PUBLISH", "X-WR-CALNAME:GlobeReady"];
   let count = 0;
   for (const task of tasks) {
-    if (!validDate(task.dueDate) || (task.completed && !includeCompleted)) continue;
+    if (!isCalendarDate(task.dueDate) || (task.completed && !includeCompleted)) continue;
     lines.push(...event({
       uid: `task-${task.id}`, date: task.dueDate, summary: task.title,
       description: [task.category && `Category: ${task.category}`, task.priority && `Priority: ${task.priority}`, task.completed && "Completed"].filter(Boolean).join(". "),
@@ -60,7 +61,7 @@ export function buildIcs({ tasks = [], dates = [], now = new Date(), includeComp
     count += 1;
   }
   for (const entry of dates) {
-    if (!validDate(entry.date)) continue;
+    if (!isCalendarDate(entry.date)) continue;
     lines.push(...event({
       uid: `date-${entry.id}`, date: entry.date, summary: entry.label,
       description: ["Date entered in GlobeReady. Confirm it against your official document.", entry.notes].filter(Boolean).join(" "),

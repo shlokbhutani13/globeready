@@ -1,6 +1,7 @@
 import {
   addDoc, collection, deleteDoc, doc, getDocs, limit, onSnapshot, query, serverTimestamp, setDoc, updateDoc, writeBatch,
 } from "firebase/firestore";
+import { isCalendarDate } from "./calendar-date";
 
 // Direct Firestore access for the zero-cost beta. Every write mirrors firestore.zero-cost.rules, and the checks here
 // exist so a student sees a clear message instead of a generic permission error.
@@ -16,7 +17,6 @@ const profileLabels = {
   officialUniversityDomain: "University website", degreeLevel: "Degree level", program: "Program", visaType: "Visa type",
   journeyStage: "Journey stage", timeZone: "Time zone", startDate: "Start date", graduationDate: "Graduation date",
 };
-const datePattern = /^\d{4}-\d{2}-\d{2}$/u;
 export const maxLocalDocuments = 50;
 const batchSize = 400;
 
@@ -41,7 +41,7 @@ function optionalBounded(value, max, label) {
 
 export function validTask(input = {}) {
   const dueDate = typeof input.dueDate === "string" ? input.dueDate.trim() : "";
-  if (dueDate && !datePattern.test(dueDate)) throw new Error("Due date must be a date (YYYY-MM-DD).");
+  if (dueDate && !isCalendarDate(dueDate)) throw new Error("Due date must be a real date (YYYY-MM-DD).");
   return {
     title: boundedText(input.title, 200, "Task title"),
     category: typeof input.category === "string" ? input.category.slice(0, 80) : "General",
@@ -65,7 +65,7 @@ export function validResource(input = {}) {
 
 export function validTrackedDate(input = {}) {
   const date = typeof input.date === "string" ? input.date.trim() : "";
-  if (!datePattern.test(date) || Number.isNaN(Date.parse(`${date}T00:00:00Z`))) throw new Error("Date must be a real date (YYYY-MM-DD).");
+  if (!isCalendarDate(date)) throw new Error("Date must be a real date (YYYY-MM-DD).");
   if (!trackedDateKinds.includes(input.kind)) throw new Error("Choose a valid date type.");
   const remindDays = input.remindDays === undefined ? 30 : input.remindDays;
   if (!Number.isInteger(remindDays) || remindDays < 0 || remindDays > 365) throw new Error("Remind days must be a whole number from 0 to 365.");
@@ -112,7 +112,7 @@ export function validProfileFields(input = {}) {
   for (const field of profileDates) {
     if (input[field] === undefined || input[field] === null) continue;
     const value = String(input[field]).trim();
-    if (value && !datePattern.test(value)) throw new Error(`${profileLabels[field]} must be a date (YYYY-MM-DD).`);
+    if (value && !isCalendarDate(value)) throw new Error(`${profileLabels[field]} must be a date (YYYY-MM-DD) and must be a real date.`);
     profile[field] = value;
   }
   return profile;
