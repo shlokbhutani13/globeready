@@ -13,7 +13,7 @@ function greetingFor(date = new Date()) {
 
 // Home answers three questions: what changed, what is next, and what Ask can help with. Everything else
 // lives one tap deeper, so an empty day stays calm instead of filling with cards.
-export default function DashboardPage({ profile = {}, tasks = [], topNews = [], unreadNotifications = 0, onToggleTask, showGettingStarted = false, onDismissGettingStarted, zeroCostMode = false, keyDates = [] }) {
+export default function DashboardPage({ profile = {}, tasks = [], topNews = [], unreadNotifications = 0, onToggleTask, showGettingStarted = false, onDismissGettingStarted, zeroCostMode = false, keyDates = [], setup }) {
   const navigate = useNavigate();
   const firstName = profile.fullName?.split(" ")[0] || "there";
   const openTasks = tasks.filter((task) => !task.completed);
@@ -31,6 +31,7 @@ export default function DashboardPage({ profile = {}, tasks = [], topNews = [], 
 
       {zeroCostMode && <section className="panel beta-status" role="status"><strong>Free public beta</strong><p className="muted">Your workspace uses free services and browser-private document reading. There is no guaranteed service level; always confirm time-sensitive decisions with the official source.</p></section>}
 
+      {setup && !setup.complete && <p className="home-quiet setup-nudge" role="status"><Link to="/setup">Finish setting up ({setup.done} of {setup.total})</Link> Next: {setup.next.title.toLowerCase()}.</p>}
       {showGettingStarted && <GettingStartedBoard zeroCostMode={zeroCostMode} onDismiss={onDismissGettingStarted} />}
 
       {topUpdate && (

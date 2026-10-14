@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { CalendarPlus, ListPlus, Pencil, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { tasksLinkedTo } from "../lib/links";
+import PageHelp from "../components/PageHelp";
 import PageHeader from "../components/ui/PageHeader";
 import SubNav, { planLinks } from "../components/ui/SubNav";
 import Notice from "../components/ui/Notice";
@@ -59,6 +60,7 @@ export default function KeyDatesPage({ dates = [], tasks = [], onAddTasks, onCre
         action={onExportCalendar && <button type="button" className="button secondary" onClick={onExportCalendar}><CalendarPlus size={16} aria-hidden="true" /> Download calendar (.ics)</button>}
       />
       <SubNav label="Plan sections" links={planLinks} />
+      <PageHelp id="dates" />
 
       <form className="panel" onSubmit={submit} aria-labelledby="date-form-title">
         <div className="panel-title"><h2 id="date-form-title">{editing ? "Edit date" : "Add a date"}</h2></div>

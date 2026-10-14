@@ -1,6 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { ExternalLink } from "lucide-react";
+import PageHelp from "../components/PageHelp";
 import PageHeader from "../components/ui/PageHeader";
 import SubNav, { updatesLinks } from "../components/ui/SubNav";
 import Notice from "../components/ui/Notice";
@@ -17,6 +18,7 @@ export default function ResourcesPage() {
         description="Emergency, scam, health, tax, housing, travel and campus-safety resources from the organizations that run them."
       />
       <SubNav label="Updates sections" links={updatesLinks} />
+      <PageHelp id="resources" />
       <Notice tone="warning">If you or someone else is in immediate danger in the United States, call <a href="tel:911">911</a>. Numbers on this page are U.S. numbers. This list is short and not exhaustive.</Notice>
 
       <nav className="jump-links" aria-label="Resource categories">

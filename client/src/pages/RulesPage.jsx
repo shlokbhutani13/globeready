@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { ExternalLink, ListPlus } from "lucide-react";
+import PageHelp from "../components/PageHelp";
 import PageHeader from "../components/ui/PageHeader";
 import SubNav, { updatesLinks } from "../components/ui/SubNav";
 import Notice from "../components/ui/Notice";
@@ -40,6 +41,7 @@ export default function RulesPage({ profile = {}, tasks = [], onAddTasks, initia
         description="Official rules, regulations, forms and agency guidance for international students, each with its source, dates and what replaced it. Always open the official page for the current text."
       />
       <SubNav label="Updates sections" links={updatesLinks} />
+      <PageHelp id="rules" />
       <Notice tone="info">GlobeReady links to official sources and does not copy form editions or fees. “Listed” means when we added the entry, not a legal review. Ask your designated school official about your own situation.</Notice>
       {error && <Notice tone="error">{error}</Notice>}
       {message && <Notice tone="success">{message}</Notice>}

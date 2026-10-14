@@ -22,6 +22,9 @@ import RulesPage from "./pages/RulesPage";
 import CasesPage from "./pages/CasesPage";
 import ForYouPage from "./pages/ForYouPage";
 import UniversityPage from "./pages/UniversityPage";
+import SetupPage from "./pages/SetupPage";
+import HelpPage from "./pages/HelpPage";
+import { setupProgress, setupSteps } from "./lib/setup-guide";
 import { caseDates } from "./lib/cases";
 import ResourcesPage from "./pages/ResourcesPage";
 import AssistantPage from "./pages/AssistantPage";
@@ -444,7 +447,7 @@ export default function App() {
       {appError && <div className="app-error" role="alert"><span>{appError}</span><button onClick={() => setAppError("")}>Dismiss</button></div>}
       <Routes>
         <Route element={<AppShell onSignOut={signOut} isAdmin={isAdmin} unreadNotifications={unreadNotifications} zeroCostMode={zeroCostPublicMode} />}>
-          <Route index element={<DashboardPage zeroCostMode={zeroCostPublicMode} keyDates={keyDateUpcoming} profile={profile} tasks={tasks} topNews={topNews} unreadNotifications={unreadNotifications} onToggleTask={changeTask} showGettingStarted={showGettingStarted} onDismissGettingStarted={dismissGettingStarted} />} />
+          <Route index element={<DashboardPage setup={zeroCostPublicMode && live ? setupProgress(setupSteps({ profile, dates: records.dates, contacts: records.contacts, tasks, consent })) : undefined} zeroCostMode={zeroCostPublicMode} keyDates={keyDateUpcoming} profile={profile} tasks={tasks} topNews={topNews} unreadNotifications={unreadNotifications} onToggleTask={changeTask} showGettingStarted={showGettingStarted} onDismissGettingStarted={dismissGettingStarted} />} />
           <Route path="news" element={(
             <NewsPage
               items={newsItems}
@@ -470,6 +473,7 @@ export default function App() {
           <Route path="tasks" element={<TasksPage zeroCostMode={zeroCostPublicMode} tasks={tasks} onAdd={addTask} onToggle={changeTask} onDelete={deleteTask} onUpdate={zeroCostStore ? (task, input) => zeroCostStore.updateTask(task, input) : undefined} linkContext={{ news: newsItems, dates: records.dates, cases: records.cases }} onExportCalendar={exportCalendar} />} />
           <Route path="search" element={<SearchPage news={newsItems} newsLoading={newsLoading} guides={guides} tasks={tasks} documents={documents} cases={zeroCostPublicMode ? records.cases : []} />} />
           {zeroCostPublicMode && live && <>
+            <Route path="setup" element={<SetupPage profile={profile} dates={records.dates} contacts={records.contacts} tasks={tasks} consent={consent} />} />
             <Route path="journey" element={<JourneyPage profile={profile} tasks={tasks} added={records.planner.journey.have} onAddTasks={addTasksFromItems} />} />
             <Route path="dates" element={<KeyDatesPage dates={records.dates} tasks={tasks} onAddTasks={addTasksFromItems} onCreate={(input) => zeroCostStore.createTrackedDate(input)} onUpdate={(entry, input) => zeroCostStore.updateTrackedDate(entry.id, { ...input, createdAt: entry.createdAt })} onRemove={(id) => zeroCostStore.removeTrackedDate(id)} onExportCalendar={exportCalendar} now={reminderClock} />} />
             <Route path="travel" element={<TravelPage have={records.planner.travel.have} custom={records.planner.travel.custom} onSaveChecklist={(value) => zeroCostStore.savePlanner("travel", value)} onAddTasks={addTasksFromItems} />} />
@@ -480,6 +484,7 @@ export default function App() {
           <Route path="university" element={<UniversityPage profile={profile} news={newsItems} contacts={zeroCostPublicMode ? records.contacts : []} savedResources={savedResources} onSaveLink={zeroCostStore ? (resource) => zeroCostStore.saveResource(resource) : undefined} onRemoveLink={zeroCostStore ? (id) => zeroCostStore.removeResource(id) : undefined} />} />
           <Route path="rules" element={<RulesPage profile={profile} tasks={tasks} onAddTasks={zeroCostStore ? addTasksFromItems : undefined} />} />
           <Route path="resources" element={<ResourcesPage />} />
+          <Route path="help" element={<HelpPage zeroCostMode={zeroCostPublicMode} />} />
           <Route path="guides" element={<GuidesPage onSave={saveGuide} onRemove={zeroCostStore ? (id) => zeroCostStore.removeResource(id) : undefined} savedResources={savedResources} savedUrls={savedResources.map((resource) => resource.url)} />} />
           <Route path="assistant" element={<AssistantPage localMode={zeroCostPublicMode} documentsAllowed={!zeroCostPublicMode || consent?.documents === true} localChunks={localChunks} documents={documents.filter((document) => document.analysisStatus === "indexed")} />} />
           <Route path="notifications" element={<NotificationsPage localMode={zeroCostPublicMode} notifications={shownNotifications} onMarkRead={markRead} onMarkAllRead={markAllRead} />} />

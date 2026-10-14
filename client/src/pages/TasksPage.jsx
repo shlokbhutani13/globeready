@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Check, ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
 import { dueStatus, localDateKey } from "../lib/reminders";
+import PageHelp from "../components/PageHelp";
 import PageHeader from "../components/ui/PageHeader";
 import SubNav, { planLinks } from "../components/ui/SubNav";
 import { CalendarPlus, Pencil, Repeat, Bell, Link2 } from "lucide-react";
@@ -96,6 +97,7 @@ export default function TasksPage({ tasks, onAdd, onToggle, onDelete, onUpdate, 
         action={onExportCalendar && <button type="button" className="button secondary" onClick={onExportCalendar}><CalendarPlus size={16} aria-hidden="true" /> Download calendar (.ics)</button>}
       />
       <SubNav label="Plan sections" links={zeroCostMode ? planLinks : []} />
+      <PageHelp id="tasks" />
 
       <form className="quick-add" onSubmit={submit}>
         <input aria-label="New task" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Add a task, deadline, or reminder" />
