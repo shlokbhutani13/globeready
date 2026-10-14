@@ -199,3 +199,15 @@ button, .button, [role="button"], select { min-height: var(--gr-target); }
 .task-row.done strong { text-decoration: line-through; color: var(--gr-muted); }
 .task-row small { display: block; color: var(--gr-muted); }
 @media (max-width: 760px) { .task-row { grid-template-columns: var(--gr-target) minmax(0, 1fr) var(--gr-target); } }
+
+/* Batch 3: rules library, resource center */
+.chip-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+.chip.status-superseded { background: var(--gr-warn-soft, #f6efe0); border-color: var(--gr-warn, #8a5a00); color: var(--gr-warn, #6b4600); }
+.chip.status-current { background: var(--gr-accent-soft); border-color: var(--gr-accent); color: var(--gr-accent-strong); }
+.record-title { margin: 0 0 4px; font-size: 1.0625rem; }
+.supersession { margin: 8px 0 0; font-size: .9375rem; }
+.supersession-chain { margin: 6px 0 0; padding-left: 20px; color: var(--gr-muted); font-size: .875rem; }
+.jump-links { display: flex; flex-wrap: wrap; gap: 8px; margin: var(--gr-space-4) 0; }
+.jump-links a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px; border: 1px solid var(--gr-line-strong); border-radius: 999px; background: var(--gr-surface); color: var(--gr-ink); text-decoration: none; }
+.jump-links a:hover { background: var(--gr-surface-soft); }
+.tip-list { margin: 0 0 var(--gr-space-3); padding-left: 20px; display: grid; gap: 6px; }
