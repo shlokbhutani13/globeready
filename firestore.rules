@@ -41,6 +41,37 @@ service cloud.firestore {
         && (!('source' in data) || (data.source is string && data.source.size() <= 200));
     }
 
+    function validConsent(consent) {
+      return consent is map
+        && consent.keys().hasOnly(['version', 'documents', 'aiGeneration', 'acceptedAt'])
+        && consent.version is string && consent.version.size() <= 80
+        && consent.documents is bool
+        && consent.aiGeneration == false;
+    }
+
+    function validStudentProfile(data) {
+      return data.keys().hasOnly([
+          'fullName', 'homeCountry', 'university', 'universityId', 'officialUniversityDomain',
+          'degreeLevel', 'program', 'visaType', 'journeyStage', 'startDate', 'graduationDate',
+          'timeZone', 'updatedAt', 'consent'
+        ])
+        && (!('fullName' in data) || (data.fullName is string && data.fullName.size() <= 500))
+        && (!('homeCountry' in data) || (data.homeCountry is string && data.homeCountry.size() <= 500))
+        && (!('university' in data) || (data.university is string && data.university.size() <= 500))
+        && (!('program' in data) || (data.program is string && data.program.size() <= 500))
+        && (!('consent' in data) || validConsent(data.consent));
+    }
+
+    function validLocalDocument(data) {
+      return data.keys().hasOnly(['name', 'category', 'contentType', 'size', 'storageMode', 'analysisStatus', 'chunks', 'uploadedAt', 'createdAt', 'updatedAt'])
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 200
+        && data.contentType in ['application/pdf', 'image/png', 'image/jpeg']
+        && data.size is int && data.size > 0 && data.size <= 10485760
+        && data.storageMode == 'browser-local'
+        && data.analysisStatus == 'indexed'
+        && data.chunks is list && data.chunks.size() >= 1 && data.chunks.size() <= 100;
+    }
+
     match /newsItems/{newsItemId} {
       allow read: if resource.data.editorialState in ['published-source-only', 'approved'];
       allow write: if false;
@@ -80,7 +111,8 @@ service cloud.firestore {
     // legacy push collection) is written by the API through the Admin SDK, so owners cannot write it directly.
     match /users/{uid} {
       allow read: if isOwner(uid);
-      allow write: if false;
+      allow create, update: if isOwner(uid) && validStudentProfile(request.resource.data);
+      allow delete: if false;
 
       match /tasks/{taskId} {
         allow read: if isOwner(uid);
@@ -95,10 +127,13 @@ service cloud.firestore {
         allow read: if isOwner(uid);
         // A document record is created only after the student has consented to document reading.
         allow create: if isOwner(uid)
-          && validDocument(uid, docId, request.resource.data)
+          && (validDocument(uid, docId, request.resource.data) || validLocalDocument(request.resource.data))
           && get(/databases/$(database)/documents/users/$(uid)).data.consent.documents == true;
-        // Deleting a document removes its stored file first, so it goes through the API, never a direct delete.
-        allow update, delete: if false;
+        allow update: if isOwner(uid) && resource.data.storageMode == 'browser-local'
+          && validLocalDocument(request.resource.data)
+          && get(/databases/$(database)/documents/users/$(uid)).data.consent.documents == true;
+        // Cloud files still go through the API; browser-local records have no stored object and may be removed directly.
+        allow delete: if isOwner(uid) && resource.data.storageMode == 'browser-local';
       }
 
       match /savedResources/{resourceId} {

@@ -42,6 +42,16 @@ function validDocument(uid, docId) {
   };
 }
 
+function validLocalDocument() {
+  const stamp = new Date("2026-01-01T00:00:00Z");
+  return {
+    name: "i20.pdf", category: "Other", contentType: "application/pdf", size: 1024,
+    storageMode: "browser-local", analysisStatus: "indexed",
+    chunks: [{ page: 1, text: "Form I-20 student record" }],
+    uploadedAt: stamp, createdAt: stamp, updatedAt: stamp,
+  };
+}
+
 describeEmulator("Firestore authorization rules", () => {
   beforeAll(async () => {
     const rules = await readFile(new URL("../../firestore.rules", import.meta.url), "utf8");
@@ -165,6 +175,35 @@ describeEmulator("Firestore authorization rules", () => {
     const record = doc(alice, "users", "alice", "documents", "doc1");
     await assertFails(updateDoc(record, { name: "renamed.pdf" }));
     await assertFails(deleteDoc(record));
+  });
+
+  test("an owner may atomically replace and remove a bounded browser-local document index", async () => {
+    const alice = environment.authenticatedContext("alice").firestore();
+    const local = doc(alice, "users", "alice", "documents", "local-one");
+    await assertSucceeds(setDoc(local, validLocalDocument()));
+    await assertSucceeds(setDoc(local, { ...validLocalDocument(), chunks: [{ page: 2, text: "Updated passage" }] }));
+    await assertFails(setDoc(local, { ...validLocalDocument(), isAdmin: true }));
+    await assertFails(setDoc(local, { ...validLocalDocument(), chunks: [] }));
+    await assertFails(setDoc(local, { ...validLocalDocument(), chunks: Array.from({ length: 101 }, () => ({ page: 1, text: "x" })) }));
+    const bob = environment.authenticatedContext("bob").firestore();
+    await assertFails(setDoc(doc(bob, "users", "alice", "documents", "local-one"), validLocalDocument()));
+    await assertSucceeds(deleteDoc(local));
+  });
+
+  test("a student may write only the bounded zero-cost profile and consent shape", async () => {
+    const dave = environment.authenticatedContext("dave").firestore();
+    const profile = doc(dave, "users", "dave");
+    await assertSucceeds(setDoc(profile, { fullName: "Dave", visaType: "F-1", updatedAt: new Date() }));
+    await assertSucceeds(setDoc(profile, {
+      consent: { version: "2026-10-13-zero-cost", documents: true, aiGeneration: false, acceptedAt: new Date() },
+      updatedAt: new Date(),
+    }, { merge: true }));
+    await assertFails(setDoc(profile, { fullName: "x".repeat(501), updatedAt: new Date() }));
+    await assertFails(setDoc(profile, { fullName: "Dave", isAdmin: true, updatedAt: new Date() }));
+    await assertFails(setDoc(profile, {
+      consent: { version: "2026-10-13-zero-cost", documents: true, aiGeneration: true, acceptedAt: new Date() },
+      updatedAt: new Date(),
+    }));
   });
 
   test("saved resources must be https links with bounded text", async () => {
