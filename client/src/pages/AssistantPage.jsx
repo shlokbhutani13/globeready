@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { ArrowUp, Bot, ExternalLink, History, RefreshCcw, Sparkles } from "lucide-react";
 import Disclaimer from "../components/Disclaimer";
 import { apiRequest } from "../lib/api";
+import { answerFromLocalChunks } from "../lib/local-assistant";
 
 export function assistantMessageFromResponse(answer) {
   return {
@@ -16,7 +17,7 @@ export function assistantMessageFromResponse(answer) {
   };
 }
 
-export default function AssistantPage({ requestAnswer = apiRequest, documents = [] }) {
+export default function AssistantPage({ requestAnswer = apiRequest, documents = [], localMode = false, localChunks = [] }) {
   const [question, setQuestion] = useState("");
   const [documentId, setDocumentId] = useState("");
   const [messages, setMessages] = useState([]);
@@ -36,12 +37,14 @@ export default function AssistantPage({ requestAnswer = apiRequest, documents = 
       const body = { question: text };
       if (documentId) body.documentId = documentId;
       if (conversationId) body.conversationId = conversationId;
-      const answer = await requestAnswer("/api/assistant", { method: "POST", body: JSON.stringify(body) });
+      const answer = localMode
+        ? answerFromLocalChunks({ question: text, chunks: localChunks, documentId })
+        : await requestAnswer("/api/assistant", { method: "POST", body: JSON.stringify(body) });
       if (answer.conversationId) setConversationId(answer.conversationId);
       setMessages((current) => [...current, assistantMessageFromResponse(answer)]);
       setQuestion("");
-    } catch {
-      setError("We could not get an answer. Check your connection and try again.");
+    } catch (nextError) {
+      setError(localMode ? nextError.message : "We could not get an answer. Check your connection and try again.");
     } finally {
       setBusy(false);
     }
@@ -86,8 +89,8 @@ export default function AssistantPage({ requestAnswer = apiRequest, documents = 
     <div className="assistant-page">
       <header className="assistant-header">
         <span><Bot size={19} /></span>
-        <div><h1>GlobeReady Assistant</h1><p>Answers from your uploaded documents and trusted official resources</p></div>
-        <button type="button" className="text-button history-toggle" onClick={openHistory}><History size={14} /> History</button>
+        <div><h1>GlobeReady Assistant</h1><p>{localMode ? "Verbatim answers from your documents — retrieval runs privately in this browser" : "Answers from your uploaded documents and trusted official resources"}</p></div>
+        {!localMode && <button type="button" className="text-button history-toggle" onClick={openHistory}><History size={14} /> History</button>}
       </header>
       {history && (
         <div className="conversation-history panel">

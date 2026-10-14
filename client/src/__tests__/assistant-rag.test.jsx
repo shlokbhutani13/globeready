@@ -7,6 +7,23 @@ import AssistantPage from "../pages/AssistantPage";
 afterEach(cleanup);
 
 describe("document-grounded assistant", () => {
+  test("uses private browser retrieval in zero-cost mode and hides cloud history", async () => {
+    const requestAnswer = vi.fn();
+    render(<AssistantPage
+      localMode
+      localChunks={[{ documentId: "i20", documentName: "I-20.pdf", page: 2, text: "Travel signature valid until May." }]}
+      requestAnswer={requestAnswer}
+    />);
+
+    expect(screen.getByText(/runs privately in this browser/i)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /history/i })).toBeNull();
+    fireEvent.change(screen.getByLabelText("Ask GlobeReady"), { target: { value: "When is my travel signature valid?" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send question" }));
+
+    expect(await screen.findByText(/From I-20\.pdf · page 2/)).toBeTruthy();
+    expect(requestAnswer).not.toHaveBeenCalled();
+  });
+
   test("renders the document, page, and excerpt returned with an answer", async () => {
     render(<AssistantPage requestAnswer={async () => ({
       answer: "Check the travel signature on page two.",
