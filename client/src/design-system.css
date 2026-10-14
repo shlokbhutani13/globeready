@@ -309,3 +309,6 @@ button, .button, [role="button"], select { min-height: var(--gr-target); }
 .chip.choice { min-height: 44px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
 .chip.choice.active { font-weight: 600; border-color: currentColor; }
 .date-note.soon, .date-note.past { font-weight: 600; }
+
+/* Batch 5.4: emergency card */
+.card-field { display: grid; gap: 4px; margin-bottom: 12px; }

@@ -7,7 +7,7 @@ import EmptyState from "../components/ui/EmptyState";
 import { glossary, searchGlossary } from "../data/glossary";
 import { helpOrder, pageHelp, pageHelpTitles } from "../data/page-help";
 
-const routes = { tasks: "/tasks", journey: "/journey", dates: "/dates", cases: "/cases", travel: "/travel", contacts: "/contacts", university: "/university", news: "/news", forYou: "/for-you", rules: "/rules", resources: "/resources", guides: "/guides", life: "/life", budget: "/life/budget", docReadiness: "/life/documents", prepare: "/prepare", nextSteps: "/next" };
+const routes = { tasks: "/tasks", journey: "/journey", dates: "/dates", cases: "/cases", travel: "/travel", contacts: "/contacts", university: "/university", news: "/news", forYou: "/for-you", rules: "/rules", resources: "/resources", guides: "/guides", life: "/life", budget: "/life/budget", docReadiness: "/life/documents", emergencyCard: "/life/emergency-card", prepare: "/prepare", nextSteps: "/next" };
 
 export default function HelpPage({ zeroCostMode = false }) {
   const [query, setQuery] = useState("");
