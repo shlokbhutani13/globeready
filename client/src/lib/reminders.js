@@ -27,7 +27,7 @@ export function dueStatus(task, now = new Date()) {
 // Open tasks that are overdue or due within `windowDays`, most urgent first. The id includes the due date, so a
 // rescheduled task produces a new, unread reminder.
 export function deriveReminders(tasks = [], now = new Date(), { windowDays = 3 } = {}) {
-  return tasks
+  const dueReminders = tasks
     .map((task) => ({ task, status: dueStatus(task, now) }))
     .filter(({ status }) => status && status.days <= windowDays)
     .sort((left, right) => left.status.days - right.status.days || String(left.task.title).localeCompare(String(right.task.title)))
@@ -39,6 +39,20 @@ export function deriveReminders(tasks = [], now = new Date(), { windowDays = 3 }
       body: status.kind === "overdue" ? "This task is past its due date. Complete it or change the date." : `Due ${task.dueDate}.`,
       dueDate: task.dueDate,
     }));
+  // A reminder date the student chose by hand fires from that day, for up to 14 days, so old data never nags.
+  const manual = tasks
+    .filter((task) => !task.completed && task.remindOn)
+    .map((task) => ({ task, days: daysUntil(task.remindOn, now) }))
+    .filter(({ days }) => days !== null && days <= 0 && days >= -14)
+    .map(({ task }) => ({
+      id: `${task.id}:remind:${task.remindOn}`,
+      taskId: task.id,
+      kind: "soon",
+      title: `Reminder: ${task.title}`,
+      body: task.dueDate ? `You asked to be reminded on ${task.remindOn}. Due ${task.dueDate}.` : `You asked to be reminded on ${task.remindOn}.`,
+      dueDate: task.dueDate || task.remindOn,
+    }));
+  return [...manual, ...dueReminders];
 }
 
 // Which reminders this browser has marked read. Stored per account on this device only.

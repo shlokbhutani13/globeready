@@ -264,7 +264,9 @@ export default function App() {
   const changeTask = async (id) => {
     const task = tasks.find((item) => item.id === id);
     if (!task) return;
-    if (live) return (zeroCostStore ? zeroCostStore.toggleTask(task) : toggleTask(auth.user.uid, task)).catch((error) => setAppError(friendlyError(error)));
+    // In the free beta the tasks page reports errors itself, so a failed "next repeat" is explained next to the task.
+    if (live && zeroCostStore) return zeroCostStore.completeTask(task);
+    if (live) return toggleTask(auth.user.uid, task).catch((error) => setAppError(friendlyError(error)));
     setTasks(tasks.map((item) => item.id === id ? { ...item, completed: !item.completed } : item));
   };
   const deleteTask = async (id) => live
@@ -458,7 +460,7 @@ export default function App() {
           )} />
           <Route path="news/:id" element={<NewsDetailPage profile={profile} items={newsItems} loading={newsLoading} error={newsError} localMode={zeroCostPublicMode} />} />
           <Route path="documents" element={<DocumentsPage localProcessing={live && zeroCostPublicMode} processing={processing} onCancelProcessing={cancelProcessing} onDeleteAllText={deleteAllDocumentText} consent={live ? consent : undefined} onSaveConsent={saveConsentChoice} documents={documents} uploadProgress={uploadProgress} storageAvailable={!live || storageAvailable} onAdd={addDocument} onDelete={deleteDocument} onAnalyze={analyzeDocument} />} />
-          <Route path="tasks" element={<TasksPage zeroCostMode={zeroCostPublicMode} tasks={tasks} onAdd={addTask} onToggle={changeTask} onDelete={deleteTask} onExportCalendar={exportCalendar} />} />
+          <Route path="tasks" element={<TasksPage zeroCostMode={zeroCostPublicMode} tasks={tasks} onAdd={addTask} onToggle={changeTask} onDelete={deleteTask} onUpdate={zeroCostStore ? (task, input) => zeroCostStore.updateTask(task, input) : undefined} linkContext={{ news: newsItems, dates: records.dates }} onExportCalendar={exportCalendar} />} />
           <Route path="search" element={<SearchPage news={newsItems} newsLoading={newsLoading} guides={guides} tasks={tasks} documents={documents} />} />
           {zeroCostPublicMode && live && <>
             <Route path="journey" element={<JourneyPage profile={profile} tasks={tasks} added={records.planner.journey.have} onAddTasks={addTasksFromItems} />} />

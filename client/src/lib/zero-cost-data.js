@@ -2,6 +2,7 @@ import {
   addDoc, collection, deleteDoc, doc, getDocs, limit, onSnapshot, query, serverTimestamp, setDoc, updateDoc, writeBatch,
 } from "firebase/firestore";
 import { isCalendarDate } from "./calendar-date";
+import { nextTaskFrom, recurrenceValues } from "./recurrence";
 
 // Direct Firestore access for the zero-cost beta. Every write mirrors firestore.zero-cost.rules, and the checks here
 // exist so a student sees a clear message instead of a generic permission error.
@@ -39,15 +40,50 @@ function optionalBounded(value, max, label) {
   return text;
 }
 
+export const linkTypes = ["news", "rule", "case", "date", "guide"];
+export const maxTaskLinks = 5;
+
+export function validLinks(input) {
+  if (input === undefined || input === null) return [];
+  if (!Array.isArray(input)) throw new Error("Links must be a list.");
+  const seen = new Set();
+  const links = [];
+  for (const link of input) {
+    const id = typeof link?.id === "string" ? link.id.trim() : "";
+    if (!linkTypes.includes(link?.type) || !/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$/u.test(id)) throw new Error("A linked item is not valid.");
+    const key = `${link.type}:${id}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    links.push({ type: link.type, id });
+  }
+  if (links.length > maxTaskLinks) throw new Error(`A task can link up to ${maxTaskLinks} items.`);
+  return links;
+}
+
 export function validTask(input = {}) {
   const dueDate = typeof input.dueDate === "string" ? input.dueDate.trim() : "";
   if (dueDate && !isCalendarDate(dueDate)) throw new Error("Due date must be a real date (YYYY-MM-DD).");
-  return {
+  const task = {
     title: boundedText(input.title, 200, "Task title"),
     category: typeof input.category === "string" ? input.category.slice(0, 80) : "General",
     priority: ["low", "medium", "high"].includes(input.priority) ? input.priority : "medium",
     dueDate,
   };
+  const notes = optionalBounded(input.notes, 1000, "Notes");
+  if (notes) task.notes = notes;
+  if (input.recurrence && input.recurrence !== "none") {
+    if (!recurrenceValues.includes(input.recurrence)) throw new Error("Choose a repeat option from the list.");
+    if (!dueDate) throw new Error("A repeating task needs a due date.");
+    task.recurrence = input.recurrence;
+  }
+  const remindOn = typeof input.remindOn === "string" ? input.remindOn.trim() : "";
+  if (remindOn) {
+    if (!isCalendarDate(remindOn)) throw new Error("Reminder date must be a real date (YYYY-MM-DD).");
+    task.remindOn = remindOn;
+  }
+  const links = validLinks(input.links);
+  if (links.length) task.links = links;
+  return task;
 }
 
 export function validResource(input = {}) {
@@ -232,6 +268,28 @@ export function createZeroCostDataStore({ firestore, uid, sdk = defaultSdk }) {
       };
       await sdk.setDoc(sdk.doc(firestore, "users", uid, "documents", id), record);
       return { id, ...record };
+    },
+    // Rewrites the whole task so cleared optional fields disappear. Creation time, source and completion are kept.
+    async updateTask(task = {}, input = {}) {
+      if (typeof task.id !== "string" || !task.id) throw new Error("Task is invalid.");
+      const fields = validTask(input);
+      await sdk.setDoc(sdk.doc(firestore, "users", uid, "tasks", task.id), {
+        ...fields, completed: task.completed === true, source: "user", createdAt: task.createdAt, updatedAt: timestamp(),
+      });
+      return { id: task.id, ...fields };
+    },
+    // Completing a repeating task also creates the next one. Reopening a task never does.
+    async completeTask(task = {}) {
+      if (typeof task.id !== "string" || !task.id) throw new Error("Task is invalid.");
+      await sdk.updateDoc(sdk.doc(firestore, "users", uid, "tasks", task.id), { completed: !task.completed, updatedAt: timestamp() });
+      const next = task.completed ? null : nextTaskFrom(task);
+      if (!next) return { nextId: null };
+      try {
+        const created = await sdk.addDoc(userCollection("tasks"), { ...validTask(next), completed: false, source: "user", createdAt: timestamp(), updatedAt: timestamp() });
+        return { nextId: created.id, next };
+      } catch (reason) {
+        throw new Error(`Marked done, but the next repeat could not be created: ${reason?.message || "try adding it again"}`);
+      }
     },
     toggleTask(task) {
       return sdk.updateDoc(sdk.doc(firestore, "users", uid, "tasks", task.id), {

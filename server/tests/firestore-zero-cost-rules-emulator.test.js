@@ -54,17 +54,39 @@ describeEmulator("zero-cost Firestore rules", () => {
     await assertFails(setDoc(ref, consent(true, { scope: "everything" }), { merge: true }));
   });
 
-  test("tasks are created incomplete with server timestamps and only completion can change", async () => {
+  test("tasks are created incomplete with server timestamps; edits keep creation time and source", async () => {
     const maya = verified("maya");
     const ref = doc(maya, "users", "maya", "tasks", "t1");
     await assertSucceeds(setDoc(ref, task()));
     await assertSucceeds(updateDoc(ref, { completed: true, updatedAt: now() }));
-    await assertFails(updateDoc(ref, { title: "changed", updatedAt: now() }));
+    await assertSucceeds(updateDoc(ref, { title: "changed", notes: "bring passport", updatedAt: now() }));
+    await assertFails(updateDoc(ref, { title: "", updatedAt: now() }));
+    await assertFails(updateDoc(ref, { title: "stale timestamp", updatedAt: new Date("2020-01-01T00:00:00Z") }));
+    await assertFails(updateDoc(ref, { source: "admin", updatedAt: now() }));
+    await assertFails(updateDoc(ref, { createdAt: new Date("2020-01-01T00:00:00Z"), updatedAt: now() }));
+    await assertFails(updateDoc(ref, { notes: "x".repeat(1001), updatedAt: now() }));
+    await assertFails(updateDoc(ref, { isAdmin: true, updatedAt: now() }));
+    await assertFails(updateDoc(ref, { completed: "yes", updatedAt: now() }));
+    await assertFails(updateDoc(doc(verified("bob"), "users", "maya", "tasks", "t1"), { title: "hijack", updatedAt: now() }));
+    await assertFails(updateDoc(doc(unverified("maya"), "users", "maya", "tasks", "t1"), { title: "unverified", updatedAt: now() }));
     await assertFails(setDoc(doc(maya, "users", "maya", "tasks", "t2"), task({ title: "" })));
     await assertFails(setDoc(doc(maya, "users", "maya", "tasks", "t3"), task({ notes: "x".repeat(1001) })));
     await assertFails(setDoc(doc(maya, "users", "maya", "tasks", "t4"), task({ completed: true })));
     await assertFails(setDoc(doc(unverified("maya"), "users", "maya", "tasks", "t5"), task()));
     await assertSucceeds(deleteDoc(ref));
+  });
+
+  test("tasks can repeat, carry a reminder date and link to a few items, within bounds", async () => {
+    const maya = verified("maya");
+    const ok = doc(maya, "users", "maya", "tasks", "r1");
+    await assertSucceeds(setDoc(ok, task({ recurrence: "monthly", remindOn: "2026-10-25", links: [{ type: "rule", id: "form-i-765" }] })));
+    await assertSucceeds(updateDoc(ok, { recurrence: "weekly", updatedAt: now() }));
+    await assertFails(updateDoc(ok, { recurrence: "daily", updatedAt: now() }));
+    await assertFails(setDoc(doc(maya, "users", "maya", "tasks", "r2"), task({ recurrence: "daily" })));
+    await assertFails(setDoc(doc(maya, "users", "maya", "tasks", "r3"), task({ recurrence: "weekly", dueDate: "" })));
+    await assertFails(setDoc(doc(maya, "users", "maya", "tasks", "r4"), task({ remindOn: "soon" })));
+    await assertFails(setDoc(doc(maya, "users", "maya", "tasks", "r5"), task({ links: Array.from({ length: 6 }, (_, index) => ({ type: "news", id: `n${index}` })) })));
+    await assertFails(setDoc(doc(maya, "users", "maya", "tasks", "r6"), task({ links: "news" })));
   });
 
   test("extracted document text needs consent, a slot ID, page counts, and the browser-local shape", async () => {

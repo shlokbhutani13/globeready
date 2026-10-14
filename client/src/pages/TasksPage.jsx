@@ -3,7 +3,13 @@ import { Check, ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
 import { dueStatus, localDateKey } from "../lib/reminders";
 import PageHeader from "../components/ui/PageHeader";
 import SubNav, { planLinks } from "../components/ui/SubNav";
-import { CalendarPlus } from "lucide-react";
+import { CalendarPlus, Pencil, Repeat, Bell, Link2 } from "lucide-react";
+import { Link } from "react-router-dom";
+import TaskEditor from "../components/TaskEditor";
+import Notice from "../components/ui/Notice";
+import { friendlyError } from "../lib/friendly-error";
+import { recurrenceLabels } from "../lib/recurrence";
+import { resolveLinks } from "../lib/links";
 
 const dayMs = 24 * 60 * 60 * 1000;
 
@@ -42,7 +48,16 @@ export function defaultCalendarMonth(tasks = [], now = new Date()) {
   return new Date(Date.UTC(year, month - 1, 1));
 }
 
-export default function TasksPage({ tasks, onAdd, onToggle, onDelete, onExportCalendar, zeroCostMode = false, now = new Date() }) {
+export default function TasksPage({ tasks, onAdd, onToggle, onDelete, onUpdate, onExportCalendar, linkContext = {}, zeroCostMode = false, now = new Date() }) {
+  const [editingId, setEditingId] = useState("");
+  const [notice, setNotice] = useState({ tone: "", text: "" });
+  const complete = async (task) => {
+    setNotice({ tone: "", text: "" });
+    try {
+      const result = await onToggle(task.id);
+      if (result?.next?.dueDate) setNotice({ tone: "success", text: `Done. The next repeat of “${task.title}” is due ${result.next.dueDate}.` });
+    } catch (reason) { setNotice({ tone: "error", text: friendlyError(reason) }); }
+  };
   const [title, setTitle] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [priority, setPriority] = useState("medium");
@@ -121,10 +136,40 @@ export default function TasksPage({ tasks, onAdd, onToggle, onDelete, onExportCa
       </section>
 
       <section className="panel task-list">
+        {notice.text && <Notice tone={notice.tone}>{notice.text}</Notice>}
         {visibleTasks.length === 0 && <p className="muted">No tasks for this view.</p>}
         {visibleTasks.map((task) => {
           const status = dueStatus(task, now);
-          return <div className={`task-row ${task.completed ? "done" : ""}`} key={task.id}><button className="check-button" aria-pressed={Boolean(task.completed)} aria-label={task.completed ? `Mark ${task.title} as not done` : `Complete ${task.title}`} onClick={() => onToggle(task.id)}>{task.completed && <Check size={15} />}</button><div><strong>{task.title}</strong><small>{task.category || "General"} · {task.priority || "medium"} priority{status && status.kind !== "later" ? <> · <span className={`due-status ${status.kind}`}>{status.label}</span></> : null}</small></div><time>{task.dueDate || "No deadline"}</time><button className="icon-button" aria-label={`Delete ${task.title}`} onClick={() => onDelete(task.id)}><Trash2 size={16} /></button></div>;
+          const links = resolveLinks(task.links, linkContext);
+          if (editingId === task.id && onUpdate) {
+            return <TaskEditor key={task.id} task={task} linkItems={links} onSave={onUpdate} onCancel={() => setEditingId("")} />;
+          }
+          return (
+            <div className={`task-row ${task.completed ? "done" : ""}`} key={task.id}>
+              <button className="check-button" aria-pressed={Boolean(task.completed)} aria-label={task.completed ? `Mark ${task.title} as not done` : `Complete ${task.title}`} onClick={() => complete(task)}>{task.completed && <Check size={15} />}</button>
+              <div>
+                <strong>{task.title}</strong>
+                <small>{task.category || "General"} · {task.priority || "medium"} priority{status && status.kind !== "later" ? <> · <span className={`due-status ${status.kind}`}>{status.label}</span></> : null}</small>
+                {(task.recurrence || task.remindOn) && (
+                  <small className="task-extras">
+                    {task.recurrence && <span><Repeat size={13} aria-hidden="true" /> {recurrenceLabels[task.recurrence]}</span>}
+                    {task.remindOn && <span><Bell size={13} aria-hidden="true" /> Remind {task.remindOn}</span>}
+                  </small>
+                )}
+                {task.notes && <p className="task-notes">{task.notes}</p>}
+                {links.length > 0 && (
+                  <ul className="chip-row task-links" aria-label={`Connected to ${task.title}`}>
+                    {links.map((link) => <li key={`${link.type}:${link.id}`}><Link className="chip" to={link.to}><Link2 size={12} aria-hidden="true" /> {link.label}</Link></li>)}
+                  </ul>
+                )}
+              </div>
+              <time>{task.dueDate || "No deadline"}</time>
+              <div className="record-actions">
+                {onUpdate && <button className="icon-button" aria-label={`Edit ${task.title}`} onClick={() => setEditingId(task.id)}><Pencil size={16} /></button>}
+                <button className="icon-button" aria-label={`Delete ${task.title}`} onClick={() => onDelete(task.id)}><Trash2 size={16} /></button>
+              </div>
+            </div>
+          );
         })}
       </section>
     </div>

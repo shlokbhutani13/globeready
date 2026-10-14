@@ -39,6 +39,25 @@ describeEmulator("zero-cost browser data layer against its rules", () => {
     await store.removeTask(task.id);
   });
 
+  test("editing, repeating and linking tasks as the browser does is accepted by the rules", async () => {
+    const firestore = environment.authenticatedContext("maya", { email_verified: true }).firestore();
+    const store = createZeroCostDataStore({ firestore, uid: "maya", sdk });
+    const created = await store.createTask({ title: "Pay rent", dueDate: "2026-10-31", recurrence: "monthly", remindOn: "2026-10-28", notes: "Portal login in password manager", links: [{ type: "rule", id: "form-i-765" }] });
+    const reread = async (id) => (await sdk.getDoc(sdk.doc(firestore, "users", "maya", "tasks", id)));
+    const first = (await reread(created.id)).data();
+    await store.updateTask({ id: created.id, completed: false, createdAt: first.createdAt }, { title: "Pay rent online", dueDate: "2026-10-31", recurrence: "monthly", links: [] });
+    const edited = (await reread(created.id)).data();
+    expect(edited).toMatchObject({ title: "Pay rent online", recurrence: "monthly", completed: false, source: "user" });
+    expect(edited.notes).toBeUndefined();
+    expect(edited.createdAt.isEqual(first.createdAt)).toBe(true);
+    const { nextId } = await store.completeTask({ id: created.id, ...edited });
+    const next = (await reread(nextId)).data();
+    expect(next).toMatchObject({ title: "Pay rent online", dueDate: "2026-11-30", recurrence: "monthly", completed: false });
+    expect((await reread(created.id)).data().completed).toBe(true);
+    await store.completeTask({ id: created.id, ...(await reread(created.id)).data() });
+    expect((await reread(created.id)).data().completed).toBe(false);
+  });
+
   test("an unverified account cannot write, so the app must show the verification step", async () => {
     const firestore = environment.authenticatedContext("new", { email_verified: false }).firestore();
     const store = createZeroCostDataStore({ firestore, uid: "new", sdk });
