@@ -18,7 +18,9 @@ The free beta (`docs/ZERO_COST_PUBLIC.md`) has no server and stores less:
   extraction. OCR code and the English model are served from GlobeReady's own site, so no third party receives an image.
 - **Stored in Firestore under the student's UID:** profile fields (including journey dates and chosen topics), privacy
   choices, tasks, key dates the student typed in (passport, visa, I-20 and similar), private contacts (names, roles,
-  phone numbers, emails, notes), checklist progress, saved guides, saved update IDs, and, only while document reading is
+  phone numbers, emails, notes), cases the student tracks (names, form and receipt numbers the student typed, dates,
+  statuses, notes; nothing is fetched from any agency), task notes, repeats, reminder dates and links to other items,
+  links the student saves for their university, checklist progress, saved guides, saved update IDs, and, only while document reading is
   on, the extracted text of up to 50 documents with page numbers. Dates are never read from documents automatically.
 - **Stored only in the browser:** display choices (text size, contrast, animation) and which reminders were marked read.
   The offline service worker keeps only GlobeReady's public files (app code, reviewed news, icons). It never stores

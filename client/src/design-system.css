@@ -235,3 +235,25 @@ button, .button, [role="button"], select { min-height: var(--gr-target); }
 .chip.case-status.open { background: var(--gr-accent-soft); border-color: var(--gr-accent); color: var(--gr-accent-strong); }
 .chip.case-status.closed { background: var(--gr-surface-soft); }
 .chip.coverage-reviewed { background: var(--gr-sage-soft); border-color: var(--gr-sage-ink); color: var(--gr-sage-ink); }
+
+/* Batch 3: update timeline, figure credit, connections */
+.news-detail-figure { margin: 0 0 var(--gr-space-4); }
+.news-detail-figure img { display: block; width: 100%; height: auto; border-radius: var(--gr-radius); }
+.news-detail-figure figcaption { margin-top: 4px; color: var(--gr-muted); font-size: .8125rem; }
+.update-timeline ol { list-style: none; margin: var(--gr-space-2) 0 0; padding: 0 0 0 var(--gr-space-4); border-left: 2px solid var(--gr-line-strong); display: grid; gap: var(--gr-space-3); }
+.update-timeline li { display: grid; grid-template-columns: 7.5rem 8.5rem minmax(0, 1fr); gap: 8px; align-items: baseline; }
+.update-timeline li[aria-current="true"] { font-weight: 650; }
+.timeline-kind { color: var(--gr-muted); font-size: .8125rem; }
+@media (max-width: 760px) { .update-timeline li { grid-template-columns: minmax(0, 1fr); gap: 0; } }
+.connected { margin: var(--gr-space-4) 0; display: grid; gap: var(--gr-space-2); }
+
+/* Connected-item chips and in-record links keep the 44px target */
+.chip-row a.chip, .task-links a.chip { min-height: var(--gr-target); padding: 0 12px; }
+.record-meta a { display: inline-flex; align-items: center; min-height: var(--gr-target); }
+
+/* Task rows with edit and delete controls stack under the text on phones instead of running off the edge */
+@media (max-width: 760px) {
+  .task-row { grid-template-columns: var(--gr-target) minmax(0, 1fr); }
+  .task-row > time, .task-row > .record-actions { grid-column: 2; justify-content: flex-start; }
+}
+.task-row small.task-extras { display: flex; }

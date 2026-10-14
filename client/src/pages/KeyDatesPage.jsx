@@ -1,5 +1,7 @@
 import React, { useState } from "react";
-import { CalendarPlus, Pencil, Trash2 } from "lucide-react";
+import { CalendarPlus, ListPlus, Pencil, Trash2 } from "lucide-react";
+import { Link } from "react-router-dom";
+import { tasksLinkedTo } from "../lib/links";
 import PageHeader from "../components/ui/PageHeader";
 import SubNav, { planLinks } from "../components/ui/SubNav";
 import Notice from "../components/ui/Notice";
@@ -9,7 +11,7 @@ import { keyDateKinds, keyDateStatus, kindLabel } from "../lib/key-dates";
 
 const blank = { label: "", kind: "passport", date: "", remindDays: "30", notes: "" };
 
-export default function KeyDatesPage({ dates = [], onCreate, onUpdate, onRemove, onExportCalendar, now = new Date() }) {
+export default function KeyDatesPage({ dates = [], tasks = [], onAddTasks, onCreate, onUpdate, onRemove, onExportCalendar, now = new Date() }) {
   const [form, setForm] = useState(blank);
   const [editing, setEditing] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -92,8 +94,20 @@ export default function KeyDatesPage({ dates = [], onCreate, onUpdate, onRemove,
                     <span>Reminder {entry.remindDays} days before</span>
                   </div>
                   {entry.notes && <p className="muted">{entry.notes}</p>}
+                  {tasksLinkedTo(tasks, "date", entry.id).length > 0 && (
+                    <ul className="chip-row" aria-label={`Tasks for ${entry.label}`}>
+                      {tasksLinkedTo(tasks, "date", entry.id).map((task) => <li key={task.id}><Link className="chip" to="/tasks">{task.completed ? "Done: " : "Task: "}{task.title}</Link></li>)}
+                    </ul>
+                  )}
                 </div>
                 <div className="record-actions">
+                  {onAddTasks && <button type="button" className="button secondary" aria-label={`Add a task for ${entry.label}`} onClick={async () => {
+                    setError(""); setSaved("");
+                    try {
+                      const created = await onAddTasks([{ title: `Prepare for: ${entry.label}`.slice(0, 200), category: "Key dates", priority: "medium", links: [{ type: "date", id: entry.id }] }], { dueDate: entry.date });
+                      setSaved(created === 0 ? "That task is already in your list." : "Task added. Find it in Tasks.");
+                    } catch (reason) { setError(friendlyError(reason)); }
+                  }}><ListPlus size={15} aria-hidden="true" /> Add task</button>}
                   <button type="button" className="button secondary" aria-label={`Edit ${entry.label}`} onClick={() => edit(entry)}><Pencil size={15} aria-hidden="true" /> Edit</button>
                   <button type="button" className="button secondary" aria-label={`Delete ${entry.label}`} onClick={() => remove(entry)}><Trash2 size={15} aria-hidden="true" /> Delete</button>
                 </div>

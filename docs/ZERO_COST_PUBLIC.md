@@ -27,6 +27,13 @@ Never deploy the zero-cost rules to a production project, or the production rule
 - Installable app with an offline shell. Offline use covers the app, reviewed updates already loaded, and guides. Changes made offline are not saved, queued or synchronized, and Firestore data and document text are never cached.
 - Restore from the app's own JSON export, with a full preview, size/ownership/limit validation, duplicate skipping, and no overwriting or deleting.
 - Text size, high contrast and reduced motion choices, remembered on the device; a skip link; labelled controls; 44 px touch targets.
+- Rules and forms library: official rules, regulations, forms and agency guidance, each linking to its official source with publication and effective dates (or an honest "no single effective date"), a superseded status and what replaced it, search, and filters by type, status, visa and topic. GlobeReady links to the source and does not copy form editions or fees. "Listed" is the date an entry was added, not a legal review.
+- What may apply to you: informational matches between the student's visa type, journey stage, university and saved topics and the tags on reviewed updates and library entries, with the matching fields shown. Never a legal conclusion.
+- Case tracker: private cases (OPT, STEM OPT, change or extension of status, SEVIS transfer, travel document) with form and receipt numbers, a manual status history, appointments and request-for-evidence deadlines that feed reminders, Home and the calendar file. GlobeReady never contacts USCIS or any agency; the status is only what the student entered, and the page says so and links to the official case status page.
+- University workspace for any university: coverage status stated honestly (no university is marked reviewed in this beta), search links generated from the website the student entered and labelled as unreviewed, the student's own saved office links, and school contacts.
+- Safety and life resources: emergency, scams, health, tax and Social Security, housing, travel and campus-safety links to the organizations that run them. U.S. numbers, short, not exhaustive.
+- Tasks can be edited and carry private notes, a weekly, monthly or yearly repeat (finishing one adds the next), a manual reminder date, and connections to updates, rules, cases, key dates and guides, shown in both directions.
+- Update pages show a timeline of related reviewed updates and rule changes, and original local illustrations credited as not official images. No outside images are loaded.
 - Clear messages for sign-in problems, password reset, offline use, permission errors, and daily quota limits; an offline notice appears when the connection drops.
 - Document reading on the student's device: text PDFs up to 100 pages and PNG/JPEG photos of printed English up to 25 megapixels, 10 MB maximum. Up to 50 documents per account. Original files are never uploaded or backed up; only the extracted text is saved, and only while document reading is on.
 - Every page is read or the document is refused. If the text does not fit the per-document storage budget (about 800 KB), nothing is saved and the student is asked to split the file. Each document shows how many pages were read and how many had no readable text.
@@ -108,6 +115,11 @@ Use disposable accounts and synthetic documents only.
 - Install the app, go offline, reload, and confirm the shell opens, the offline banner says changes are not saved, and no Firebase or OCR request is served from cache.
 - Export the account, then restore the file: check the preview, confirm duplicates are skipped, and confirm a file from another account is refused.
 - Switch text size, contrast and animation in Settings and confirm they persist after reload.
+- Rules and forms: search for I-765, filter to Superseded, open an official source, add a review task and confirm it shows on the rule and in Tasks.
+- Cases: add a case, add a status update, an appointment and a response deadline; confirm the dates reach Home, Reminders and the `.ics` file; remove a history entry; delete the case. Confirm the page says nothing is checked with any agency.
+- Tasks: edit a task, set a repeat and a reminder date, complete it and confirm the next one appears; remove a connection.
+- University: with and without a website entered; confirm the not-reviewed wording, save a link and remove it.
+- For you and Safety and life: change profile fields and confirm the matches and their reasons change; open a few resource links.
 - Repeat at 390 px width and with keyboard-only navigation.
 
 ## Rollback and recovery
