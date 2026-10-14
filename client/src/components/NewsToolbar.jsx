@@ -1,9 +1,9 @@
 import React from "react";
 import { Search, X } from "lucide-react";
 
-const iso = (date) => date.toISOString().slice(0, 10);
-function rangeFor(kind) {
-  const now = new Date();
+// Calendar dates in the student's own time zone. toISOString() would use UTC and shift evening dates to tomorrow.
+export const iso = (date) => [date.getFullYear(), String(date.getMonth() + 1).padStart(2, "0"), String(date.getDate()).padStart(2, "0")].join("-");
+export function rangeFor(kind, now = new Date()) {
   const from = new Date(now);
   if (kind === "week") from.setDate(now.getDate() - 7);
   if (kind === "month") from.setMonth(now.getMonth() - 1);

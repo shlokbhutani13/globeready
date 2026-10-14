@@ -1,5 +1,6 @@
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
+import { ocrAssets } from './vite-plugins/ocr-assets.js'
 
 export default defineConfig(({ mode, command }) => {
   const env = loadEnv(mode, process.cwd(), '')
@@ -13,7 +14,8 @@ export default defineConfig(({ mode, command }) => {
     if (forbidden.length) throw new Error(`zero-cost-public cannot use ${forbidden.join(', ')}.`)
   }
   return {
-    plugins: [react()],
+    // OCR files are only published in the zero-cost build, the one runtime that reads images in the browser.
+    plugins: [react(), ocrAssets({ emit: mode === 'zero-cost-public' })],
     // Build-time switch for the local emulator wiring. It is false in every build that is not local-user, so the
     // emulator addresses are removed from production bundles rather than only guarded at runtime.
     define: {
