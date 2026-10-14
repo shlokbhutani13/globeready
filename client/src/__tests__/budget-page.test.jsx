@@ -39,6 +39,7 @@ describe("BudgetPage", () => {
     expect(loadBudget(store, "u", now).currency).toBe("EUR");
     const months = screen.getByRole("region", { name: "Month by month" });
     expect(within(months).getByRole("row", { name: /2026-11/u }).textContent).toContain("1,500.00");
+    expect(within(months).getByRole("columnheader", { name: "Total (EUR)" })).toBeTruthy();
   });
   it("explains a bad amount and keeps what was typed", () => {
     renderPage();
