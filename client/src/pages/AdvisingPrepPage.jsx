@@ -13,6 +13,7 @@ import { buildSummary, summaryFileName, summaryNotice, summaryText } from "../li
 import { universityCoverage } from "../lib/university";
 import { caseKindLabel } from "../lib/cases";
 import { contactRoleLabels } from "./ContactsPage";
+import { downloadText } from "../lib/download";
 import { friendlyError } from "../lib/friendly-error";
 
 const groupLabel = Object.fromEntries([...questionGroups, { id: "mine", label: "My own questions" }].map((group) => [group.id, group.label]));
@@ -20,7 +21,7 @@ const blankTerm = { label: "", date: "", note: "" };
 
 function toggle(list, id) { return list.includes(id) ? list.filter((value) => value !== id) : [...list, id]; }
 
-export default function AdvisingPrepPage({ profile = {}, news = [], contacts = [], cases = [], dates = [], storageScope = "", storage = typeof localStorage === "undefined" ? undefined : localStorage, now = new Date(), download = defaultDownload, print = () => window.print() }) {
+export default function AdvisingPrepPage({ profile = {}, news = [], contacts = [], cases = [], dates = [], storageScope = "", storage = typeof localStorage === "undefined" ? undefined : localStorage, now = new Date(), download = downloadText, print = () => window.print() }) {
   const coverage = useMemo(() => universityCoverage(profile, news), [profile, news]);
   const [workspace, setWorkspace] = useState(() => loadWorkspace(storage, storageScope));
   const [customText, setCustomText] = useState("");
@@ -156,12 +157,4 @@ export default function AdvisingPrepPage({ profile = {}, news = [], contacts = [
       <Disclaimer />
     </div>
   );
-}
-
-function defaultDownload(name, text) {
-  const url = URL.createObjectURL(new Blob([text], { type: "text/plain;charset=utf-8" }));
-  const anchor = document.createElement("a");
-  anchor.href = url; anchor.download = name;
-  document.body.appendChild(anchor); anchor.click(); anchor.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
