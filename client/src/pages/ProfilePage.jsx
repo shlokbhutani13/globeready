@@ -2,7 +2,13 @@ import React, { useEffect, useState } from "react";
 import { Save } from "lucide-react";
 import { universityIdFor } from "../lib/news-data";
 
-export default function ProfilePage({ profile, onSave }) {
+const topicLabels = {
+  general: "General", status: "Maintaining status", "forms-fees": "Forms and fees", employment: "Work and training",
+  "travel-entry": "Travel and entry", "taxes-social-security": "Taxes and Social Security", emergency: "Emergencies",
+  "campus-life": "Campus life", university: "My university",
+};
+
+export default function ProfilePage({ profile, onSave, showTopics = false }) {
   const [form, setForm] = useState(profile);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
@@ -46,6 +52,10 @@ export default function ProfilePage({ profile, onSave }) {
         <label>Program start date<input type="date" {...field("startDate")} /></label>
         <label>Expected graduation date<input type="date" {...field("graduationDate")} /></label>
         <label>Journey stage<select {...field("journeyStage")}><option>Preparing for arrival</option><option>Newly arrived</option><option>Current student</option><option>Preparing for graduation</option></select></label>
+        {showTopics && <fieldset className="topic-fieldset"><legend>Topics I want flagged in Updates</legend>
+          <p className="muted profile-note">Used only to label updates that may be relevant. It is informational and never decides what applies to you.</p>
+          <div className="topic-grid">{Object.entries(topicLabels).map(([id, label]) => <label className="check-row" key={id}><input type="checkbox" checked={(form.topics || []).includes(id)} onChange={(event) => { setSaved(false); const current = form.topics || []; setForm({ ...form, topics: event.target.checked ? [...current, id] : current.filter((topic) => topic !== id) }); }} /><span>{label}</span></label>)}</div>
+        </fieldset>}
         {error && <p className="inline-error" role="alert">{error}</p>}
         {saved && <p className="inline-notice" role="status">Profile saved.</p>}
         <button className="button primary" disabled={busy}><Save size={17} /> {busy ? "Saving…" : "Save profile"}</button>

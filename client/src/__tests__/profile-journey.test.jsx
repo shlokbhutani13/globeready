@@ -39,3 +39,13 @@ test("Home's Next task is the soonest deadline, not the first in the list", () =
   render(<MemoryRouter><DashboardPage tasks={tasks} /></MemoryRouter>);
   expect(screen.getByText("Sooner")).toBeInTheDocument();
 });
+
+test("topic choices appear only where they can be saved, and are saved with the profile", async () => {
+  const onSave = vi.fn().mockResolvedValue(true);
+  const { rerender } = render(<ProfilePage profile={{ fullName: "Maya" }} onSave={onSave} />);
+  expect(screen.queryByText(/Topics I want flagged/)).not.toBeInTheDocument();
+  rerender(<ProfilePage profile={{ fullName: "Maya" }} onSave={onSave} showTopics />);
+  fireEvent.click(screen.getByLabelText("Work and training"));
+  fireEvent.click(screen.getByRole("button", { name: /save profile/i }));
+  await waitFor(() => expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ topics: ["employment"] })));
+});
