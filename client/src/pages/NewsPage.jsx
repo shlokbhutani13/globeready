@@ -29,7 +29,9 @@ export default function NewsPage({
   zeroCostMode = false,
 }) {
   const [showPreferences, setShowPreferences] = useState(false);
-  const ranked = rankNewsItems(items, profile);
+  const [savedOnly, setSavedOnly] = useState(false);
+  const allRanked = rankNewsItems(items, profile);
+  const ranked = savedOnly ? allRanked.filter((item) => savedIds.has(item.id)) : allRanked;
 
   const toggleTopic = (topic) => {
     const current = preferences.topics || [];
@@ -51,6 +53,8 @@ export default function NewsPage({
       </header>
 
       <NewsToolbar filters={filters} onChange={onFilterChange} sources={zeroCostMode ? sourcesFromItems(items) : undefined} />
+
+      {onToggleSave && <div className="saved-toggle"><button type="button" className={`button secondary ${savedOnly ? "active" : ""}`} aria-pressed={savedOnly} onClick={() => setSavedOnly((value) => !value)}>{savedOnly ? "Showing saved updates" : `Show saved updates (${savedIds.size})`}</button></div>}
 
       {sourceHealth?.state === "delayed" && (
         <div className="panel" style={{ marginBottom: 18 }} role="status">
@@ -113,8 +117,8 @@ export default function NewsPage({
 
       {!loading && !error && ranked.length === 0 && (
         <div className="empty-state">
-          <h3>No updates match yet</h3>
-          <p>GlobeReady has not published a verified update for these filters. This does not mean nothing has changed — check back soon or adjust your filters.</p>
+          <h3>{savedOnly ? "No saved updates here" : "No updates match yet"}</h3>
+          {savedOnly ? <p>Use the bookmark on an update to keep it here. Saved updates that do not match your current filters are hidden.</p> : <p>GlobeReady has not published a verified update for these filters. This does not mean nothing has changed — check back soon or adjust your filters.</p>}
         </div>
       )}
 
