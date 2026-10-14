@@ -6,16 +6,20 @@ import { newsImageFor } from "../lib/news-images";
 import Disclaimer from "../components/Disclaimer";
 import NewsExplanation from "../components/NewsExplanation";
 
-export default function NewsDetailPage({ item: supplied, items = [], explanation, localMode = false }) {
+export default function NewsDetailPage({ item: supplied, items = [], explanation, localMode = false, loading = false, error: feedError = "" }) {
   const { id } = useParams();
-  const [item, setItem] = useState(supplied || items.find((entry) => entry.id === id) || null);
-  const [error, setError] = useState("");
+  // The story is derived on every render, so a feed that finishes loading after this page opened still resolves.
+  const listed = supplied || items.find((entry) => entry.id === id) || null;
+  const [fetched, setFetched] = useState(null);
+  const [fetchError, setFetchError] = useState("");
   useEffect(() => {
-    if (item || !id || localMode) return;
-    fetchNewsItem(id).then(setItem).catch((reason) => setError(reason.message || "Could not load this update."));
-  }, [id, item, localMode]);
+    if (listed || !id || localMode) return;
+    fetchNewsItem(id).then(setFetched).catch((reason) => setFetchError(reason.message || "Could not load this update."));
+  }, [id, listed, localMode]);
+  const item = listed || (fetched?.id === id ? fetched : null);
+  const error = item ? "" : fetchError || (localMode ? feedError : "");
   if (error) return <div className="page"><div className="inline-error" role="alert">{error}</div><Link to="/news">Back to all news</Link></div>;
-  if (!item) return <div className="page"><div className="empty-state">{localMode ? "This update is not in the current reviewed snapshot." : "Loading verified update…"}</div></div>;
+  if (!item) return <div className="page"><div className="empty-state" role="status">{localMode && !loading ? "This update is not in the current reviewed snapshot." : "Loading verified update…"}</div><Link to="/news">Back to all news</Link></div>;
   const image = newsImageFor(item);
   return <article className="page news-detail">
     <Link className="back-link" to="/news"><ArrowLeft size={16} /> All news</Link>

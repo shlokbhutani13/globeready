@@ -154,3 +154,12 @@ input,select,textarea{color:#344054}.auth-form input,.profile-form input,.profil
 .verify-page .demo-pill{display:inline-flex;align-items:center;gap:6px;margin-top:18px}
 .verify-page .button+.button{margin-top:9px}
 @media(max-width:760px){.panel-title{flex-wrap:wrap;gap:10px}.panel-title .confirm-row{justify-content:flex-start}}
+
+.mobile-account{position:relative;display:flex}
+.mobile-account>button{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border:0;background:transparent;color:#7a8494;font-size:10px;min-height:44px}
+.mobile-account>button[aria-expanded="true"]{color:#315f8f;background:#f5f8fa}
+.mobile-account-menu{position:absolute;right:8px;bottom:72px;min-width:190px;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(16,24,40,.14);padding:6px;display:flex;flex-direction:column}
+.mobile-account-menu a,.mobile-account-menu button{min-height:44px;padding:0 12px;border:0;border-radius:8px;background:transparent;display:flex;align-items:center;gap:10px;color:#344054;text-decoration:none;font-size:14px;text-align:left}
+.mobile-account-menu a:hover,.mobile-account-menu button:hover,.mobile-account-menu a.active{background:#f5f8fa}
+.mobile-account button:focus-visible,.mobile-account-menu a:focus-visible,.mobile-account-menu button:focus-visible{outline:2px solid #315f8f;outline-offset:-2px}
+@media(max-width:760px){.mobile-nav{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:1fr}}
