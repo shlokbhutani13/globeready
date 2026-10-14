@@ -32,6 +32,7 @@ export default function DocumentsPage({
   onAnalyze = () => {},
   uploadProgress = 0,
   storageAvailable: storageAvailableSetting = true,
+  localProcessing = false,
   consent,
   onSaveConsent = () => {},
 }) {
@@ -39,7 +40,7 @@ export default function DocumentsPage({
   // consent is undefined when the page is not in a signed-in account, so nothing is gated. In a signed-in
   // account it is null while loading, and uploads stay closed until the student has consented.
   const gated = consent !== undefined && !(consent && consent.documents);
-  const storageAvailable = storageAvailableSetting && !gated;
+  const documentInputAvailable = (storageAvailableSetting || localProcessing) && !gated;
   const [error, setError] = useState("");
   const choose = (file) => {
     if (!file) return;
@@ -49,12 +50,12 @@ export default function DocumentsPage({
   };
   return (
     <div className="page">
-      <header className="page-header"><div><span className="eyebrow">Private document vault</span><h1>Your important documents</h1><p>Keep immigration, insurance, housing, and university records organized.</p></div><button className="button primary" disabled={!storageAvailable} onClick={() => input.current?.click()}><FilePlus2 size={17} /> Add document</button></header>
+      <header className="page-header"><div><span className="eyebrow">Private document vault</span><h1>Your important documents</h1><p>Keep immigration, insurance, housing, and university records organized.</p></div><button className="button primary" disabled={!documentInputAvailable} onClick={() => input.current?.click()}><FilePlus2 size={17} /> Add document</button></header>
       {consent !== undefined && <ConsentPanel consent={consent} onSave={onSaveConsent} compact />}
-      <input ref={input} hidden disabled={!storageAvailable} type="file" accept=".pdf,.png,.jpg,.jpeg" onChange={(event) => choose(event.target.files?.[0])} />
-      <section className={`upload-zone${storageAvailable ? "" : " disabled"}`} onClick={() => storageAvailable && input.current?.click()}><span><UploadCloud size={27} /></span><div><h2>{storageAvailable ? "Upload a document" : gated ? "Turn on document reading to upload" : "Document uploads unavailable"}</h2><p>{storageAvailable ? "Text-based PDFs, or PNG/JPEG photos of printed text, up to 10 MB. Scanned PDFs and handwriting cannot be read." : "Document uploads need Storage to be enabled for this deployment."}</p></div><LockKeyhole size={19} /></section>
+      <input ref={input} hidden disabled={!documentInputAvailable} type="file" accept=".pdf,.png,.jpg,.jpeg" onChange={(event) => choose(event.target.files?.[0])} />
+      <section className={`upload-zone${documentInputAvailable ? "" : " disabled"}`} onClick={() => documentInputAvailable && input.current?.click()}><span><UploadCloud size={27} /></span><div><h2>{documentInputAvailable ? localProcessing ? "Process a document on this device" : "Upload a document" : gated ? "Turn on document reading to upload" : "Document uploads unavailable"}</h2><p>{documentInputAvailable ? localProcessing ? "PDF, PNG, or JPEG, up to 10 MB. The original file never leaves this device and is not backed up." : "Text-based PDFs, or PNG/JPEG photos of printed text, up to 10 MB. Scanned PDFs and handwriting cannot be read." : "Document uploads need Storage to be enabled for this deployment."}</p></div><LockKeyhole size={19} /></section>
       {error && <div className="inline-error">{error}</div>}
-      {uploadProgress > 0 && uploadProgress < 100 && <div className="upload-progress"><span style={{ width: `${uploadProgress}%` }} />Uploading {uploadProgress}%</div>}
+      {uploadProgress > 0 && uploadProgress < 100 && <div className="upload-progress"><span style={{ width: `${uploadProgress}%` }} />{localProcessing ? "Processing" : "Uploading"} {uploadProgress}%</div>}
       <section className="panel"><div className="panel-title"><div><span className="eyebrow">Vault</span><h2>{documents.length} documents</h2></div></div>
         <div className="document-table">{documents.map((document) => {
           const readable = isReadableDocument(document);

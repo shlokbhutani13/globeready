@@ -15,11 +15,13 @@
     "local-user:reset": "bash ../scripts/local-user/reset.sh"
   },
   "dependencies": {
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
     "firebase": "^12.1.0",
     "lucide-react": "^0.468.0",
-    "react-router-dom": "^7.8.0"
+    "pdfjs-dist": "^5.4.296",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^7.8.0",
+    "tesseract.js": "^7.0.0"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.6.3",

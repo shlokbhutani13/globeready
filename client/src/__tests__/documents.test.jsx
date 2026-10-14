@@ -24,6 +24,14 @@ describe("document validation", () => {
     expect(screen.getByText(/document uploads need storage to be enabled/i)).toBeTruthy();
   });
 
+  test("offers private on-device processing without cloud Storage", () => {
+    render(<DocumentsPage storageAvailable={false} localProcessing />);
+
+    expect(screen.getByRole("button", { name: "Add document" }).disabled).toBe(false);
+    expect(screen.getByRole("heading", { name: /process a document on this device/i })).toBeTruthy();
+    expect(screen.getByText(/original file never leaves this device/i)).toBeTruthy();
+  });
+
   test("shows a document's current indexing state", () => {
     render(<DocumentsPage documents={[
       {
