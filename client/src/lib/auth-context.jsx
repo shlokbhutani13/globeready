@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useMemo, useState } from "
 import {
   GoogleAuthProvider,
   createUserWithEmailAndPassword,
+  deleteUser,
   onAuthStateChanged,
   reauthenticateWithPopup,
   sendPasswordResetEmail,
@@ -37,6 +38,7 @@ export function AuthProvider({ children }) {
     signInGoogle: () => signInWithPopup(auth, new GoogleAuthProvider()),
     hasGoogleProvider: () => Boolean(auth?.currentUser?.providerData?.some((provider) => provider.providerId === "google.com")),
     reauthenticateGoogle: () => reauthenticateWithPopup(auth.currentUser, new GoogleAuthProvider()),
+    deleteCurrentUser: () => deleteUser(auth.currentUser),
     resetPassword: (email) => sendPasswordResetEmail(auth, email),
     signOutUser: () => signOut(auth),
   }), [user, loading]);

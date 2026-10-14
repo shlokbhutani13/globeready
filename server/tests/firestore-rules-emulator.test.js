@@ -214,6 +214,24 @@ describeEmulator("Firestore authorization rules", () => {
     await assertFails(setDoc(doc(alice, "users", "alice", "savedResources", "r4"), { ...validFor("savedResources"), url: `https://x.example/${"a".repeat(500)}` }));
   });
 
+  test("an owner may remove the bounded zero-cost inventory but another user may not", async () => {
+    const erin = environment.authenticatedContext("erin").firestore();
+    const bob = environment.authenticatedContext("bob").firestore();
+    const profile = doc(erin, "users", "erin");
+    const task = doc(erin, "users", "erin", "tasks", "t1");
+    const resource = doc(erin, "users", "erin", "savedResources", "r1");
+    await assertSucceeds(setDoc(profile, {
+      fullName: "Erin", consent: { version: "2026-10-13-zero-cost", documents: true, aiGeneration: false }, updatedAt: new Date(),
+    }));
+    await assertSucceeds(setDoc(task, validFor("tasks")));
+    await assertSucceeds(setDoc(resource, validFor("savedResources")));
+    await assertFails(deleteDoc(doc(bob, "users", "erin", "tasks", "t1")));
+    await assertFails(deleteDoc(doc(bob, "users", "erin")));
+    await assertSucceeds(deleteDoc(task));
+    await assertSucceeds(deleteDoc(resource));
+    await assertSucceeds(deleteDoc(profile));
+  });
+
   test("a student can mark an in-app notification read, and nothing else", async () => {
     await environment.withSecurityRulesDisabled(async (context) => {
       await setDoc(doc(context.firestore(), "users", "alice", "notifications", "n1"), { title: "Due", read: false, updatedAt: new Date() });

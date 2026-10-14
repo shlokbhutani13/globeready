@@ -62,7 +62,7 @@ export default function SettingsPage({ live = true, preferences = {}, onUpdatePr
 
       <section className="panel settings-section">
         <div className="panel-title"><h2>Your data</h2></div>
-        <p className="muted">Download your profile, tasks, document text, saved updates, and assistant conversations as a JSON file.</p>
+        <p className="muted">{zeroCostMode ? "Download your profile, tasks, saved resources, and locally extracted document text as a JSON file. Original files are not stored." : "Download your profile, tasks, document text, saved updates, and assistant conversations as a JSON file."}</p>
         <button className="button secondary" onClick={onExport}><Download size={16} /> Export my data</button>
       </section>
 

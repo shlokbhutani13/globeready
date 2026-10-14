@@ -30,6 +30,7 @@ import {
 import { createZeroCostDataStore } from "./lib/zero-cost-data";
 import { extractLocalDocument } from "./lib/local-documents/extract";
 import { loadStaticCoverage, subscribeStaticNews } from "./lib/static-news";
+import { deleteZeroCostAccount, downloadZeroCostExport, exportZeroCostAccount } from "./lib/zero-cost-account";
 
 const initialProfile = { fullName: "Maya Singh", homeCountry: "India", university: "UNC Chapel Hill", program: "Computer Science", visaType: "F-1", journeyStage: "Preparing for arrival" };
 const emptyProfile = { fullName: "", homeCountry: "", university: "", program: "", visaType: "F-1", journeyStage: "Preparing for arrival" };
@@ -271,12 +272,19 @@ export default function App() {
   };
   const deleteAccount = async () => {
     await deleteAccountWithReauth({
-      removeAccount: () => apiRequest("/api/account", { method: "DELETE", body: JSON.stringify({ confirmation: "DELETE MY ACCOUNT" }) }),
+      removeAccount: () => zeroCostPublicMode
+        ? deleteZeroCostAccount({ firestore: db, uid: auth.user.uid, deleteIdentity: auth.deleteCurrentUser })
+        : apiRequest("/api/account", { method: "DELETE", body: JSON.stringify({ confirmation: "DELETE MY ACCOUNT" }) }),
       hasGoogleProvider: auth.hasGoogleProvider,
       reauthenticateGoogle: auth.reauthenticateGoogle,
     });
     await auth.signOutUser().catch(() => {});
     setDemo(false);
+  };
+  const exportAccount = async () => {
+    if (!zeroCostPublicMode) return apiDownload("/api/account/export", "globeready-account-export.json");
+    const archive = await exportZeroCostAccount({ firestore: db, uid: auth.user.uid });
+    downloadZeroCostExport(archive);
   };
   const signOut = async () => {
     if (live) await auth.signOutUser();
@@ -353,7 +361,7 @@ export default function App() {
               onSaveConsent={saveConsentChoice}
               preferences={newsPreferences}
               onUpdatePreferences={updatePreferences}
-              onExport={() => apiDownload("/api/account/export", "globeready-account-export.json").catch((error) => setAppError(error.message))}
+              onExport={() => exportAccount().catch((error) => setAppError(error.message))}
               onDelete={deleteAccount}
               onShowGettingStarted={() => setShowGettingStarted(true)}
               zeroCostMode={zeroCostPublicMode}

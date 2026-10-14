@@ -112,7 +112,7 @@ service cloud.firestore {
     match /users/{uid} {
       allow read: if isOwner(uid);
       allow create, update: if isOwner(uid) && validStudentProfile(request.resource.data);
-      allow delete: if false;
+      allow delete: if isOwner(uid);
 
       match /tasks/{taskId} {
         allow read: if isOwner(uid);
@@ -139,7 +139,8 @@ service cloud.firestore {
       match /savedResources/{resourceId} {
         allow read: if isOwner(uid);
         allow create: if isOwner(uid) && validSavedResource(request.resource.data);
-        allow update, delete: if false;
+        allow update: if false;
+        allow delete: if isOwner(uid);
       }
 
       match /notifications/{notificationId} {
