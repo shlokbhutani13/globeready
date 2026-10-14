@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import { RefreshCcw } from "lucide-react";
+import PageHeader from "../components/ui/PageHeader";
+import SubNav, { updatesLinks } from "../components/ui/SubNav";
 import SourceStatus from "../components/SourceStatus";
 import Disclaimer from "../components/Disclaimer";
 import { rankNewsItems } from "../lib/news-data";
@@ -41,16 +43,13 @@ export default function NewsPage({
 
   return (
     <div className="page">
-      <header className="page-header">
-        <div>
-          <span className="eyebrow">Nationwide updates</span>
-          <h1>Updates for you</h1>
-          <p>{zeroCostMode ? "A reviewed official-source feed stored with the app. Search and filters cover the currently published snapshot." : "Verified updates currently available from monitored sources, ranked for your profile. The complete available feed stays visible."}</p>
-        </div>
-        {!zeroCostMode && <button className="button secondary" onClick={() => setShowPreferences((value) => !value)}>
-          {showPreferences ? "Hide preferences" : "Edit preferences"}
-        </button>}
-      </header>
+      <PageHeader
+        eyebrow="Updates and guides"
+        title="Updates for you"
+        description={zeroCostMode ? "A reviewed official-source feed stored with the app. Search and filters cover the currently published snapshot." : "Verified updates currently available from monitored sources, ranked for your profile. The complete available feed stays visible."}
+        action={!zeroCostMode && <button type="button" className="button secondary" onClick={() => setShowPreferences((value) => !value)}>{showPreferences ? "Hide preferences" : "Edit preferences"}</button>}
+      />
+      <SubNav label="Updates sections" links={updatesLinks} />
 
       <NewsToolbar filters={filters} onChange={onFilterChange} sources={zeroCostMode ? sourcesFromItems(items) : undefined} />
 

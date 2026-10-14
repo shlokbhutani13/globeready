@@ -6,9 +6,12 @@ import './design-system.css'
 import { AuthProvider } from './lib/auth-context.jsx'
 import { installStaleBuildRecovery } from './lib/stale-build.js'
 import { applyDisplay, loadDisplay } from './lib/display-preferences.js'
+import { registerServiceWorker } from './lib/register-service-worker.js'
+import { zeroCostPublicMode } from './lib/firebase.js'
 
 installStaleBuildRecovery()
 applyDisplay(loadDisplay())
+registerServiceWorker({ enabled: import.meta.env.PROD && zeroCostPublicMode })
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

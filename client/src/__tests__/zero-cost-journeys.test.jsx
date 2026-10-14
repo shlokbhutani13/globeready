@@ -17,7 +17,7 @@ describe("zero-cost public journeys", () => {
   });
 
   test("presents reviewed static news and removes unavailable digest controls", () => {
-    render(<NewsPage zeroCostMode items={[]} sourceHealth={{ state: "delayed", generatedAt: "2026-09-01T00:00:00Z" }} />);
+    render(<MemoryRouter><NewsPage zeroCostMode items={[]} sourceHealth={{ state: "delayed", generatedAt: "2026-09-01T00:00:00Z" }} /></MemoryRouter>);
     expect(screen.getByText(/reviewed official-source feed/i)).toBeInTheDocument();
     expect(screen.getByText(/feed may be out of date/i)).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: /update digest/i })).not.toBeInTheDocument();

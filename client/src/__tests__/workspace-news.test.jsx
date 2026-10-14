@@ -1,5 +1,6 @@
 import "@testing-library/jest-dom/vitest";
 import React from "react";
+import { MemoryRouter } from "react-router-dom";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
@@ -104,26 +105,26 @@ describe("NewsCard", () => {
 describe("NewsPage", () => {
   test("shows a retry action when loading failed, and never a blank page", () => {
     const onRetry = vi.fn();
-    render(<NewsPage items={[]} loading={false} error="Could not reach GlobeReady." onRetry={onRetry} />);
+    render(<MemoryRouter><NewsPage items={[]} loading={false} error="Could not reach GlobeReady." onRetry={onRetry} /></MemoryRouter>);
     expect(screen.getByRole("alert")).toHaveTextContent(/could not reach/i);
     fireEvent.click(screen.getByRole("button", { name: /retry/i }));
     expect(onRetry).toHaveBeenCalled();
   });
 
   test("shows an explicit empty state instead of implying there is nothing to report", () => {
-    render(<NewsPage items={[]} loading={false} error="" />);
+    render(<MemoryRouter><NewsPage items={[]} loading={false} error="" /></MemoryRouter>);
     expect(screen.getByText(/does not mean nothing has changed/i)).toBeInTheDocument();
   });
 
   test("renders every item it is given", () => {
-    render(<NewsPage items={[item({ id: "a" }), item({ id: "b", title: "Second update" })]} />);
+    render(<MemoryRouter><NewsPage items={[item({ id: "a" }), item({ id: "b", title: "Second update" })]} /></MemoryRouter>);
     expect(screen.getAllByText("USCIS updates I-20 guidance")).not.toHaveLength(0);
     expect(screen.getAllByText("Second update")).not.toHaveLength(0);
   });
 
   test("offers archive search and common time filters", () => {
     const onFilterChange = vi.fn();
-    render(<NewsPage items={[item()]} filters={{}} onFilterChange={onFilterChange} />);
+    render(<MemoryRouter><NewsPage items={[item()]} filters={{}} onFilterChange={onFilterChange} /></MemoryRouter>);
     fireEvent.change(screen.getByRole("searchbox", { name: /search updates/i }), { target: { value: "OPT" } });
     expect(onFilterChange).toHaveBeenCalledWith(expect.objectContaining({ q: "OPT" }));
     fireEvent.click(screen.getByRole("button", { name: /this month/i }));
@@ -133,33 +134,33 @@ describe("NewsPage", () => {
   });
 
   test("shows the student's university coverage status", () => {
-    render(<NewsPage items={[]} profile={{ university: "UNC Chapel Hill" }} coverage={{ state: "verification-pending", sources: [] }} />);
+    render(<MemoryRouter><NewsPage items={[]} profile={{ university: "UNC Chapel Hill" }} coverage={{ state: "verification-pending", sources: [] }} /></MemoryRouter>);
     expect(screen.getByText(/verification pending/i)).toBeInTheDocument();
   });
 
   test("always shows the general-information disclaimer", () => {
-    render(<NewsPage items={[]} />);
+    render(<MemoryRouter><NewsPage items={[]} /></MemoryRouter>);
     expect(screen.getByText(/general information/i)).toBeInTheDocument();
   });
 });
 
 describe("delayed source disclosure", () => {
   test("names the delayed publisher and never presents the feed as complete", () => {
-    render(<NewsPage items={[item()]} sourceHealth={{ state: "delayed", delayedPublishers: ["UNC ISSS"], lastCheckedAt: null }} />);
+    render(<MemoryRouter><NewsPage items={[item()]} sourceHealth={{ state: "delayed", delayedPublishers: ["UNC ISSS"], lastCheckedAt: null }} /></MemoryRouter>);
     expect(screen.getByText(/source check delayed/i)).toBeInTheDocument();
     expect(screen.getByText(/UNC ISSS/)).toBeInTheDocument();
     expect(screen.getByText(/does not mean nothing has changed/i)).toBeInTheDocument();
   });
 
   test("shows no delay banner when every check is current", () => {
-    render(<NewsPage items={[item()]} sourceHealth={{ state: "current", delayedPublishers: [] }} />);
+    render(<MemoryRouter><NewsPage items={[item()]} sourceHealth={{ state: "current", delayedPublishers: [] }} /></MemoryRouter>);
     expect(screen.queryByText(/source check delayed/i)).not.toBeInTheDocument();
   });
 });
 
 describe("university coverage never implies verification it does not have", () => {
   test("a pending student-submitted source reads as pending, never as covered", () => {
-    render(<NewsPage items={[]} profile={{ university: "Example University" }} coverage={{ state: "verification-pending", sources: [{ publisher: "Example University", verified: false, enabled: false }] }} />);
+    render(<MemoryRouter><NewsPage items={[]} profile={{ university: "Example University" }} coverage={{ state: "verification-pending", sources: [{ publisher: "Example University", verified: false, enabled: false }] }} /></MemoryRouter>);
     expect(screen.getByText("Verification pending")).toBeInTheDocument();
     expect(screen.queryByText(/^Covered$/)).not.toBeInTheDocument();
   });
