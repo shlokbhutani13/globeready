@@ -7,12 +7,12 @@ import EmptyState from "../components/ui/EmptyState";
 import { glossary, searchGlossary } from "../data/glossary";
 import { helpOrder, pageHelp, pageHelpTitles } from "../data/page-help";
 
-const routes = { tasks: "/tasks", journey: "/journey", dates: "/dates", cases: "/cases", travel: "/travel", contacts: "/contacts", university: "/university", news: "/news", forYou: "/for-you", rules: "/rules", resources: "/resources", prepare: "/prepare", nextSteps: "/next" };
+const routes = { tasks: "/tasks", journey: "/journey", dates: "/dates", cases: "/cases", travel: "/travel", contacts: "/contacts", university: "/university", news: "/news", forYou: "/for-you", rules: "/rules", resources: "/resources", guides: "/guides", prepare: "/prepare", nextSteps: "/next" };
 
 export default function HelpPage({ zeroCostMode = false }) {
   const [query, setQuery] = useState("");
   const terms = searchGlossary(query);
-  const topics = helpOrder.filter((id) => zeroCostMode || ["news", "forYou", "rules", "resources", "university"].includes(id));
+  const topics = helpOrder.filter((id) => zeroCostMode || ["news", "forYou", "rules", "resources", "guides", "university"].includes(id));
   return (
     <div className="page">
       <PageHeader eyebrow="Help" title="Help and glossary" description="How each part of GlobeReady works, what it keeps, and what the common terms mean." />

@@ -22,6 +22,10 @@ import ResourcesPage from "../pages/ResourcesPage";
 import CasesPage from "../pages/CasesPage";
 import ForYouPage from "../pages/ForYouPage";
 import UniversityPage from "../pages/UniversityPage";
+import SetupPage from "../pages/SetupPage";
+import HelpPage from "../pages/HelpPage";
+import NextStepsPage from "../pages/NextStepsPage";
+import AdvisingPrepPage from "../pages/AdvisingPrepPage";
 
 afterEach(cleanup);
 const noop = vi.fn(async () => {});
@@ -48,6 +52,10 @@ const pages = {
   Cases: <CasesPage cases={[{ id: "c", title: "OPT", kind: "opt-ead", status: "filed", timeline: [] }]} onCreate={noop} onUpdate={noop} onAddEntry={noop} onRemoveEntry={noop} onRemove={noop} onAddTasks={noop} />,
   "For you": <ForYouPage profile={profile} news={[story]} />,
   University: <UniversityPage profile={{ university: "Example University", officialUniversityDomain: "example.edu" }} onSaveLink={noop} onRemoveLink={noop} />,
+  Setup: <SetupPage profile={profile} />,
+  Help: <HelpPage zeroCostMode />,
+  "Next steps": <NextStepsPage tasks={[{ id: "1", title: "Task", dueDate: "2020-01-01" }]} profile={profile} storage={undefined} />,
+  "Appointment preparation": <AdvisingPrepPage profile={profile} contacts={[{ id: "c", name: "Dr. Rao", role: "dso" }]} cases={[{ id: "k", title: "OPT", kind: "opt-ead", status: "filed", timeline: [] }]} dates={[]} storage={undefined} />,
   Ask: <AssistantPage localMode documentsAllowed localChunks={[]} documents={[]} />,
 };
 
