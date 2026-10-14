@@ -6,6 +6,7 @@ import { newsImageFor } from "../lib/news-images";
 import Disclaimer from "../components/Disclaimer";
 import RelevanceNote from "../components/RelevanceNote";
 import NewsAtAGlance from "../components/NewsAtAGlance";
+import NewsExplainer from "../components/NewsExplainer";
 import NewsExplanation from "../components/NewsExplanation";
 import UpdateTimeline from "../components/UpdateTimeline";
 import { rulesForNews } from "../data/rules-library";
@@ -13,7 +14,7 @@ import { tasksLinkedTo } from "../lib/links";
 import { updateTimeline } from "../lib/news-timeline";
 import { friendlyError } from "../lib/friendly-error";
 
-export default function NewsDetailPage({ item: supplied, items = [], explanation, localMode = false, loading = false, error: feedError = "", profile, tasks = [], onAddTasks }) {
+export default function NewsDetailPage({ onSeen, item: supplied, items = [], explanation, localMode = false, loading = false, error: feedError = "", profile, tasks = [], onAddTasks }) {
   const [taskMessage, setTaskMessage] = useState({ tone: "", text: "" });
   const { id } = useParams();
   // The story is derived on every render, so a feed that finishes loading after this page opened still resolves.
@@ -24,6 +25,8 @@ export default function NewsDetailPage({ item: supplied, items = [], explanation
     if (listed || !id || localMode) return;
     fetchNewsItem(id).then(setFetched).catch((reason) => setFetchError(reason.message || "Could not load this update."));
   }, [id, listed, localMode]);
+  const itemEarly = listed;
+  useEffect(() => { if (itemEarly && onSeen) onSeen(itemEarly); }, [itemEarly?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   const item = listed || (fetched?.id === id ? fetched : null);
   const error = item ? "" : fetchError || (localMode ? feedError : "");
   if (error) return <div className="page"><div className="inline-error" role="alert">{error}</div><Link to="/news">Back to all news</Link></div>;
@@ -40,7 +43,7 @@ export default function NewsDetailPage({ item: supplied, items = [], explanation
     {item.whyItMatters && <section className="news-detail-callout"><h2>Why this matters</h2><p>{item.whyItMatters}</p></section>}
     {(item.detailSections || []).map((section) => <section key={section.heading}><h2>{section.heading}</h2><p>{section.body}</p></section>)}
     <UpdateTimeline events={updateTimeline(item, items)} />
-    {explanation || (localMode ? <NewsAtAGlance item={item} /> : <NewsExplanation itemId={item.id} />)}
+    {explanation || (localMode ? <><NewsAtAGlance item={item} /><NewsExplainer item={item} /></> : <NewsExplanation itemId={item.id} />)}
     {(connectedRules.length > 0 || linkedTasks.length > 0 || onAddTasks) && (
       <section className="connected" aria-labelledby="connected-title">
         <h2 id="connected-title">Connected in GlobeReady</h2>

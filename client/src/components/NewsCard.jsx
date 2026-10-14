@@ -10,7 +10,7 @@ const legalStateCopy = {
   expired: "Expired", informational: "Informational",
 };
 
-export default function NewsCard({ item, saved = false, onToggleSave, compact = false, profile }) {
+export default function NewsCard({ item, saved = false, onToggleSave, compact = false, profile, seenState }) {
   const legalLabel = legalStateCopy[item.legalState] || item.legalState || "Informational";
   const summary = item.editorialState === "approved" && item.plainLanguageSummary
     ? item.plainLanguageSummary
@@ -21,6 +21,7 @@ export default function NewsCard({ item, saved = false, onToggleSave, compact = 
       {!compact && <img className="news-card-image" src={newsImageFor(item).url} alt={newsImageFor(item).alt} />}
       <div className="news-card-top">
         <span className={`legal-state ${item.legalState || "informational"}`}>{legalLabel}</span>
+        {(seenState === "new" || seenState === "updated") && <span className="legal-state pending">{seenState === "new" ? "New" : "Updated"}</span>}
         {!item.sourceVerified && <span className="legal-state pending">Unverified source</span>}
         {onToggleSave && (
           <button

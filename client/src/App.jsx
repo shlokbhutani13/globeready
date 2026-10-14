@@ -22,6 +22,7 @@ import RulesPage from "./pages/RulesPage";
 import CasesPage from "./pages/CasesPage";
 import ForYouPage from "./pages/ForYouPage";
 import UniversityPage from "./pages/UniversityPage";
+import { clearNewsDeviceData, markSeen as markNewsSeen } from "./lib/news-discovery";
 import SetupPage from "./pages/SetupPage";
 import HelpPage from "./pages/HelpPage";
 import { setupProgress, setupSteps } from "./lib/setup-guide";
@@ -388,6 +389,7 @@ export default function App() {
         reauthenticateGoogle: auth.reauthenticateGoogle,
       });
     }
+    if (zeroCostPublicMode) clearNewsDeviceData(localStorage, auth.user?.uid || "");
     await auth.signOutUser().catch(() => {});
     setDemo(false);
   };
@@ -466,9 +468,10 @@ export default function App() {
               digests={newsDigests}
               onUpdatePreferences={updatePreferences}
               zeroCostMode={zeroCostPublicMode}
+              storageScope={auth.user?.uid || ""}
             />
           )} />
-          <Route path="news/:id" element={<NewsDetailPage profile={profile} items={newsItems} loading={newsLoading} error={newsError} localMode={zeroCostPublicMode} tasks={tasks} onAddTasks={zeroCostStore ? addTasksFromItems : undefined} />} />
+          <Route path="news/:id" element={<NewsDetailPage onSeen={zeroCostPublicMode ? (entry) => markNewsSeen(localStorage, auth.user?.uid || "", entry) : undefined} profile={profile} items={newsItems} loading={newsLoading} error={newsError} localMode={zeroCostPublicMode} tasks={tasks} onAddTasks={zeroCostStore ? addTasksFromItems : undefined} />} />
           <Route path="documents" element={<DocumentsPage localProcessing={live && zeroCostPublicMode} processing={processing} onCancelProcessing={cancelProcessing} onDeleteAllText={deleteAllDocumentText} consent={live ? consent : undefined} onSaveConsent={saveConsentChoice} documents={documents} uploadProgress={uploadProgress} storageAvailable={!live || storageAvailable} onAdd={addDocument} onDelete={deleteDocument} onAnalyze={analyzeDocument} />} />
           <Route path="tasks" element={<TasksPage zeroCostMode={zeroCostPublicMode} tasks={tasks} onAdd={addTask} onToggle={changeTask} onDelete={deleteTask} onUpdate={zeroCostStore ? (task, input) => zeroCostStore.updateTask(task, input) : undefined} linkContext={{ news: newsItems, dates: records.dates, cases: records.cases }} onExportCalendar={exportCalendar} />} />
           <Route path="search" element={<SearchPage news={newsItems} newsLoading={newsLoading} guides={guides} tasks={tasks} documents={documents} cases={zeroCostPublicMode ? records.cases : []} />} />
