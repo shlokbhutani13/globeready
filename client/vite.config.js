@@ -19,7 +19,7 @@ export default defineConfig(({ mode, command }) => {
     define: {
       __GLOBEREADY_LOCAL_USER__: JSON.stringify(mode === 'local-user'),
       __GLOBEREADY_ZERO_COST_PUBLIC__: JSON.stringify(mode === 'zero-cost-public'),
-      'import.meta.env.VITE_ZERO_COST_PUBLIC': JSON.stringify(mode === 'zero-cost-public'),
+      'import.meta.env.VITE_ZERO_COST_PUBLIC': JSON.stringify(String(mode === 'zero-cost-public')),
     },
     build: {
       chunkSizeWarningLimit: 650,

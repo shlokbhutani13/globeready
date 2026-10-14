@@ -9,7 +9,7 @@ GlobeReady helps international students in the United States follow verified off
 
 GlobeReady provides general information, not legal, immigration, tax, health, or financial advice. Confirm decisions with your Designated School Official (DSO), your university, or the relevant government agency.
 
-> **Release status:** not released. Nothing has been deployed. The current production-readiness position and its open items are in [docs/RELEASE_READINESS.md](docs/RELEASE_READINESS.md).
+> **Release status:** the repository includes a verified `$0` public-beta mode, but nothing has been deployed from this branch. Paid/full-production provisioning remains separate. See [docs/ZERO_COST_PUBLIC.md](docs/ZERO_COST_PUBLIC.md) and [docs/RELEASE_READINESS.md](docs/RELEASE_READINESS.md).
 
 ## What the launch includes
 
@@ -45,12 +45,13 @@ The client reads a student's own records through Firebase rules. The API verifie
 
 Requirements: Node.js 22 (`.nvmrc`). Local-user mode also needs Java 21 for the Firebase emulators.
 
-GlobeReady has three modes. They are mutually exclusive and documented in [docs/MODES.md](docs/MODES.md):
+GlobeReady has four mutually exclusive modes:
 
 | Mode | Start | What it is |
 | --- | --- | --- |
 | Demo | `npm run demo` in `server/` and `client/` | Sample data in memory; no account, no uploads. Development only. |
 | Local-user | `npm run local-user` in `client/` | Real accounts, rules, uploads, and document reading, on the Firebase emulators on this computer. Persists across restarts. Development only. |
+| Zero-cost public | `npm run build -- --mode zero-cost-public` in `client/` | Static signed-in beta: Firestore, local document processing, deterministic cited retrieval, and reviewed static news; no API, Storage, cloud AI, email, or push. |
 | Production | Not started locally | Real Firebase only. Refuses to start without its full configuration. See [docs/CONFIGURATION.md](docs/CONFIGURATION.md). |
 
 Local-user mode, from a fresh clone:
@@ -78,6 +79,7 @@ Demo mode accepts the `x-demo-user` header as the identity. Production refuses i
 ```bash
 cd server && npm ci && npm test && npm run lint && npm run test:rules
 cd client && npm ci && npm test && npm run build
+cd client && npm run build -- --mode zero-cost-public
 ```
 
 `npm run test:rules` starts the Firestore, Auth, and Storage emulators (requires Java 21). It covers the security rules,
@@ -108,6 +110,7 @@ Read [SECURITY.md](SECURITY.md) and [docs/PRIVACY.md](docs/PRIVACY.md) before co
 - [Rollback and recovery](docs/ROLLBACK.md)
 - [Smoke tests](docs/SMOKE_TESTS.md)
 - [Release readiness](docs/RELEASE_READINESS.md)
+- [Zero-cost public beta](docs/ZERO_COST_PUBLIC.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Privacy model](docs/PRIVACY.md)
 - [Security policy](SECURITY.md)

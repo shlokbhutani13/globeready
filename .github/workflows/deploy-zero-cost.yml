@@ -1,0 +1,91 @@
+name: Deploy zero-cost public beta
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Deploy a temporary preview first; live requires the protected environment.
+        required: true
+        default: preview
+        type: choice
+        options: [preview, live]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: zero-cost-hosting-${{ inputs.target }}
+  cancel-in-progress: false
+
+env:
+  VITE_ZERO_COST_PUBLIC: "true"
+  VITE_FIREBASE_API_KEY: ${{ vars.VITE_FIREBASE_API_KEY }}
+  VITE_FIREBASE_AUTH_DOMAIN: ${{ vars.VITE_FIREBASE_AUTH_DOMAIN }}
+  VITE_FIREBASE_PROJECT_ID: ${{ vars.VITE_FIREBASE_PROJECT_ID }}
+  VITE_FIREBASE_APP_ID: ${{ vars.VITE_FIREBASE_APP_ID }}
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+      - name: Refuse incomplete public configuration
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          for name in VITE_FIREBASE_API_KEY VITE_FIREBASE_AUTH_DOMAIN VITE_FIREBASE_PROJECT_ID VITE_FIREBASE_APP_ID FIREBASE_SERVICE_ACCOUNT; do
+            test -n "$(printenv "$name")" || { echo "Missing required configuration: $name"; exit 1; }
+          done
+      - working-directory: client
+        run: npm ci
+      - working-directory: client
+        run: npm test
+      - working-directory: client
+        run: npm run build -- --mode zero-cost-public
+      - uses: actions/upload-artifact@v6
+        with:
+          name: zero-cost-public-${{ github.run_id }}
+          path: client/dist
+          if-no-files-found: error
+          retention-days: 7
+
+  preview:
+    if: inputs.target == 'preview'
+    needs: verify
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v7
+        with:
+          name: zero-cost-public-${{ github.run_id }}
+          path: client/dist
+      - uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          projectId: ${{ vars.VITE_FIREBASE_PROJECT_ID }}
+          channelId: preview-${{ github.run_number }}
+          expires: 7d
+
+  live:
+    if: inputs.target == 'live'
+    needs: verify
+    environment: globeready-live
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v7
+        with:
+          name: zero-cost-public-${{ github.run_id }}
+          path: client/dist
+      - uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          projectId: ${{ vars.VITE_FIREBASE_PROJECT_ID }}
+          channelId: live

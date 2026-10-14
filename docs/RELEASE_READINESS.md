@@ -1,5 +1,19 @@
 # Release readiness: production hardening pass
 
+## Zero-cost public-beta checkpoint (2026-10-13)
+
+The `codex/globeready-zero-cost-public` branch adds an explicit static public-beta runtime without provisioning or paid infrastructure. It is ready for no-cost Firebase configuration and preview deployment, subject to the external actions in `docs/ZERO_COST_PUBLIC.md`.
+
+- Firebase Auth and owner-scoped Firestore are used directly; API, Storage, emulator, and demo configuration fail closed in this build mode.
+- Original files remain in the browser. Only bounded extracted text and metadata are saved after complete extraction.
+- Ask GlobeReady performs deterministic local passage matching and never sends private text to a model.
+- News is a hashed, reviewed static artifact. Weekly automation proposes official candidates in a PR and cannot publish directly.
+- Export and cleanup-first deletion run in the browser. Identity deletion happens only after supported Firestore cleanup succeeds.
+- Hosting headers, SPA routing, artifact scans, size budget, preview-first manual deployment, and protected live approval are checked by repository tests and workflow configuration.
+- No Firebase project, paid plan, service, deployment, domain, or billing setting was created or changed during implementation.
+
+This does not alter the paid/full-production provisioning inventory below. Live Google sign-in, real Firestore quotas/rules, Hosting CSP behavior, and the complete disposable-account journey still require preview verification after the user supplies an existing free Firebase project and scoped deploy credential.
+
 **Verified starting checkpoint:** `5f669abb0b629378d71f6e36cced072b1e4369d7` (local and remote feature branch).
 `origin/main` was not changed and nothing was merged. Nothing in this pass was pushed, deployed, or provisioned.
 
