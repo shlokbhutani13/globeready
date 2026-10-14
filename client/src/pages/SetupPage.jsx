@@ -5,8 +5,8 @@ import Notice from "../components/ui/Notice";
 import Disclaimer from "../components/Disclaimer";
 import { setupProgress, setupSteps } from "../lib/setup-guide";
 
-export default function SetupPage({ profile = {}, dates = [], contacts = [], tasks = [], consent }) {
-  const steps = setupSteps({ profile, dates, contacts, tasks, consent });
+export default function SetupPage({ profile = {}, dates = [], contacts = [], journeyHave = [], consent }) {
+  const steps = setupSteps({ profile, dates, contacts, journeyHave, consent });
   const progress = setupProgress(steps);
   return (
     <div className="page">

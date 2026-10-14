@@ -453,7 +453,7 @@ export default function App() {
       {appError && <div className="app-error" role="alert"><span>{appError}</span><button onClick={() => setAppError("")}>Dismiss</button></div>}
       <Routes>
         <Route element={<AppShell onSignOut={signOut} isAdmin={isAdmin} unreadNotifications={unreadNotifications} zeroCostMode={zeroCostPublicMode} />}>
-          <Route index element={<DashboardPage setup={zeroCostPublicMode && live ? setupProgress(setupSteps({ profile, dates: records.dates, contacts: records.contacts, tasks, consent })) : undefined} zeroCostMode={zeroCostPublicMode} keyDates={keyDateUpcoming} profile={profile} tasks={tasks} topNews={topNews} unreadNotifications={unreadNotifications} onToggleTask={changeTask} showGettingStarted={showGettingStarted} onDismissGettingStarted={dismissGettingStarted} />} />
+          <Route index element={<DashboardPage setup={zeroCostPublicMode && live ? setupProgress(setupSteps({ profile, dates: records.dates, contacts: records.contacts, journeyHave: records.planner.journey.have, consent })) : undefined} zeroCostMode={zeroCostPublicMode} keyDates={keyDateUpcoming} profile={profile} tasks={tasks} topNews={topNews} unreadNotifications={unreadNotifications} onToggleTask={changeTask} showGettingStarted={showGettingStarted} onDismissGettingStarted={dismissGettingStarted} />} />
           <Route path="news" element={(
             <NewsPage
               items={newsItems}
@@ -480,7 +480,7 @@ export default function App() {
           <Route path="tasks" element={<TasksPage zeroCostMode={zeroCostPublicMode} tasks={tasks} onAdd={addTask} onToggle={changeTask} onDelete={deleteTask} onUpdate={zeroCostStore ? (task, input) => zeroCostStore.updateTask(task, input) : undefined} linkContext={{ news: newsItems, dates: records.dates, cases: records.cases }} onExportCalendar={exportCalendar} />} />
           <Route path="search" element={<SearchPage news={newsItems} newsLoading={newsLoading} guides={guides} tasks={tasks} documents={documents} cases={zeroCostPublicMode ? records.cases : []} />} />
           {zeroCostPublicMode && live && <>
-            <Route path="setup" element={<SetupPage profile={profile} dates={records.dates} contacts={records.contacts} tasks={tasks} consent={consent} />} />
+            <Route path="setup" element={<SetupPage profile={profile} dates={records.dates} contacts={records.contacts} journeyHave={records.planner.journey.have} consent={consent} />} />
             <Route path="next" element={<NextStepsPage tasks={tasks} dates={watchedDates} journeyHave={records.planner.journey.have} profile={profile} now={reminderClock} onToggleTask={changeTask} onAddTasks={addTasksFromItems} storageScope={auth.user?.uid || ""} />} />
             <Route path="prepare" element={<AdvisingPrepPage profile={profile} news={newsItems} contacts={records.contacts} cases={records.cases} dates={records.dates} now={reminderClock} storageScope={auth.user?.uid || ""} />} />
             <Route path="journey" element={<JourneyPage profile={profile} tasks={tasks} added={records.planner.journey.have} onAddTasks={addTasksFromItems} />} />

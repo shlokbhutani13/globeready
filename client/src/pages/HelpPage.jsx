@@ -23,9 +23,9 @@ export default function HelpPage({ zeroCostMode = false }) {
         {zeroCostMode ? (
           <>
             <ul className="tip-list">
-              <li><strong>Saved in your private account:</strong> your profile, tasks, key dates, contacts, cases you track, saved links and news, and checklist choices. Only you can read them.</li>
-              <li><strong>Stays on this device:</strong> your documents are read in your browser. Original files and their text are not uploaded unless you choose otherwise in Settings.</li>
-              <li><strong>Never collected:</strong> passwords, your passport or ID numbers, or your immigration case status from any agency. Do not type those into notes.</li>
+              <li><strong>Saved in your private account:</strong> your profile, tasks, key dates, contacts, cases you track, saved links and news, checklist choices, and extracted document text. Extracted document text can be saved in your private account when document reading is on. Turning document reading off stops search but does not delete text already saved.</li>
+              <li><strong>Stays on this device:</strong> original files are never uploaded. News seen markers, saved searches, snoozes, and appointment-preparation notes stay only in this browser.</li>
+              <li><strong>Not retrieved automatically:</strong> GlobeReady does not obtain your immigration case status or personal records from any agency. Avoid putting passport or ID numbers into free-text notes.</li>
               <li><strong>Your control:</strong> export, restore or delete your data in <Link to="/settings">Settings</Link> at any time.</li>
             </ul>
           </>
