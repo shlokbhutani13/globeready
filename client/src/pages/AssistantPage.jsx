@@ -34,8 +34,9 @@ export default function AssistantPage({ requestAnswer = apiRequest, documents = 
   const [history, setHistory] = useState(null);
 
   const blocked = localMode && !documentsAllowed;
+  const noDocuments = localMode && documentsAllowed && documents.length === 0 && localChunks.length === 0;
   const send = async (text) => {
-    if (!text.trim() || blocked) return;
+    if (!text.trim() || blocked || noDocuments) return;
     setLastQuestion(text);
     setError("");
     setBusy(true);
@@ -109,7 +110,8 @@ export default function AssistantPage({ requestAnswer = apiRequest, documents = 
       )}
       <div className="conversation">
         {blocked && <div className="assistant-empty" role="status"><span><Sparkles size={25} /></span><h2>Document reading is off</h2><p>Ask searches your saved document text only while document reading is on. Turn it on in <Link to="/documents">Documents</Link>, or delete your saved text there.</p></div>}
-        {!blocked && messages.length === 0 && <div className="assistant-empty"><span><Sparkles size={25} /></span><h2>{localMode ? "Which passage are you looking for?" : "What can I help you prepare for?"}</h2><p>{localMode ? "Use the words your document uses. Results are exact quotes with the document and page, not an answer." : "Ask about documents, university arrival, SSN, banking, healthcare, housing, CPT, or OPT."}</p><div>{(localMode ? localSuggestions : serverSuggestions).map((item) => <button key={item} onClick={() => setQuestion(item)}>{item}</button>)}</div></div>}
+        {noDocuments && <div className="assistant-empty" role="status"><span><Sparkles size={25} /></span><h2>No saved documents to search</h2><p>Add a text PDF or a photo of printed text in <Link to="/documents">Documents</Link>. It is read on this device, and only the extracted text is saved.</p></div>}
+        {!blocked && !noDocuments && messages.length === 0 && <div className="assistant-empty"><span><Sparkles size={25} /></span><h2>{localMode ? "Which passage are you looking for?" : "What can I help you prepare for?"}</h2><p>{localMode ? "Use the words your document uses. Results are exact quotes with the document and page, not an answer." : "Ask about documents, university arrival, SSN, banking, healthcare, housing, CPT, or OPT."}</p><div>{(localMode ? localSuggestions : serverSuggestions).map((item) => <button key={item} onClick={() => setQuestion(item)}>{item}</button>)}</div></div>}
         {messages.map((message, index) => message.kind === "passages" ? <div className="message assistant passages" key={index}>
           <h2 className="passages-title">{message.passages.length ? `${message.passages.length} matching passage${message.passages.length === 1 ? "" : "s"} from your documents` : "No matching passage"}</h2>
           {message.passages.map((passage, passageIndex) => <figure className="passage" key={`${passage.documentId}-${passageIndex}`}>
@@ -132,7 +134,7 @@ export default function AssistantPage({ requestAnswer = apiRequest, documents = 
           </div>
         )}
       </div>
-      <form className="assistant-composer" onSubmit={ask}>{documents.length > 0 && <select aria-label="Document scope" value={documentId} onChange={(event) => setDocumentId(event.target.value)}><option value="">All indexed documents</option>{documents.map((document) => <option key={document.id} value={document.id}>{document.name}</option>)}</select>}<input aria-label="Ask GlobeReady" disabled={blocked} value={question} onChange={(event) => setQuestion(event.target.value)} placeholder={localMode ? "Search your documents, for example: program end date" : "Ask a question about your student journey"} /><button aria-label="Send question" disabled={busy || blocked}><ArrowUp size={18} /></button></form>
+      <form className="assistant-composer" onSubmit={ask}>{documents.length > 0 && <select aria-label="Document scope" value={documentId} onChange={(event) => setDocumentId(event.target.value)}><option value="">All indexed documents</option>{documents.map((document) => <option key={document.id} value={document.id}>{document.name}</option>)}</select>}<input aria-label="Ask GlobeReady" disabled={blocked || noDocuments} value={question} onChange={(event) => setQuestion(event.target.value)} placeholder={localMode ? "Search your documents, for example: program end date" : "Ask a question about your student journey"} /><button aria-label="Send question" disabled={busy || blocked || noDocuments}><ArrowUp size={18} /></button></form>
       <Disclaimer compact />
     </div>
   );
