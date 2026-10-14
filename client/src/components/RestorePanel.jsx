@@ -3,7 +3,7 @@ import Notice from "./ui/Notice";
 import { applyRestore, planRestore } from "../lib/restore";
 import { friendlyError } from "../lib/friendly-error";
 
-const sectionLabels = { tasks: "tasks", savedResources: "saved guides", savedNews: "saved updates", trackedDates: "key dates", contacts: "contacts", planner: "checklist lists" };
+const sectionLabels = { tasks: "tasks", savedResources: "saved guides", savedNews: "saved updates", trackedDates: "key dates", contacts: "contacts", cases: "cases", planner: "checklist lists" };
 
 // Import a GlobeReady export. The file is read in this browser, checked completely, previewed, and written only after
 // the student confirms. Existing records are kept; duplicates are skipped.

@@ -1,3 +1,4 @@
+import { maxCases, validCase } from "./cases";
 import {
   maxContacts, maxPlannerCustom, maxPlannerHave, validContact, validPlanner, validProfileFields, validResource, validTask, validTrackedDate,
 } from "./zero-cost-data";
@@ -5,9 +6,9 @@ import {
 // Restores GlobeReady's own export file. Nothing is written until the student confirms a preview, existing records are
 // never overwritten or deleted, and the file must belong to the signed-in account.
 export const maxRestoreBytes = 10 * 1024 * 1024;
-export const restoreLimits = { tasks: 2_000, savedResources: 500, savedNews: 1_000, trackedDates: 200, contacts: maxContacts, planner: 2 };
+export const restoreLimits = { tasks: 2_000, savedResources: 500, savedNews: 1_000, trackedDates: 200, contacts: maxContacts, cases: maxCases, planner: 2 };
 const newsIdPattern = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$/u;
-const sections = ["tasks", "savedResources", "savedNews", "trackedDates", "contacts", "planner"];
+const sections = ["tasks", "savedResources", "savedNews", "trackedDates", "contacts", "cases", "planner"];
 
 const fail = (error) => ({ ok: false, error });
 const norm = (value) => String(value ?? "").trim().toLowerCase();
@@ -27,7 +28,7 @@ export function planRestore(text, { uid, existing = {} } = {}) {
     if (archive[section].length > restoreLimits[section]) return fail(`The "${section}" section has more than ${restoreLimits[section]} records, more than the free beta stores.`);
   }
 
-  const plan = { ok: true, add: { tasks: [], savedResources: [], savedNews: [], trackedDates: [], contacts: [], planner: [] }, duplicates: 0, invalid: [], capped: [], notRestored: [], profileFill: {} };
+  const plan = { ok: true, add: { tasks: [], savedResources: [], savedNews: [], trackedDates: [], contacts: [], cases: [], planner: [] }, duplicates: 0, invalid: [], capped: [], notRestored: [], profileFill: {} };
   const invalid = (section, index, error) => plan.invalid.push({ section, index, reason: error.message || String(error) });
 
   const have = {
@@ -36,6 +37,7 @@ export function planRestore(text, { uid, existing = {} } = {}) {
     savedNews: new Set(existing.savedNews || []),
     trackedDates: new Set((existing.trackedDates || []).map((entry) => `${entry.kind}|${entry.date}|${norm(entry.label)}`)),
     contacts: new Set((existing.contacts || []).map((entry) => `${norm(entry.name)}|${entry.role}|${norm(entry.email)}|${norm(entry.phone)}`)),
+    cases: new Set((existing.cases || []).map((entry) => `${norm(entry.title)}|${entry.kind}|${norm(entry.receiptNumber)}`)),
   };
   const take = (section, key, value) => {
     if (have[section].has(key)) { plan.duplicates += 1; return; }
@@ -64,9 +66,16 @@ export function planRestore(text, { uid, existing = {} } = {}) {
     try { const contact = validContact(record); take("contacts", `${norm(contact.name)}|${contact.role}|${norm(contact.email)}|${norm(contact.phone)}`, contact); } catch (error) { invalid("contacts", index, error); }
   });
 
-  // Free-beta bounds: contacts cap at 50 in total, counting the contacts already saved.
+  (archive.cases || []).forEach((record, index) => {
+    try { const item = validCase(record); take("cases", `${norm(item.title)}|${item.kind}|${norm(item.receiptNumber)}`, item); } catch (error) { invalid("cases", index, error); }
+  });
+
+  // Free-beta bounds: contacts and cases cap at 50 in total, counting the contacts already saved.
   const room = Math.max(0, maxContacts - (existing.contacts || []).length);
   if (plan.add.contacts.length > room) { plan.capped.push({ section: "contacts", skipped: plan.add.contacts.length - room }); plan.add.contacts = plan.add.contacts.slice(0, room); }
+
+  const caseRoom = Math.max(0, maxCases - (existing.cases || []).length);
+  if (plan.add.cases.length > caseRoom) { plan.capped.push({ section: "cases", skipped: plan.add.cases.length - caseRoom }); plan.add.cases = plan.add.cases.slice(0, caseRoom); }
 
   // Planner progress merges as a union with what is already saved; it never removes progress.
   for (const record of archive.planner || []) {
@@ -102,7 +111,7 @@ export function planRestore(text, { uid, existing = {} } = {}) {
 
   const added = plan.add;
   const writes = added.tasks.length + added.tasks.filter((task) => task.completed).length + added.savedResources.length + added.savedNews.length
-    + added.trackedDates.length + added.contacts.length + added.planner.length + (Object.keys(plan.profileFill).length ? 1 : 0);
+    + added.trackedDates.length + added.contacts.length + added.cases.length + added.planner.length + (Object.keys(plan.profileFill).length ? 1 : 0);
   plan.writes = writes;
   plan.counts = Object.fromEntries(Object.entries(added).map(([key, list]) => [key, list.length]));
   plan.nothingToRestore = writes === 0;
@@ -123,6 +132,7 @@ export async function applyRestore(plan, store, { onProgress = () => {}, concurr
   plan.add.savedNews.forEach((id) => jobs.push(() => store.saveNews(id)));
   plan.add.trackedDates.forEach((entry) => jobs.push(() => store.createTrackedDate(entry)));
   plan.add.contacts.forEach((contact) => jobs.push(() => store.createContact(contact, 0)));
+  plan.add.cases.forEach((item) => jobs.push(() => store.createCase(item, 0)));
   plan.add.planner.forEach((entry) => jobs.push(() => store.savePlanner(entry.id, entry)));
   if (Object.keys(plan.profileFill).length) jobs.push(() => store.saveProfile(plan.profileFill));
 

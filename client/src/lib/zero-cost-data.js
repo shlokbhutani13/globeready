@@ -3,6 +3,7 @@ import {
 } from "firebase/firestore";
 import { isCalendarDate } from "./calendar-date";
 import { nextTaskFrom, recurrenceValues } from "./recurrence";
+import { maxCases, validCase, withEntry, withoutEntry } from "./cases";
 
 // Direct Firestore access for the zero-cost beta. Every write mirrors firestore.zero-cost.rules, and the checks here
 // exist so a student sees a clear message instead of a generic permission error.
@@ -236,6 +237,26 @@ export function createZeroCostDataStore({ firestore, uid, sdk = defaultSdk }) {
       return sdk.setDoc(sdk.doc(firestore, "users", uid, "contacts", id), { ...validContact(input), createdAt: input.createdAt, updatedAt: timestamp() });
     },
     removeContact(id) { return sdk.deleteDoc(sdk.doc(firestore, "users", uid, "contacts", id)); },
+    async createCase(input = {}, existingCount = 0) {
+      if (existingCount >= maxCases) throw new Error(`The free beta keeps up to ${maxCases} cases. Delete one to add another.`);
+      const record = { ...validCase(input), createdAt: timestamp(), updatedAt: timestamp() };
+      const reference = await sdk.addDoc(userCollection("cases"), record);
+      return { id: reference.id, ...record };
+    },
+    updateCase(id, input = {}) {
+      if (typeof id !== "string" || !id) throw new Error("Case is invalid.");
+      return sdk.setDoc(sdk.doc(firestore, "users", uid, "cases", id), { ...validCase(input), createdAt: input.createdAt, updatedAt: timestamp() });
+    },
+    // Adds one history entry (and any status it implies) to a case in a single write.
+    addCaseEntry(record = {}, entry = {}) {
+      if (typeof record.id !== "string" || !record.id) throw new Error("Case is invalid.");
+      return sdk.setDoc(sdk.doc(firestore, "users", uid, "cases", record.id), { ...withEntry(record, entry), createdAt: record.createdAt, updatedAt: timestamp() });
+    },
+    removeCaseEntry(record = {}, index) {
+      if (typeof record.id !== "string" || !record.id) throw new Error("Case is invalid.");
+      return sdk.setDoc(sdk.doc(firestore, "users", uid, "cases", record.id), { ...withoutEntry(record, index), createdAt: record.createdAt, updatedAt: timestamp() });
+    },
+    removeCase(id) { return sdk.deleteDoc(sdk.doc(firestore, "users", uid, "cases", id)); },
     async savePlanner(plannerId, input = {}) {
       if (!["journey", "travel"].includes(plannerId)) throw new Error("Unknown planner.");
       const value = validPlanner(input);

@@ -19,6 +19,8 @@ import DocumentsPage from "./pages/DocumentsPage";
 import TasksPage from "./pages/TasksPage";
 import GuidesPage from "./pages/GuidesPage";
 import RulesPage from "./pages/RulesPage";
+import CasesPage from "./pages/CasesPage";
+import { caseDates } from "./lib/cases";
 import ResourcesPage from "./pages/ResourcesPage";
 import AssistantPage from "./pages/AssistantPage";
 import ProfilePage from "./pages/ProfilePage";
@@ -126,11 +128,14 @@ export default function App() {
     return () => { clearInterval(timer); window.removeEventListener("focus", tick); };
   }, [auth.user?.uid]);
   const records = useZeroCostRecords({ firestore: db, uid: auth.user?.uid, enabled: Boolean(auth.user) && zeroCostPublicMode, onError: (error) => setAppError(friendlyError(error)) });
+  // Key dates plus the appointment and evidence-response dates from cases, so reminders, Home and the calendar file
+  // treat them alike.
+  const watchedDates = useMemo(() => [...records.dates, ...caseDates(records.cases)], [records.dates, records.cases]);
   const localReminders = useMemo(
     () => (zeroCostPublicMode
-      ? [...deriveReminders(tasks, reminderClock), ...deriveDateReminders(records.dates, reminderClock)].map((reminder) => ({ ...reminder, read: readReminderIds.has(reminder.id) }))
+      ? [...deriveReminders(tasks, reminderClock), ...deriveDateReminders(watchedDates, reminderClock)].map((reminder) => ({ ...reminder, read: readReminderIds.has(reminder.id) }))
       : []),
-    [tasks, records.dates, reminderClock, readReminderIds],
+    [tasks, watchedDates, reminderClock, readReminderIds],
   );
 
   // Consent is loaded before any early return, so every render calls the same hooks in the same order.
@@ -214,7 +219,7 @@ export default function App() {
 
   const live = Boolean(auth.user);
   const zeroCostStore = live && zeroCostPublicMode ? createZeroCostDataStore({ firestore: db, uid: auth.user.uid }) : null;
-  const keyDateUpcoming = zeroCostPublicMode ? upcomingDates(records.dates, reminderClock) : [];
+  const keyDateUpcoming = zeroCostPublicMode ? upcomingDates(watchedDates, reminderClock) : [];
   // Tasks created from a template, always through the same validated path as a task typed by hand.
   const addTasksFromItems = async (items, { dueDate } = {}) => {
     if (!zeroCostStore) throw new Error("Sign in to add tasks.");
@@ -228,7 +233,7 @@ export default function App() {
     return planned.length;
   };
   const exportCalendar = () => {
-    const result = buildIcs({ tasks, dates: zeroCostPublicMode ? records.dates : [] });
+    const result = buildIcs({ tasks, dates: zeroCostPublicMode ? watchedDates : [] });
     if (result.count === 0) { setAppError("There is nothing to export yet. Add a due date to a task or a key date first."); return; }
     setAppError("");
     downloadIcs(result);
@@ -237,7 +242,7 @@ export default function App() {
     uid: auth.user.uid,
     store: zeroCostStore,
     existing: {
-      profile, tasks, savedResources, savedNews: savedNews.map((entry) => entry.id), trackedDates: records.dates, contacts: records.contacts, planner: records.planner,
+      profile, tasks, savedResources, savedNews: savedNews.map((entry) => entry.id), trackedDates: records.dates, contacts: records.contacts, cases: records.cases, planner: records.planner,
     },
   } : undefined;
   const savedNewsIds = new Set(savedNews.map((item) => item.id));
@@ -460,12 +465,13 @@ export default function App() {
           )} />
           <Route path="news/:id" element={<NewsDetailPage profile={profile} items={newsItems} loading={newsLoading} error={newsError} localMode={zeroCostPublicMode} />} />
           <Route path="documents" element={<DocumentsPage localProcessing={live && zeroCostPublicMode} processing={processing} onCancelProcessing={cancelProcessing} onDeleteAllText={deleteAllDocumentText} consent={live ? consent : undefined} onSaveConsent={saveConsentChoice} documents={documents} uploadProgress={uploadProgress} storageAvailable={!live || storageAvailable} onAdd={addDocument} onDelete={deleteDocument} onAnalyze={analyzeDocument} />} />
-          <Route path="tasks" element={<TasksPage zeroCostMode={zeroCostPublicMode} tasks={tasks} onAdd={addTask} onToggle={changeTask} onDelete={deleteTask} onUpdate={zeroCostStore ? (task, input) => zeroCostStore.updateTask(task, input) : undefined} linkContext={{ news: newsItems, dates: records.dates }} onExportCalendar={exportCalendar} />} />
+          <Route path="tasks" element={<TasksPage zeroCostMode={zeroCostPublicMode} tasks={tasks} onAdd={addTask} onToggle={changeTask} onDelete={deleteTask} onUpdate={zeroCostStore ? (task, input) => zeroCostStore.updateTask(task, input) : undefined} linkContext={{ news: newsItems, dates: records.dates, cases: records.cases }} onExportCalendar={exportCalendar} />} />
           <Route path="search" element={<SearchPage news={newsItems} newsLoading={newsLoading} guides={guides} tasks={tasks} documents={documents} />} />
           {zeroCostPublicMode && live && <>
             <Route path="journey" element={<JourneyPage profile={profile} tasks={tasks} added={records.planner.journey.have} onAddTasks={addTasksFromItems} />} />
             <Route path="dates" element={<KeyDatesPage dates={records.dates} onCreate={(input) => zeroCostStore.createTrackedDate(input)} onUpdate={(entry, input) => zeroCostStore.updateTrackedDate(entry.id, { ...input, createdAt: entry.createdAt })} onRemove={(id) => zeroCostStore.removeTrackedDate(id)} onExportCalendar={exportCalendar} now={reminderClock} />} />
             <Route path="travel" element={<TravelPage have={records.planner.travel.have} custom={records.planner.travel.custom} onSaveChecklist={(value) => zeroCostStore.savePlanner("travel", value)} onAddTasks={addTasksFromItems} />} />
+            <Route path="cases" element={<CasesPage cases={records.cases} tasks={tasks} now={reminderClock} onCreate={(input, count) => zeroCostStore.createCase(input, count)} onUpdate={(entry, input) => zeroCostStore.updateCase(entry.id, { ...input, createdAt: entry.createdAt })} onAddEntry={(entry, item) => zeroCostStore.addCaseEntry(entry, item)} onRemoveEntry={(entry, index) => zeroCostStore.removeCaseEntry(entry, index)} onRemove={(id) => zeroCostStore.removeCase(id)} onAddTasks={addTasksFromItems} />} />
             <Route path="contacts" element={<ContactsPage contacts={records.contacts} onCreate={(input, count) => zeroCostStore.createContact(input, count)} onUpdate={(entry, input) => zeroCostStore.updateContact(entry.id, { ...input, createdAt: entry.createdAt })} onRemove={(id) => zeroCostStore.removeContact(id)} />} />
           </>}
           <Route path="rules" element={<RulesPage profile={profile} onAddTasks={zeroCostStore ? addTasksFromItems : undefined} />} />
