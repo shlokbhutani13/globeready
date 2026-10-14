@@ -24,3 +24,16 @@ test("mobile bar has an Account menu with Profile, Settings and Sign out, usable
   fireEvent.click(within(screen.getByRole("group", { name: "Account menu" })).getByRole("button", { name: /Sign out/ }));
   expect(onSignOut).toHaveBeenCalled();
 });
+
+test("shows an offline notice that clears when the connection returns", () => {
+  render(<MemoryRouter><AppShell onSignOut={() => {}} /></MemoryRouter>);
+  expect(screen.queryByText(/you are offline/i)).not.toBeInTheDocument();
+  fireEvent(window, new Event("offline"));
+  expect(screen.queryByText(/you are offline/i)).not.toBeInTheDocument();
+  Object.defineProperty(navigator, "onLine", { configurable: true, value: false });
+  fireEvent(window, new Event("offline"));
+  expect(screen.getByText(/you are offline/i)).toBeInTheDocument();
+  Object.defineProperty(navigator, "onLine", { configurable: true, value: true });
+  fireEvent(window, new Event("online"));
+  expect(screen.queryByText(/you are offline/i)).not.toBeInTheDocument();
+});
