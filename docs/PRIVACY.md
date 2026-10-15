@@ -14,6 +14,10 @@ matches your deployment before accepting identity documents.
 
 The free beta (`docs/ZERO_COST_PUBLIC.md`) has no server and stores less:
 
+- **Monitoring is separate from students:** candidate collection and editorial review use public official-source
+  material only. They cannot read student profiles, documents, tasks, browser storage, or student Firestore collections.
+  Private reviewer notes are excluded from public artifacts; only an explicit public correction note may be published.
+
 - **Never stored:** original document files. PDFs and photos are read in the browser; the bytes are discarded after
   extraction. OCR code and the English model are served from GlobeReady's own site, so no third party receives an image.
 - **Stored in Firestore under the student's UID:** profile fields (including journey dates and chosen topics), privacy

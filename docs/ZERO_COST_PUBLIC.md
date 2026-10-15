@@ -94,6 +94,10 @@ HTML revalidates on every visit; hashed `/assets/` and `/ocr/` files are cached 
 
 ## Reviewed news operation
 
+The complete candidate, decision, publication, failure, and rollback procedure is in
+[`NEWS_REVIEW_OPERATIONS.md`](NEWS_REVIEW_OPERATIONS.md). The reviewed university-link procedure and validator are in
+[`UNIVERSITY_COVERAGE.md`](UNIVERSITY_COVERAGE.md).
+
 `.github/workflows/propose-news-update.yml` runs weekly and writes Federal Register candidates that are not already reviewed to a pull request. The proposal file has no timestamps, so the pull request changes only when there is something new. Candidates are not public news. The workflow needs the repository setting that allows GitHub Actions to create pull requests, and pull requests it opens do not start CI on their own; push a commit or re-run CI before merging.
 
 A reviewer must verify the source, dates, lifecycle and legal state, student impact, and wording, then deliberately edit `server/data/reviewed-public-news.json` (including `generatedAt`, the date of the review). Only `active` coverage entries may carry `lastVerifiedAt`; `planned` entries are listed for transparency and shown as not monitored. Regenerate the static files with:
@@ -105,6 +109,10 @@ npm run news:public -- --input data/reviewed-public-news.json
 ```
 
 The files carry a SHA-256 content hash that the browser checks to detect corruption; it is not a signature and does not prove who produced them. A server test fails if the committed `client/public/data/*.json` files differ from what the reviewed input generates. The app labels the feed delayed after twice its declared cadence (14 days at the current 7-day cadence), so the feed needs a human review at least every two weeks to stay current.
+
+CI rehearses candidate generation from committed fixtures and validates the university registry. It never contacts a
+government or university site. The weekly proposal workflow may collect official public material, but it still cannot
+publish it without human review.
 
 ## Preview smoke checks
 
