@@ -72,6 +72,12 @@ describe("admin authorization", () => {
 });
 
 describe("admin news routes", () => {
+  test("the real demo store provides an available candidate queue", async () => {
+    const app = createApp({ store: createDemoStore(), auth: liveAuth({ admin: true }), assistant: null });
+    const response = await request(app).get("/api/admin/news/candidates").set("authorization", "Bearer token").expect(200);
+    expect(response.body.data.items).toEqual([]);
+  });
+
   test("lists bounded review candidates and validates decisions before persistence", async () => {
     const store = createDemoStore();
     const candidate = { id: `review-candidate:${"a".repeat(64)}`, sourceId: "uscis", publicationState: "unreviewed" };

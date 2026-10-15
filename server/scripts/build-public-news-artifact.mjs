@@ -108,6 +108,19 @@ export function buildProposals(payload, reviewedIds = new Set()) {
     .sort((left, right) => String(right.publishedAt || "").localeCompare(String(left.publishedAt || "")) || left.externalId.localeCompare(right.externalId));
 }
 
+export function buildDiscoveryArtifact({ source, previous, entries, collectedAt }) {
+  const result = compareSourceSnapshots({
+    source,
+    previous,
+    current: { ok: true, entries },
+    collectedAt,
+  });
+  return {
+    artifact: { schemaVersion: 1, sourceHealth: result.sourceHealth, proposals: result.candidates },
+    snapshot: result.nextSnapshot,
+  };
+}
+
 async function main() {
   const args = process.argv.slice(2);
   const valueAfter = (flag) => {
@@ -155,9 +168,33 @@ async function main() {
     if (!response.ok) throw new Error(`Federal Register discovery failed (${response.status}).`);
     const text = await response.text();
     if (text.length > 5_000_000) throw new Error("Federal Register discovery response is unexpectedly large.");
+    if (!snapshotOutputPath) throw new Error("Live discovery requires a snapshot output path.");
+    const payload = JSON.parse(text);
+    const source = { id: "federal-register", allowedHosts: ["www.federalregister.gov"] };
+    const entries = buildProposals(payload).map((item) => ({
+      externalId: item.externalId,
+      title: item.title,
+      canonicalUrl: item.canonicalUrl,
+      publishedAt: item.publishedAt,
+      updatedAt: null,
+      effectiveAt: null,
+      sourceExcerpt: item.sourceExcerpt,
+      topics: [],
+      visaTypes: [],
+    }));
+    let previous;
+    if (snapshotInputPath) {
+      try { previous = JSON.parse(await readFile(resolve(snapshotInputPath), "utf8")); }
+      catch (error) { if (error?.code !== "ENOENT") throw error; }
+    }
     const reviewed = reviewedPath ? JSON.parse(await readFile(resolve(reviewedPath), "utf8")) : { items: [] };
-    const proposals = buildProposals(JSON.parse(text), new Set((reviewed.items || []).map((item) => item.id)));
-    await writeJson(discoverPath, { source: "federal-register", proposals });
+    if (!previous) {
+      const reviewedIds = new Set((reviewed.items || []).map((item) => item.id));
+      previous = { entries: entries.filter((item) => reviewedIds.has(`federal-register-${item.externalId}`)), absenceCounts: {}, resolvedFingerprints: [] };
+    }
+    const result = buildDiscoveryArtifact({ source, previous, entries, collectedAt: new Date().toISOString() });
+    await writeJson(discoverPath, result.artifact);
+    await writeJson(snapshotOutputPath, result.snapshot);
   }
   if (!inputPath) {
     if (discoverPath) return;

@@ -4,7 +4,7 @@ import { adminCoverageLedger, buildCoverageLedger } from "../news/coverage-ledge
 import { mergedSources } from "../news/coverage.js";
 import { canonicalOfficialHostname, canonicalOfficialUrl } from "../news/official-url.js";
 import { validateOnboardingTransition } from "../news/source-onboarding.js";
-import { validateReviewDecision } from "../news/review-decisions.js";
+import { validateCandidateDecision } from "../news/review-decisions.js";
 
 const sourceFields = new Set([
   "id", "publisher", "adapter", "url", "allowedHosts", "acceptedContentTypes",
@@ -221,7 +221,7 @@ export function adminNewsRouter(store, {
     const candidate = await store.reviewCandidates.get(request.params.id);
     if (!candidate) return error(response, 404, "review_candidate_not_found", "Review candidate was not found.");
     let decision;
-    try { decision = validateReviewDecision(request.body); } catch (cause) {
+    try { decision = validateCandidateDecision(candidate, request.body); } catch (cause) {
       return error(response, 422, "invalid_review_decision", cause.message);
     }
     const result = await store.reviewCandidates.decide(candidate.id, decision, {

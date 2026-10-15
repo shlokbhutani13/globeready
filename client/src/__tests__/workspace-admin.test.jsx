@@ -31,6 +31,7 @@ describe("NewsAdminPage", () => {
       if (path === "/api/admin/news/health") {
         return Promise.resolve({ sourceCount: 1, runCount: 3 });
       }
+      if (path === "/api/admin/news/candidates") return Promise.resolve({ items: [] });
       return Promise.reject(new Error(`Unexpected path ${path}`));
     });
 
@@ -45,6 +46,7 @@ describe("NewsAdminPage", () => {
     apiRequest.mockImplementation((path, options) => {
       if (path === "/api/admin/news/sources") return Promise.resolve({ items: [] });
       if (path === "/api/admin/news/health") return Promise.resolve({ sourceCount: 0, runCount: 0 });
+      if (path === "/api/admin/news/candidates") return Promise.resolve({ items: [] });
       if (path === "/api/admin/news/review" && !options) {
         return Promise.resolve({ items: [{ id: "review-1", status: "pending", type: "news-explanation", newsItemId: "item-1" }] });
       }
@@ -70,6 +72,7 @@ describe("NewsAdminPage", () => {
       }
       if (path === "/api/admin/news/review") return Promise.resolve({ items: [] });
       if (path === "/api/admin/news/health") return Promise.resolve({ sourceCount: 1, runCount: 0 });
+      if (path === "/api/admin/news/candidates") return Promise.resolve({ items: [] });
       return Promise.reject(new Error(`Unexpected path ${path}`));
     });
 

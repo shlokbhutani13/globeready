@@ -27,7 +27,12 @@ jobs:
         run: npm ci
       - name: Collect official candidates for human review only
         working-directory: server
-        run: npm run news:public -- --discover-output data/news-proposals.json --reviewed data/reviewed-public-news.json
+        run: |
+          npm run news:public -- \
+            --discover-output data/news-proposals.json \
+            --reviewed data/reviewed-public-news.json \
+            --snapshot-input data/news-source-snapshots/federal-register.json \
+            --snapshot-output data/news-source-snapshots/federal-register.json
       - name: Preserve review evidence
         uses: actions/upload-artifact@v7
         with:

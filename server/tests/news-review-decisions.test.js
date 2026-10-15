@@ -11,7 +11,7 @@ const current = {
   topics: ["status"], visaTypes: ["f-1"],
 };
 const candidate = buildReviewCandidate({ source, current, collectedAt: "2026-10-14T12:00:00.000Z", changeType: "new" });
-const confirmations = { source: true, title: true, dates: true, legalState: true, tags: true, imagePolicy: true };
+const confirmations = { source: true, title: true, dates: true, legalState: true, factualSummary: true, tags: true, imagePolicy: true };
 const record = {
   id: "uscis-notice-1", title: current.title, publisher: "USCIS", canonicalUrl: current.canonicalUrl,
   publishedAt: current.publishedAt, effectiveAt: current.effectiveAt, sourceVerified: true,
@@ -22,7 +22,7 @@ const record = {
 const approve = { type: "approve", confirmations, record, reasonCode: "verified-official-source", privateNote: "Internal only" };
 
 describe("human news review decisions", () => {
-  test("requires confirmation of source title dates legal state tags and image policy", () => {
+  test("requires confirmation of source title dates legal state factual summary tags and image policy", () => {
     expect(validateReviewDecision(approve)).toEqual(approve);
   });
 
@@ -54,6 +54,12 @@ describe("human news review decisions", () => {
     const result = applyReviewDecision({ candidate, decision: { type: "archive", targetId: record.id, reasonCode: "source-withdrawn", publicCorrectionNote: "The source withdrew this notice." }, reviewedItems: [record], clock: () => new Date("2026-10-14T13:00:00Z") });
     const artifacts = buildPublicArtifacts({ items: result.reviewedItems, coverage: [], generatedAt: "2026-10-14T13:00:00Z" });
     expect(artifacts.news.stories[0]).toMatchObject({ id: record.id, editorialState: "archived", correctionNote: "The source withdrew this notice." });
+  });
+
+  test("a removed candidate cannot be approved or corrected as current content", () => {
+    const removed = buildReviewCandidate({ source, previous: current, collectedAt: "2026-10-14T12:00:00.000Z", changeType: "removed" });
+    expect(() => applyReviewDecision({ candidate: removed, decision: approve, reviewedItems: [] })).toThrow(/removed.*archiv/i);
+    expect(() => applyReviewDecision({ candidate: removed, decision: { ...approve, type: "correct", targetId: record.id, publicCorrectionNote: "Removed." }, reviewedItems: [record] })).toThrow(/removed.*archiv/i);
   });
 
   test("never copies private reviewer notes into public artifacts", () => {

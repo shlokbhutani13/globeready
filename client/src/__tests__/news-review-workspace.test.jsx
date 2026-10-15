@@ -37,6 +37,14 @@ describe("news review workspace", () => {
     expect(approve).toBeDisabled();
     for (const checkbox of screen.getAllByRole("checkbox")) fireEvent.click(checkbox);
     expect(approve).toBeEnabled();
+    expect(screen.getByRole("checkbox", { name: /factual summary/i })).toBeChecked();
+  });
+
+  test("removed evidence can only be rejected deferred or archived", () => {
+    render(<NewsReviewDetail candidate={candidate({ changeType: "removed", current: null })} onDecision={() => {}} />);
+    expect(screen.queryByRole("button", { name: /approve candidate/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /publish correction/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /archive public item/i })).toBeInTheDocument();
   });
 
   test("submits bounded reject defer correction and archive decisions", async () => {
