@@ -39,7 +39,9 @@ export default function LoginPage({ onDemo, auth, localUser = false, demoAvailab
         <div className="login-card">
           <span className="demo-pill">{localUser ? "Local development" : demoAvailable ? "Demo available" : "Secure sign-in"}</span>
           <h2>Welcome to GlobeReady</h2>
-          <p>Sign in for your private workspace, or explore the product with safe sample data.</p>
+          <p>{demoAvailable
+            ? "Sign in for your private workspace, or explore the development demo."
+            : "Sign in or create an account to open your private workspace."}</p>
           {demoAvailable && <button className="button primary wide" onClick={onDemo}>Continue in demo mode <ArrowRight size={17} /></button>}
           {localUser && <p className="local-user-note"><strong>Local development environment.</strong> Firebase Authentication, Firestore, and Storage run as emulators on this computer. The Google button opens a mock Google identity from the local emulator. It is not your Google account.</p>}
           <div className="login-divider"><span>{localUser ? "Local emulator sign-in" : "Google or email sign-in"}</span></div>

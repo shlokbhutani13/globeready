@@ -52,7 +52,7 @@ import { useAuth } from "./lib/auth-context";
 import { apiDownload, apiRequest } from "./lib/api";
 import { deleteAccountWithReauth } from "./lib/account-deletion";
 import { fetchConsent, saveConsent } from "./lib/consent";
-import { db, demoMode, localUserMode, storageAvailable, zeroCostPublicMode } from "./lib/firebase";
+import { db, demoMode, localUserMode, staticReviewedNewsMode, storageAvailable, zeroCostPublicMode } from "./lib/firebase";
 import {
   createTask, removeDocument, removeTask, saveResource, subscribeStudentData,
   toggleTask, uploadDocument,
@@ -66,18 +66,7 @@ import { createZeroCostDataStore, nextDocumentSlot } from "./lib/zero-cost-data"
 import { extractLocalDocument } from "./lib/local-documents/extract";
 import { loadStaticCoverage, subscribeStaticNews } from "./lib/static-news";
 import { deleteZeroCostAccount, downloadZeroCostExport, exportZeroCostAccount } from "./lib/zero-cost-account";
-
-const initialProfile = { fullName: "Maya Singh", homeCountry: "India", university: "UNC Chapel Hill", program: "Computer Science", visaType: "F-1", journeyStage: "Preparing for arrival" };
-const emptyProfile = { fullName: "", homeCountry: "", university: "", program: "", visaType: "F-1", journeyStage: "Preparing for arrival" };
-const initialTasks = [
-  { id: "task-1", title: "Pay the SEVIS I-901 fee", category: "Immigration", priority: "high", dueDate: "2026-08-01", completed: false },
-  { id: "task-2", title: "Upload health insurance waiver", category: "Healthcare", priority: "high", dueDate: "2026-08-05", completed: false },
-  { id: "task-3", title: "Review airport transportation", category: "Arrival", priority: "medium", dueDate: "2026-08-12", completed: false },
-];
-const initialDocuments = [
-  { id: "doc-1", name: "I-20.pdf", category: "Immigration", storageMode: "safe demo metadata" },
-  { id: "doc-2", name: "Insurance policy.pdf", category: "Healthcare", storageMode: "safe demo metadata" },
-];
+import { blankProfile, workspaceDefaults } from "./lib/workspace-defaults";
 const zeroCostConsentText = {
   documents: "GlobeReady extracts text on this device, then saves only the text and document metadata to your account.",
   aiGeneration: "Cloud AI is unavailable in the free public beta. Ask GlobeReady uses deterministic passage matching in your browser.",
@@ -86,10 +75,11 @@ const zeroCostConsentText = {
 
 export default function App() {
   const auth = useAuth();
+  const [workspaceDefaultsAtStartup] = useState(() => workspaceDefaults());
   const [demo, setDemo] = useState(false);
-  const [profile, setProfile] = useState(initialProfile);
-  const [tasks, setTasks] = useState(initialTasks);
-  const [documents, setDocuments] = useState(initialDocuments);
+  const [profile, setProfile] = useState(workspaceDefaultsAtStartup.profile);
+  const [tasks, setTasks] = useState(workspaceDefaultsAtStartup.tasks);
+  const [documents, setDocuments] = useState(workspaceDefaultsAtStartup.documents);
   const [savedResources, setSavedResources] = useState([]);
   const [uploadProgress, setUploadProgress] = useState(0);
   // Browser-only processing state for the zero-cost beta: { percent, label } while a file is being read.
@@ -170,7 +160,7 @@ export default function App() {
 
   useEffect(() => {
     if (!auth.user) return undefined;
-    setProfile({ ...emptyProfile, fullName: auth.user.displayName || "" });
+    setProfile({ ...blankProfile(), fullName: auth.user.displayName || "" });
     setTasks([]);
     setDocuments([]);
     setSavedResources([]);
@@ -186,7 +176,7 @@ export default function App() {
     const unsubscribers = subscribeStudentData(auth.user.uid, {
       profile: (value) => {
         const { consent: storedConsent, ...profileValue } = value;
-        setProfile({ ...emptyProfile, fullName: auth.user.displayName || "", ...profileValue });
+        setProfile({ ...blankProfile(), fullName: auth.user.displayName || "", ...profileValue });
         if (zeroCostPublicMode) setConsent({ documents: false, aiGeneration: false, ...storedConsent, text: zeroCostConsentText });
       },
       tasks: setTasks,
@@ -195,7 +185,7 @@ export default function App() {
       error: (error) => setAppError(friendlyError(error, "Could not load your workspace.")),
     });
 
-    const stopNews = (zeroCostPublicMode ? subscribeStaticNews : subscribeNews)(
+    const stopNews = (staticReviewedNewsMode ? subscribeStaticNews : subscribeNews)(
       newsFilters,
       (items, meta) => { setNewsItems(items); setSourceHealth(meta.sourceHealth); setNewsLoading(false); setNewsError(""); },
       (error) => { setNewsLoading(false); setNewsError(error?.message || "Could not load updates."); },
@@ -206,7 +196,7 @@ export default function App() {
     const stopPreferences = zeroCostPublicMode ? () => {} : subscribeNewsPreferences(auth.user.uid, setNewsPreferences, () => {});
     const stopNotifications = zeroCostPublicMode ? () => {} : subscribeNotifications(auth.user.uid, setNotifications, () => {});
 
-    if (zeroCostPublicMode) {
+    if (staticReviewedNewsMode) {
       loadStaticCoverage().then(setCoverageLedger).catch(() => setCoverageLedger(null));
     } else {
       apiRequest("/api/admin/news/health").then(() => setIsAdmin(true)).catch(() => setIsAdmin(false));
@@ -246,7 +236,15 @@ export default function App() {
   }, [zeroCostPublicMode, live, tasks, watchedDates, records.planner, profile, reminderClock, lifeExtra, lifeVersion, auth.user?.uid]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (auth.loading) return <div className="app-loading">Preparing GlobeReady…</div>;
-  if (!auth.user && !demo) return <LoginPage onDemo={() => setDemo(true)} auth={auth} localUser={localUserMode} demoAvailable={demoMode} zeroCost={zeroCostPublicMode} />;
+  if (!auth.user && !demo) return <LoginPage onDemo={async () => {
+    // The direct build-time flag lets Vite omit the fixture module entirely from every non-demo build.
+    if (import.meta.env.VITE_DEMO_MODE !== "true") return;
+    const { demoWorkspace } = await import("./data/demo-workspace");
+    setProfile({ ...demoWorkspace.profile });
+    setTasks(demoWorkspace.tasks.map((item) => ({ ...item })));
+    setDocuments(demoWorkspace.documents.map((item) => ({ ...item })));
+    setDemo(true);
+  }} auth={auth} localUser={localUserMode} demoAvailable={demoMode} zeroCost={zeroCostPublicMode} />;
   // The zero-cost rules accept writes only from verified email addresses (Google accounts arrive verified).
   if (auth.user && zeroCostPublicMode && !auth.emailVerified) return <VerifyEmailPage auth={auth} />;
 
