@@ -1,7 +1,7 @@
 const htmlContentTypes = ["text/html", "application/xhtml+xml"];
 
 function source(input) {
-  return Object.freeze({
+  const record = {
     verified: true,
     enabled: true,
     cadenceHours: 12,
@@ -9,8 +9,18 @@ function source(input) {
     sourceDocumentType: "Notice",
     acceptedContentTypes: htmlContentTypes,
     ...input,
-    allowedHosts: Object.freeze([...input.allowedHosts]),
-    acceptedContentTypes: Object.freeze([...(input.acceptedContentTypes || htmlContentTypes)]),
+  };
+  record.status ||= record.enabled ? "active" : "paused";
+  record.topics ||= [];
+  record.visaTypes ||= [];
+  record.lastReviewedAt ||= record.checkedAt;
+  record.enabled = record.status === "active";
+  return Object.freeze({
+    ...record,
+    allowedHosts: Object.freeze([...record.allowedHosts]),
+    acceptedContentTypes: Object.freeze([...(record.acceptedContentTypes || htmlContentTypes)]),
+    topics: Object.freeze([...record.topics]),
+    visaTypes: Object.freeze([...record.visaTypes]),
   });
 }
 
