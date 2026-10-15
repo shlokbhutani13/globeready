@@ -4,6 +4,7 @@ import { adminCoverageLedger, buildCoverageLedger } from "../news/coverage-ledge
 import { mergedSources } from "../news/coverage.js";
 import { canonicalOfficialHostname, canonicalOfficialUrl } from "../news/official-url.js";
 import { validateOnboardingTransition } from "../news/source-onboarding.js";
+import { validateReviewDecision } from "../news/review-decisions.js";
 
 const sourceFields = new Set([
   "id", "publisher", "adapter", "url", "allowedHosts", "acceptedContentTypes",
@@ -207,6 +208,27 @@ export function adminNewsRouter(store, {
   router.get("/review", async (_request, response) => {
     const items = await store.reviewQueue.listGlobal();
     response.json({ data: { items } });
+  });
+  router.get("/candidates", async (_request, response) => {
+    if (!store.reviewCandidates?.listGlobal) return error(response, 503, "review_candidates_unavailable", "The candidate review queue is unavailable.");
+    const items = await store.reviewCandidates.listGlobal();
+    response.json({ data: { items: items.slice(0, 500) } });
+  });
+  router.post("/candidates/:id/decision", adminMutationLimiter, async (request, response) => {
+    if (!/^review-candidate:[a-f0-9]{64}$/u.test(request.params.id || "") || !store.reviewCandidates?.get || !store.reviewCandidates?.decide) {
+      return error(response, 404, "review_candidate_not_found", "Review candidate was not found.");
+    }
+    const candidate = await store.reviewCandidates.get(request.params.id);
+    if (!candidate) return error(response, 404, "review_candidate_not_found", "Review candidate was not found.");
+    let decision;
+    try { decision = validateReviewDecision(request.body); } catch (cause) {
+      return error(response, 422, "invalid_review_decision", cause.message);
+    }
+    const result = await store.reviewCandidates.decide(candidate.id, decision, {
+      reviewerUid: request.user.uid,
+      reviewedAt: new Date(clock()).toISOString(),
+    });
+    response.json({ data: result });
   });
   router.patch("/review/:id", adminMutationLimiter, async (request, response) => {
     if (!documentIdPattern.test(request.params.id)) return error(response, 404, "review_not_found", "Review was not found.");

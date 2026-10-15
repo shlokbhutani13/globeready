@@ -34,6 +34,16 @@ describe("public news artifact generator", () => {
     expect(() => buildPublicArtifacts({ items: [{ ...reviewed, canonicalUrl: "https://news.example.com/story" }], coverage: [], generatedAt: "2026-10-13T12:00:00.000Z" })).toThrow(/official/i);
   });
 
+  test("strips private review fields while keeping bounded public correction history", () => {
+    const item = { ...reviewed, correctionNote: "The official source corrected its title.", reviewHistory: [
+      { type: "correct", decidedAt: "2026-10-14T13:00:00.000Z", reasonCode: "source-correction", reviewerUid: "private", privateNote: "hidden" },
+    ] };
+    const story = buildPublicArtifacts({ items: [item], coverage: [], generatedAt: "2026-10-14T13:00:00Z" }).news.stories[0];
+    expect(story.correctionNote).toMatch(/corrected its title/iu);
+    expect(story.reviewHistory).toEqual([{ type: "correct", decidedAt: "2026-10-14T13:00:00.000Z", reasonCode: "source-correction" }]);
+    expect(JSON.stringify(story)).not.toMatch(/private|reviewerUid/iu);
+  });
+
   test("bounds public output and emits only safe coverage fields", () => {
     const coverage = [{ id: "uscis", name: "USCIS", status: "active", officialUrl: "https://www.uscis.gov", lastVerifiedAt: "2026-10-13T12:00:00.000Z", secret: "x" }];
     const { news, coverage: result } = buildPublicArtifacts({ items: [reviewed], coverage, generatedAt: "2026-10-13T12:00:00.000Z" });
