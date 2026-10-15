@@ -23,6 +23,8 @@ export default function NewsCard({ item, saved = false, onToggleSave, compact = 
         <span className={`legal-state ${item.legalState || "informational"}`}>{legalLabel}</span>
         {(seenState === "new" || seenState === "updated") && <span className="legal-state pending">{seenState === "new" ? "New" : "Updated"}</span>}
         {!item.sourceVerified && <span className="legal-state pending">Unverified source</span>}
+        {item.editorialState === "archived" && <span className="legal-state withdrawn">Archived update</span>}
+        {item.correctionNote && item.editorialState !== "archived" && <span className="legal-state pending">Corrected</span>}
         {onToggleSave && (
           <button
             className="icon-button"

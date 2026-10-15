@@ -2,12 +2,17 @@ import React, { useEffect, useState } from "react";
 import { Check, ShieldAlert, X } from "lucide-react";
 import { apiRequest } from "../lib/api";
 import CoverageLedger from "../components/CoverageLedger";
+import NewsReviewQueue from "../components/NewsReviewQueue";
+import NewsReviewDetail from "../components/NewsReviewDetail";
+import { fetchReviewCandidates, submitReviewDecision } from "../lib/news-data";
 
 export default function NewsAdminPage({ isAdmin = false }) {
   const [sources, setSources] = useState([]);
   const [reviewQueue, setReviewQueue] = useState([]);
   const [health, setHealth] = useState(null);
   const [coverage, setCoverage] = useState(null);
+  const [candidates, setCandidates] = useState([]);
+  const [selectedCandidate, setSelectedCandidate] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -18,11 +23,13 @@ export default function NewsAdminPage({ isAdmin = false }) {
       apiRequest("/api/admin/news/sources"),
       apiRequest("/api/admin/news/review"),
       apiRequest("/api/admin/news/health"),
+      fetchReviewCandidates().catch(() => ({ items: [] })),
     ])
-      .then(([sourcesData, reviewData, healthData]) => {
+      .then(([sourcesData, reviewData, healthData, candidateData]) => {
         setSources(sourcesData.items || []);
         setReviewQueue(reviewData.items || []);
         setHealth(healthData);
+        setCandidates(candidateData.items || []);
       })
       .catch((caught) => setError(caught.message))
       .finally(() => setLoading(false));
@@ -57,6 +64,12 @@ export default function NewsAdminPage({ isAdmin = false }) {
     }
   };
 
+  const decideCandidate = async (candidate, decision) => {
+    await submitReviewDecision(candidate.id, decision);
+    setSelectedCandidate(null);
+    setCandidates((items) => items.filter((item) => item.id !== candidate.id));
+  };
+
   if (!isAdmin) {
     return (
       <div className="page">
@@ -85,6 +98,8 @@ export default function NewsAdminPage({ isAdmin = false }) {
       {!loading && (
         <>
           <CoverageLedger ledger={coverage} admin />
+          <NewsReviewQueue candidates={candidates} onSelect={setSelectedCandidate} />
+          {selectedCandidate && <NewsReviewDetail candidate={selectedCandidate} onDecision={decideCandidate} />}
           {health && (
             <section className="metric-grid" style={{ marginBottom: 18 }}>
               <div className="metric-card"><div><span className="metric-label">Registered sources</span><strong>{health.sourceCount}</strong></div></div>

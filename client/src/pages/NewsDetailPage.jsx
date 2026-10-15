@@ -38,6 +38,8 @@ export default function NewsDetailPage({ onSeen, item: supplied, items = [], exp
     <Link className="back-link" to="/news"><ArrowLeft size={16} /> All news</Link>
     <figure className="news-detail-figure"><img className="news-detail-image" src={image.url} alt={image.alt} />{image.credit && <figcaption>{image.credit}</figcaption>}</figure>
     <header><span className="eyebrow">{item.publisher || "Official source"}</span><h1>{item.title}</h1><div className="news-card-meta">{item.publishedAt && <span>Published {item.publishedAt}</span>}{item.verifiedAt && <span>Verified {item.verifiedAt}</span>}</div></header>
+    {(item.editorialState === "archived" || item.correctionNote) && <section className="news-detail-callout" aria-labelledby="correction-title"><h2 id="correction-title">{item.editorialState === "archived" ? "Archived update" : "Correction"}</h2><p>{item.correctionNote || "This update is kept for history and is no longer current."}</p></section>}
+    {item.reviewHistory?.length > 0 && <details><summary>Review history</summary><ul>{item.reviewHistory.map((entry, index) => <li key={`${entry.decidedAt}-${index}`}>{entry.type === "approve" ? "Approved" : entry.type === "correct" ? "Corrected" : entry.type === "archive" ? "Archived" : entry.type} on {String(entry.decidedAt).slice(0, 10)}</li>)}</ul></details>}
     {(item.shortSummary || item.excerpt || item.sourceExcerpt) && <p className="news-detail-lead">{item.shortSummary || item.excerpt || item.sourceExcerpt}</p>}
     {profile && <RelevanceNote item={item} profile={profile} explain />}
     {item.whyItMatters && <section className="news-detail-callout"><h2>Why this matters</h2><p>{item.whyItMatters}</p></section>}
