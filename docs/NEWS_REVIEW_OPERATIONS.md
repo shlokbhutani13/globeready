@@ -11,10 +11,14 @@ a human reviewer makes an explicit decision; only reviewed input generates the s
    collections with the item absent. A failed collection marks source health and cannot remove an item.
 3. The candidate stays `unreviewed`. It is not read by the public artifact builder and contains no AI-written legal
    interpretation.
-4. In the admin review workspace, compare the evidence with the official page. Approving requires confirmation of the
+4. Download `server/data/news-proposals.json` from the review pull request or workflow artifact. In a locally running
+   full-backend admin workspace, use **Import review artifact** to load it into the durable candidate queue, then compare
+   the evidence with the official page. Importing never publishes. Approving requires confirmation of the
    source, title, dates, legal state, factual summary, affected tags, and image policy. Reject and defer use bounded
    reason fields. A correction keeps the public ID; archive/retraction keeps public history and requires public wording.
-5. Add the approved public record to `server/data/reviewed-public-news.json`, then run:
+   The complete decision payload is retained with the candidate for the editor to apply. The public zero-cost site has
+   no admin backend by design; editorial review happens locally or in a separately provisioned full backend.
+5. Apply the retained approved record to `server/data/reviewed-public-news.json`, then run:
 
    ```bash
    cd server
@@ -53,4 +57,3 @@ Review decisions can be previewed without writes with `npm run news:operations -
   confirmations.
 
 Pushing, GitHub-hosted CI, live collection, preview deployment, and destructive smoke tests require separate approval.
-

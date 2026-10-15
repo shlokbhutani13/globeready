@@ -253,7 +253,7 @@ function reviewCandidateStore(firestore, clock) {
         const snapshot = await transaction.get(reference);
         if (!snapshot.exists || snapshot.data().publicationState !== "unreviewed") throw new Error("Review candidate was not found or was already decided.");
         const clean = validateCandidateDecision({ id, ...snapshot.data() }, decision);
-        const nextResolution = { type: clean.type, reasonCode: clean.reasonCode, reviewerUid: reviewerUid.trim(), reviewedAt };
+        const nextResolution = { type: clean.type, reasonCode: clean.reasonCode, reviewerUid: reviewerUid.trim(), reviewedAt, decision: clean };
         transaction.set(reference, withoutUndefined({ ...snapshot.data(), publicationState: clean.type === "defer" ? "deferred" : "resolved", resolution: nextResolution, updatedAt: currentDate(clock) }));
         return nextResolution;
       });

@@ -25,6 +25,12 @@ jobs:
           cache-dependency-path: server/package-lock.json
       - working-directory: server
         run: npm ci
+      - name: Restore the pending review snapshot
+        run: |
+          if git fetch origin refs/heads/automation/public-news-review:refs/remotes/origin/automation/public-news-review; then
+            mkdir -p server/data/news-source-snapshots
+            git show refs/remotes/origin/automation/public-news-review:server/data/news-source-snapshots/federal-register.json > server/data/news-source-snapshots/federal-register.json || true
+          fi
       - name: Collect official candidates for human review only
         working-directory: server
         run: |

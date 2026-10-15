@@ -5,6 +5,7 @@ import { mergedSources } from "../news/coverage.js";
 import { canonicalOfficialHostname, canonicalOfficialUrl } from "../news/official-url.js";
 import { validateOnboardingTransition } from "../news/source-onboarding.js";
 import { validateCandidateDecision } from "../news/review-decisions.js";
+import { validateReviewCandidate } from "../news/review-candidates.js";
 
 const sourceFields = new Set([
   "id", "publisher", "adapter", "url", "allowedHosts", "acceptedContentTypes",
@@ -213,6 +214,31 @@ export function adminNewsRouter(store, {
     if (!store.reviewCandidates?.listGlobal) return error(response, 503, "review_candidates_unavailable", "The candidate review queue is unavailable.");
     const items = await store.reviewCandidates.listGlobal();
     response.json({ data: { items: items.slice(0, 500) } });
+  });
+  router.post("/candidates/import", adminMutationLimiter, async (request, response) => {
+    if (!store.reviewCandidates?.upsert || !Array.isArray(request.body?.items) || request.body.items.length > 500) {
+      return error(response, 422, "invalid_review_candidates", "Provide a bounded candidate artifact with an items array.");
+    }
+    const sources = mergedSources(registeredSources, await store.newsSources.listGlobal());
+    const byId = new Map(sources.map((source) => [source.id, source]));
+    let items;
+    try {
+      items = request.body.items.map((candidate) => validateReviewCandidate(candidate, byId.get(candidate?.sourceId)));
+    } catch (cause) {
+      return error(response, 422, "invalid_review_candidates", cause.message);
+    }
+    const imported = [];
+    for (const candidate of items) {
+      const existing = await store.reviewCandidates.get(candidate.id);
+      if (existing && existing.fingerprint !== candidate.fingerprint) {
+        return error(response, 409, "review_candidate_conflict", "A candidate ID already exists with different evidence.");
+      }
+      if (!existing) {
+        const result = await store.reviewCandidates.upsert(candidate.id, candidate);
+        imported.push(result.item);
+      }
+    }
+    response.status(201).json({ data: { imported: imported.length, items: imported } });
   });
   router.post("/candidates/:id/decision", adminMutationLimiter, async (request, response) => {
     if (!/^review-candidate:[a-f0-9]{64}$/u.test(request.params.id || "") || !store.reviewCandidates?.get || !store.reviewCandidates?.decide) {

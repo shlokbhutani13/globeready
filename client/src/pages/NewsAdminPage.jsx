@@ -4,7 +4,7 @@ import { apiRequest } from "../lib/api";
 import CoverageLedger from "../components/CoverageLedger";
 import NewsReviewQueue from "../components/NewsReviewQueue";
 import NewsReviewDetail from "../components/NewsReviewDetail";
-import { fetchReviewCandidates, submitReviewDecision } from "../lib/news-data";
+import { fetchReviewCandidates, importReviewCandidates, submitReviewDecision } from "../lib/news-data";
 
 export default function NewsAdminPage({ isAdmin = false }) {
   const [sources, setSources] = useState([]);
@@ -70,6 +70,21 @@ export default function NewsAdminPage({ isAdmin = false }) {
     setCandidates((items) => items.filter((item) => item.id !== candidate.id));
   };
 
+  const importCandidates = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    try {
+      const artifact = JSON.parse(await file.text());
+      const result = await importReviewCandidates(artifact.proposals || artifact.items);
+      setError("");
+      await load();
+      if (!result.imported) setError("No new candidates were found in that artifact.");
+    } catch (caught) {
+      setError(caught.message || "The candidate artifact could not be imported.");
+    }
+  };
+
   if (!isAdmin) {
     return (
       <div className="page">
@@ -98,6 +113,7 @@ export default function NewsAdminPage({ isAdmin = false }) {
       {!loading && (
         <>
           <CoverageLedger ledger={coverage} admin />
+          <section className="section-card"><h2>Import review artifact</h2><p className="muted">Download the candidate JSON from the scheduled GitHub review run, then import it here. Importing never publishes an update.</p><label className="button secondary">Choose candidate JSON<input type="file" accept="application/json,.json" onChange={importCandidates} hidden /></label></section>
           <NewsReviewQueue candidates={candidates} onSelect={setSelectedCandidate} />
           {selectedCandidate && <NewsReviewDetail candidate={selectedCandidate} onDecision={decideCandidate} />}
           {health && (

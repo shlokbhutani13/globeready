@@ -3,6 +3,7 @@ import { describe, expect, test, vi } from "vitest";
 
 import { createApp } from "../src/app.js";
 import { validateApprovalDraft } from "../src/news/approval-policy.js";
+import { buildReviewCandidate } from "../src/news/review-candidates.js";
 import { createUserRateLimiter } from "../src/rate-limit.js";
 import { createDemoStore } from "../src/store.js";
 
@@ -76,6 +77,22 @@ describe("admin news routes", () => {
     const app = createApp({ store: createDemoStore(), auth: liveAuth({ admin: true }), assistant: null });
     const response = await request(app).get("/api/admin/news/candidates").set("authorization", "Bearer token").expect(200);
     expect(response.body.data.items).toEqual([]);
+  });
+
+  test("imports a scheduled candidate artifact and preserves the complete decision", async () => {
+    const store = createDemoStore();
+    const candidate = buildReviewCandidate({
+      source: { id: "federal-register", allowedHosts: ["www.federalregister.gov"] },
+      changeType: "new", collectedAt: "2026-10-15T12:00:00.000Z",
+      current: { externalId: "2026-1", title: "Student notice", canonicalUrl: "https://www.federalregister.gov/documents/2026/01/01/example", publishedAt: "2026-10-15", sourceExcerpt: "Official summary", topics: [], visaTypes: [] },
+    });
+    const app = createApp({ store, auth: liveAuth({ admin: true }), assistant: null });
+    const admin = (method, path) => request(app)[method](path).set("authorization", "Bearer token");
+    await admin("post", "/api/admin/news/candidates/import").send({ items: [candidate] }).expect(201);
+    expect((await admin("get", "/api/admin/news/candidates").expect(200)).body.data.items).toHaveLength(1);
+    const decision = { type: "reject", reasonCode: "needs-more-evidence", privateNote: "Keep this note" };
+    await admin("post", `/api/admin/news/candidates/${encodeURIComponent(candidate.id)}/decision`).send(decision).expect(200);
+    expect((await store.reviewCandidates.get(candidate.id)).resolution.decision).toEqual(decision);
   });
 
   test("lists bounded review candidates and validates decisions before persistence", async () => {
