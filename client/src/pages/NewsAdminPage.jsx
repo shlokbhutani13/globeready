@@ -23,7 +23,7 @@ export default function NewsAdminPage({ isAdmin = false }) {
       apiRequest("/api/admin/news/sources"),
       apiRequest("/api/admin/news/review"),
       apiRequest("/api/admin/news/health"),
-      fetchReviewCandidates().catch(() => ({ items: [] })),
+      fetchReviewCandidates(),
     ])
       .then(([sourcesData, reviewData, healthData, candidateData]) => {
         setSources(sourcesData.items || []);

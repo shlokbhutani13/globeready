@@ -1,7 +1,7 @@
 export const reviewDecisionTypes = Object.freeze(["approve", "reject", "defer", "correct", "archive"]);
 
 const types = new Set(reviewDecisionTypes);
-const requiredConfirmations = ["source", "title", "dates", "legalState", "tags", "imagePolicy"];
+const requiredConfirmations = ["source", "title", "dates", "legalState", "factualSummary", "tags", "imagePolicy"];
 const reasonCodes = new Set([
   "verified-official-source", "needs-more-evidence", "not-relevant", "duplicate",
   "source-correction", "source-withdrawn", "superseded", "image-policy-failed",
@@ -31,7 +31,7 @@ export function validateReviewDecision(value) {
     if (!value.confirmations || typeof value.confirmations !== "object" || Array.isArray(value.confirmations)
       || Object.keys(value.confirmations).length !== requiredConfirmations.length
       || requiredConfirmations.some((key) => value.confirmations[key] !== true)) {
-      throw new Error("Confirm the source, title, dates, legal state, tags, and image policy before approval.");
+      throw new Error("Confirm the source, title, dates, legal state, factual summary, tags, and image policy before approval.");
     }
     if (!value.record || typeof value.record !== "object" || Array.isArray(value.record)) throw new Error("An approved reviewed record is required.");
     for (const field of ["id", "title", "publisher", "canonicalUrl", "documentType", "legalState"]) bounded(value.record[field], field === "canonicalUrl" ? 2_000 : 500, { required: true });
@@ -44,6 +44,15 @@ export function validateReviewDecision(value) {
   return value;
 }
 
+export function validateCandidateDecision(candidate, value) {
+  const clean = validateReviewDecision(value);
+  if (!candidate?.id || candidate.publicationState !== "unreviewed") throw new Error("A valid unreviewed candidate is required.");
+  if (candidate.changeType === "removed" && ["approve", "correct"].includes(clean.type)) {
+    throw new Error("Removed candidates must be rejected, deferred, or handled by archiving the existing public item.");
+  }
+  return clean;
+}
+
 function decidedAt(clock) {
   const date = new Date(clock());
   if (Number.isNaN(date.valueOf())) throw new Error("Review clock returned an invalid date.");
@@ -51,8 +60,7 @@ function decidedAt(clock) {
 }
 
 export function applyReviewDecision({ candidate, decision, reviewedItems = [], clock = () => new Date() } = {}) {
-  const clean = validateReviewDecision(decision);
-  if (!candidate?.id || candidate.publicationState !== "unreviewed") throw new Error("A valid unreviewed candidate is required.");
+  const clean = validateCandidateDecision(candidate, decision);
   const stamp = decidedAt(clock);
   const history = { type: clean.type, decidedAt: stamp, reasonCode: clean.reasonCode };
   if (["reject", "defer"].includes(clean.type)) return { item: null, reviewedItems: [...reviewedItems], resolution: { candidateId: candidate.id, ...history } };

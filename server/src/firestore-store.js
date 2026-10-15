@@ -2,6 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 
 import { isPublished } from "./news/schema.js";
 import { SNAPSHOT_COMMIT_PROTOCOL } from "./news/snapshots.js";
+import { validateCandidateDecision } from "./news/review-decisions.js";
 
 const urgencyRanks = new Map([
   ["critical", 4],
@@ -235,6 +236,28 @@ function reviewQueueStore(firestore, clock) {
         return next;
       });
       return atApiBoundary({ id, ...result });
+    },
+  };
+}
+
+function reviewCandidateStore(firestore, clock) {
+  const candidates = globalCollectionStore(firestore, "newsReviewCandidates", clock);
+  return {
+    ...candidates,
+    async decide(id, decision, { reviewerUid, reviewedAt } = {}) {
+      if (typeof reviewerUid !== "string" || !reviewerUid.trim() || !Number.isFinite(Date.parse(reviewedAt))) {
+        throw new Error("Review candidate decision metadata is invalid.");
+      }
+      const reference = firestore.collection("newsReviewCandidates").doc(id);
+      const resolution = await firestore.runTransaction(async (transaction) => {
+        const snapshot = await transaction.get(reference);
+        if (!snapshot.exists || snapshot.data().publicationState !== "unreviewed") throw new Error("Review candidate was not found or was already decided.");
+        const clean = validateCandidateDecision({ id, ...snapshot.data() }, decision);
+        const nextResolution = { type: clean.type, reasonCode: clean.reasonCode, reviewerUid: reviewerUid.trim(), reviewedAt };
+        transaction.set(reference, withoutUndefined({ ...snapshot.data(), publicationState: clean.type === "defer" ? "deferred" : "resolved", resolution: nextResolution, updatedAt: currentDate(clock) }));
+        return nextResolution;
+      });
+      return atApiBoundary({ candidateId: id, resolution });
     },
   };
 }
@@ -1111,6 +1134,7 @@ export function createFirestoreStore(firestore, { clock = () => new Date() } = {
     newsOperations,
     newsSyncState: newsSyncStateStore(firestore, clock),
     reviewQueue: reviewQueueStore(firestore, clock),
+    reviewCandidates: reviewCandidateStore(firestore, clock),
     reviewAudit: readOnlyGlobalCollectionStore(firestore, "newsReviewAudits", clock),
     leases,
     snapshots: createFirestoreSnapshotStore(firestore, { clock }),

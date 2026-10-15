@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { describe, expect, test } from "vitest";
-import { buildProposals, buildPublicArtifacts } from "../scripts/build-public-news-artifact.mjs";
+import { buildDiscoveryArtifact, buildProposals, buildPublicArtifacts } from "../scripts/build-public-news-artifact.mjs";
 
 const root = new URL("../../", import.meta.url);
 const exec = promisify(execFile);
@@ -92,6 +92,18 @@ describe("public news artifact generator", () => {
     expect(await readFile(first, "utf8")).toBe(await readFile(second, "utf8"));
     expect(JSON.parse(await readFile(first, "utf8"))).toMatchObject({ schemaVersion: 1, sourceHealth: { sourceId: "uscis" } });
   });
+
+  test("live discovery uses the change ledger for edits redirects and confirmed removals", () => {
+    const source = { id: "federal-register", allowedHosts: ["www.federalregister.gov"] };
+    const prior = { entries: [{ externalId: "one", title: "Old", canonicalUrl: "https://www.federalregister.gov/d/one", publishedAt: "2026-10-01", updatedAt: null, effectiveAt: null, sourceExcerpt: "Old", topics: [], visaTypes: [] }], absenceCounts: {}, resolvedFingerprints: [] };
+    const changed = buildDiscoveryArtifact({ source, previous: prior, entries: [{ ...prior.entries[0], title: "New" }], collectedAt: "2026-10-14T12:00:00Z" });
+    expect(changed.artifact.proposals).toHaveLength(1);
+    expect(changed.artifact.proposals[0].changeType).toBe("changed");
+    const missingOnce = buildDiscoveryArtifact({ source, previous: prior, entries: [], collectedAt: "2026-10-14T12:00:00Z" });
+    expect(missingOnce.artifact.proposals).toEqual([]);
+    const missingTwice = buildDiscoveryArtifact({ source, previous: missingOnce.snapshot, entries: [], collectedAt: "2026-10-15T12:00:00Z" });
+    expect(missingTwice.artifact.proposals[0].changeType).toBe("removed");
+  });
 });
 
 describe("zero-cost release contract", () => {
@@ -102,6 +114,13 @@ describe("zero-cost release contract", () => {
     expect(workflow).toMatch(/permissions:\s*\n\s*contents:\s*read/u);
     expect(workflow).not.toMatch(/contents:\s*write|pull-requests:\s*write/u);
     expect(workflow).not.toMatch(/https:\/\/(?:www\.)?(?:uscis|ice|dhs|state)\.gov/iu);
+  });
+
+  test("the weekly proposal workflow persists the change-ledger snapshot", async () => {
+    const workflow = await readFile(new URL(".github/workflows/propose-news-update.yml", root), "utf8");
+    expect(workflow).toMatch(/--snapshot-input\s+data\/news-source-snapshots\/federal-register\.json/u);
+    expect(workflow).toMatch(/--snapshot-output\s+data\/news-source-snapshots\/federal-register\.json/u);
+    expect(workflow).toContain("additions, edits, redirects, confirmed removals, or collection failures");
   });
 
   test("release documentation lists every separately authorized live check", async () => {
