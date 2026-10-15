@@ -1,7 +1,8 @@
 import { createHash } from "node:crypto";
-import { readFile, writeFile, mkdir } from "node:fs/promises";
+import { readFile, writeFile, mkdir, rename } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { compareSourceSnapshots } from "../src/news/change-ledger.js";
 
 const storyFields = [
   "id", "sourceId", "sourceVerified", "title", "publisher", "canonicalUrl", "officialPdfUrl", "publishedAt", "updatedAt", "verifiedAt",
@@ -101,8 +102,32 @@ async function main() {
   const inputPath = valueAfter("--input");
   const reviewedPath = valueAfter("--reviewed");
   const discoverPath = valueAfter("--discover-output");
+  const fixturePath = valueAfter("--fixture-input");
+  const snapshotInputPath = valueAfter("--snapshot-input");
+  const snapshotOutputPath = valueAfter("--snapshot-output");
   const newsPath = valueAfter("--news-output") || "../client/public/data/news.json";
   const coveragePath = valueAfter("--coverage-output") || "../client/public/data/coverage.json";
+  const writeJson = async (path, value) => {
+    const target = resolve(path);
+    await mkdir(dirname(target), { recursive: true });
+    const temporary = `${target}.tmp-${process.pid}`;
+    await writeFile(temporary, `${JSON.stringify(value, null, 2)}\n`);
+    await rename(temporary, target);
+  };
+  if (fixturePath) {
+    if (!discoverPath || !snapshotOutputPath) throw new Error("Fixture collection requires proposal and snapshot output paths.");
+    const fixture = JSON.parse(await readFile(resolve(fixturePath), "utf8"));
+    const previous = snapshotInputPath ? JSON.parse(await readFile(resolve(snapshotInputPath), "utf8")) : undefined;
+    const result = compareSourceSnapshots({
+      source: fixture.source,
+      previous,
+      current: { ok: fixture.ok === true, entries: fixture.entries || [], errorCode: fixture.errorCode },
+      collectedAt: fixture.collectedAt,
+    });
+    await writeJson(discoverPath, { schemaVersion: 1, sourceHealth: result.sourceHealth, proposals: result.candidates });
+    await writeJson(snapshotOutputPath, result.nextSnapshot);
+    return;
+  }
   if (discoverPath) {
     const url = new URL("https://www.federalregister.gov/api/v1/documents.json");
     url.searchParams.set("per_page", "100");
@@ -117,9 +142,7 @@ async function main() {
     if (text.length > 5_000_000) throw new Error("Federal Register discovery response is unexpectedly large.");
     const reviewed = reviewedPath ? JSON.parse(await readFile(resolve(reviewedPath), "utf8")) : { items: [] };
     const proposals = buildProposals(JSON.parse(text), new Set((reviewed.items || []).map((item) => item.id)));
-    const target = resolve(discoverPath);
-    await mkdir(dirname(target), { recursive: true });
-    await writeFile(target, `${JSON.stringify({ source: "federal-register", proposals }, null, 2)}\n`);
+    await writeJson(discoverPath, { source: "federal-register", proposals });
   }
   if (!inputPath) {
     if (discoverPath) return;
@@ -128,9 +151,7 @@ async function main() {
   const input = JSON.parse(await readFile(resolve(inputPath), "utf8"));
   const artifacts = buildPublicArtifacts(input);
   for (const [path, value] of [[newsPath, artifacts.news], [coveragePath, artifacts.coverage]]) {
-    const target = resolve(path);
-    await mkdir(dirname(target), { recursive: true });
-    await writeFile(target, `${JSON.stringify(value, null, 2)}\n`);
+    await writeJson(path, value);
   }
 }
 
