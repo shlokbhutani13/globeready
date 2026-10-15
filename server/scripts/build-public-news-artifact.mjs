@@ -3,17 +3,20 @@ import { readFile, writeFile, mkdir, rename } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { compareSourceSnapshots } from "../src/news/change-ledger.js";
+import { reviewDecisionTypes as reviewDecisionTypeList } from "../src/news/review-decisions.js";
 
 const storyFields = [
   "id", "sourceId", "sourceVerified", "title", "publisher", "canonicalUrl", "officialPdfUrl", "publishedAt", "updatedAt", "verifiedAt",
   "effectiveAt", "expiresAt", "documentType", "legalState", "editorialState", "docketNumber", "excerpt",
   "sourceExcerpt", "plainLanguageSummary", "shortSummary", "whyItMatters", "detailSections", "actions", "image",
   "urgency", "topics", "visaTypes", "nationalities", "universityIds", "journeyStages", "lifecycleState", "replacementItemId",
+  "correctionNote", "reviewHistory",
 ];
 const coverageFields = ["id", "name", "status", "officialUrl", "scope", "lastVerifiedAt", "cadenceHours"];
 // "active" sources are reviewed for the static feed; "planned" ones are listed for transparency but not monitored.
 const coverageStatuses = new Set(["active", "planned"]);
-const publishedStates = new Set(["approved", "published-source-only"]);
+const publishedStates = new Set(["approved", "published-source-only", "archived"]);
+const reviewDecisionTypes = new Set(reviewDecisionTypeList);
 const maxStories = 250;
 const maxBytes = 1_000_000;
 
@@ -42,6 +45,15 @@ function pick(record, fields) {
   return Object.fromEntries(fields.filter((field) => record[field] !== undefined).map((field) => [field, record[field]]));
 }
 
+function publicReviewHistory(value) {
+  if (!Array.isArray(value)) return [];
+  return value.slice(-20).map((entry) => ({
+    type: String(entry?.type || "").slice(0, 30),
+    decidedAt: String(entry?.decidedAt || "").slice(0, 40),
+    reasonCode: String(entry?.reasonCode || "").slice(0, 80),
+  })).filter((entry) => reviewDecisionTypes.has(entry.type) && Number.isFinite(Date.parse(entry.decidedAt)) && entry.reasonCode);
+}
+
 function stamp(payload) {
   return { ...payload, contentHash: hash(payload) };
 }
@@ -55,7 +67,10 @@ export function buildPublicArtifacts({ items = [], coverage = [], generatedAt = 
     if (item?.sourceVerified !== true || !publishedStates.has(item?.editorialState)) throw new Error("Every public story must be source-verified and reviewed.");
     if (!officialUrl(item.canonicalUrl)) throw new Error("Every public story must use an official HTTPS .gov or .edu canonical URL.");
     if (item.officialPdfUrl && !officialUrl(item.officialPdfUrl)) throw new Error("Official PDF URLs must use HTTPS .gov or .edu hosts.");
-    return pick(item, storyFields);
+    const story = pick(item, storyFields);
+    if (Object.hasOwn(story, "correctionNote")) story.correctionNote = String(story.correctionNote || "").trim().slice(0, 1_000);
+    if (Object.hasOwn(story, "reviewHistory")) story.reviewHistory = publicReviewHistory(story.reviewHistory);
+    return story;
   }).sort((left, right) => String(right.publishedAt || "").localeCompare(String(left.publishedAt || "")) || String(left.id).localeCompare(String(right.id)));
 
   const entries = (Array.isArray(coverage) ? coverage : []).slice(0, 250).map((entry) => {

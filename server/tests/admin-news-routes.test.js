@@ -72,6 +72,25 @@ describe("admin authorization", () => {
 });
 
 describe("admin news routes", () => {
+  test("lists bounded review candidates and validates decisions before persistence", async () => {
+    const store = createDemoStore();
+    const candidate = { id: `review-candidate:${"a".repeat(64)}`, sourceId: "uscis", publicationState: "unreviewed" };
+    const decide = vi.fn(async (_id, decision) => ({ candidateId: candidate.id, ...decision }));
+    store.reviewCandidates = {
+      listGlobal: vi.fn(async () => [candidate]),
+      get: vi.fn(async (id) => id === candidate.id ? candidate : null),
+      decide,
+    };
+    const app = createApp({ store, auth: liveAuth({ admin: true }), assistant: null });
+    const admin = (method, path) => request(app)[method](path).set("authorization", "Bearer token");
+    expect((await admin("get", "/api/admin/news/candidates").expect(200)).body.data.items).toEqual([candidate]);
+    await admin("post", `/api/admin/news/candidates/${encodeURIComponent(candidate.id)}/decision`)
+      .send({ type: "approve", confirmations: {} }).expect(422);
+    await admin("post", `/api/admin/news/candidates/${encodeURIComponent(candidate.id)}/decision`)
+      .send({ type: "reject", reasonCode: "needs-more-evidence", privateNote: "Check again" }).expect(200);
+    expect(decide).toHaveBeenCalledWith(candidate.id, expect.objectContaining({ type: "reject" }), expect.objectContaining({ reviewerUid: "user-1" }));
+  });
+
   test("moves a university source through verified onboarding and refuses ordinary users", async () => {
     const store = createDemoStore();
     await store.newsSources.upsert("example-u", {
