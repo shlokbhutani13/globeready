@@ -3,6 +3,7 @@ import { readFile, writeFile, mkdir, rename } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { compareSourceSnapshots } from "../src/news/change-ledger.js";
+import { validateReviewCandidate } from "../src/news/review-candidates.js";
 import { reviewDecisionTypes as reviewDecisionTypeList } from "../src/news/review-decisions.js";
 
 const storyFields = [
@@ -121,6 +122,11 @@ export function buildDiscoveryArtifact({ source, previous, entries, collectedAt 
   };
 }
 
+export function mergePendingCandidates(pending = [], current = []) {
+  return [...new Map([...pending, ...current].map((candidate) => [candidate.id, candidate])).values()]
+    .sort((left, right) => left.sourceId.localeCompare(right.sourceId) || left.id.localeCompare(right.id));
+}
+
 async function main() {
   const args = process.argv.slice(2);
   const valueAfter = (flag) => {
@@ -133,6 +139,7 @@ async function main() {
   const fixturePath = valueAfter("--fixture-input");
   const snapshotInputPath = valueAfter("--snapshot-input");
   const snapshotOutputPath = valueAfter("--snapshot-output");
+  const pendingInputPath = valueAfter("--pending-input");
   const newsPath = valueAfter("--news-output") || "../client/public/data/news.json";
   const coveragePath = valueAfter("--coverage-output") || "../client/public/data/coverage.json";
   const writeJson = async (path, value) => {
@@ -193,7 +200,15 @@ async function main() {
       previous = { entries: entries.filter((item) => reviewedIds.has(`federal-register-${item.externalId}`)), absenceCounts: {}, resolvedFingerprints: [] };
     }
     const result = buildDiscoveryArtifact({ source, previous, entries, collectedAt: new Date().toISOString() });
-    await writeJson(discoverPath, result.artifact);
+    let pending = [];
+    if (pendingInputPath) {
+      try {
+        const prior = JSON.parse(await readFile(resolve(pendingInputPath), "utf8"));
+        pending = Array.isArray(prior.proposals) ? prior.proposals.map((candidate) => validateReviewCandidate(candidate, source)) : [];
+      } catch (error) { if (error?.code !== "ENOENT") throw error; }
+    }
+    const proposals = mergePendingCandidates(pending, result.artifact.proposals);
+    await writeJson(discoverPath, { ...result.artifact, proposals });
     await writeJson(snapshotOutputPath, result.snapshot);
   }
   if (!inputPath) {

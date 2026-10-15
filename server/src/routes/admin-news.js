@@ -227,12 +227,16 @@ export function adminNewsRouter(store, {
     } catch (cause) {
       return error(response, 422, "invalid_review_candidates", cause.message);
     }
-    const imported = [];
-    for (const candidate of items) {
-      const existing = await store.reviewCandidates.get(candidate.id);
+    const existingItems = await Promise.all(items.map((candidate) => store.reviewCandidates.get(candidate.id)));
+    for (const [index, candidate] of items.entries()) {
+      const existing = existingItems[index];
       if (existing && existing.fingerprint !== candidate.fingerprint) {
         return error(response, 409, "review_candidate_conflict", "A candidate ID already exists with different evidence.");
       }
+    }
+    const imported = [];
+    for (const [index, candidate] of items.entries()) {
+      const existing = existingItems[index];
       if (!existing) {
         const result = await store.reviewCandidates.upsert(candidate.id, candidate);
         imported.push(result.item);

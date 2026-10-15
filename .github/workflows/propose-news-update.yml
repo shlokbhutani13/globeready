@@ -29,7 +29,14 @@ jobs:
         run: |
           if git fetch origin refs/heads/automation/public-news-review:refs/remotes/origin/automation/public-news-review; then
             mkdir -p server/data/news-source-snapshots
-            git show refs/remotes/origin/automation/public-news-review:server/data/news-source-snapshots/federal-register.json > server/data/news-source-snapshots/federal-register.json || true
+            if git show refs/remotes/origin/automation/public-news-review:server/data/news-source-snapshots/federal-register.json > /tmp/federal-register-snapshot.json; then
+              mv /tmp/federal-register-snapshot.json server/data/news-source-snapshots/federal-register.json
+            fi
+            if git show refs/remotes/origin/automation/public-news-review:server/data/news-proposals.json > /tmp/news-proposals.json; then
+              true
+            else
+              rm -f /tmp/news-proposals.json
+            fi
           fi
       - name: Collect official candidates for human review only
         working-directory: server
@@ -37,6 +44,7 @@ jobs:
           npm run news:public -- \
             --discover-output data/news-proposals.json \
             --reviewed data/reviewed-public-news.json \
+            --pending-input /tmp/news-proposals.json \
             --snapshot-input data/news-source-snapshots/federal-register.json \
             --snapshot-output data/news-source-snapshots/federal-register.json
       - name: Preserve review evidence

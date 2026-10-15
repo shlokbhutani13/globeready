@@ -137,5 +137,13 @@ export function validateReviewCandidate(value, source) {
   const url = canonicalUrl(value.canonicalUrl, source);
   const collectedAt = isoTimestamp(value.collectedAt);
   if (!Array.isArray(value.diffs) || value.diffs.length > evidenceFields.size || value.diffs.some((field) => !evidenceFields.has(field))) throw new Error("Review candidate diffs are invalid.");
-  return { ...value, canonicalUrl: url, collectedAt, current, previous, diffs: [...value.diffs] };
+  const basis = current || previous;
+  const fingerprint = candidateFingerprint(basis);
+  const id = `review-candidate:${createHash("sha256").update(JSON.stringify([source.id, value.changeType, fingerprint])).digest("hex")}`;
+  const diffs = fieldDiffs(previous, current);
+  if (value.fingerprint !== fingerprint || value.id !== id || url !== basis.canonicalUrl
+    || JSON.stringify([...value.diffs].sort()) !== JSON.stringify(diffs)) {
+    throw new Error("Review candidate identity does not match its evidence.");
+  }
+  return { ...value, canonicalUrl: url, collectedAt, current, previous, diffs };
 }
