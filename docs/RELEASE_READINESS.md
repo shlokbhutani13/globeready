@@ -1,5 +1,17 @@
 # Release readiness: production hardening pass
 
+## Zero-cost completion UI check (2026-10-14)
+
+The signed-in local-user app was checked at 390 px and 1280 px across 27 student routes (54 route/viewport
+combinations). Every route had exactly one `h1`, no horizontal document overflow, and no interactive target below
+44 by 44 px, except ordinary inline text links. Checkbox and radio controls were evaluated by their associated label
+hit area. The pass found and fixed narrow calendar-day controls, undersized phone-number links, checkbox-label hit
+areas, mobile error wrapping, and a failed admin-load state with no retry action.
+
+The route loop intentionally navigated faster than a person and exhausted the local per-process news request limit;
+the resulting 429 responses exercised the existing error states and are not a layout failure. No cloud service,
+deployment, production account, or paid resource was involved.
+
 ## Zero-cost public-beta repair pass (2026-10-14)
 
 An independent review of `e188dd4` found that the beta's tests passed while deployment-only behavior and large-input
