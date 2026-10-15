@@ -1,8 +1,13 @@
-import { readFile } from "node:fs/promises";
+import { readFile, mkdtemp } from "node:fs/promises";
+import { execFile } from "node:child_process";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { promisify } from "node:util";
 import { describe, expect, test } from "vitest";
 import { buildProposals, buildPublicArtifacts } from "../scripts/build-public-news-artifact.mjs";
 
 const root = new URL("../../", import.meta.url);
+const exec = promisify(execFile);
 
 const reviewed = {
   id: "uscis-opt", sourceId: "uscis", sourceVerified: true, editorialState: "approved",
@@ -63,5 +68,18 @@ describe("public news artifact generator", () => {
     expect(first.map((item) => item.externalId)).toEqual(["2026-20001"]);
     expect(buildProposals({ results: [...payload.results].reverse() }, new Set(["federal-register-2026-14439"]))).toEqual(first);
     expect(JSON.stringify(first)).not.toMatch(/generatedAt/u);
+  });
+
+  test("generates the same proposal artifact from fixture input twice", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "globeready-proposals-"));
+    const script = new URL("../scripts/build-public-news-artifact.mjs", import.meta.url);
+    const fixture = new URL("fixtures/news-change-ledger/current.json", import.meta.url);
+    const snapshot = new URL("fixtures/news-change-ledger/previous.json", import.meta.url);
+    const first = join(directory, "first.json");
+    const second = join(directory, "second.json");
+    const next = join(directory, "snapshot.json");
+    for (const output of [first, second]) await exec(process.execPath, [script.pathname, "--fixture-input", fixture.pathname, "--snapshot-input", snapshot.pathname, "--snapshot-output", next, "--discover-output", output]);
+    expect(await readFile(first, "utf8")).toBe(await readFile(second, "utf8"));
+    expect(JSON.parse(await readFile(first, "utf8"))).toMatchObject({ schemaVersion: 1, sourceHealth: { sourceId: "uscis" } });
   });
 });
