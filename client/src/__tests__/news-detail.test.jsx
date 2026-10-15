@@ -47,3 +47,16 @@ test("free-beta detail page shows a source-based At a glance panel and no AI wor
   expect(screen.getByText("Final rule")).toBeInTheDocument();
   expect(screen.queryByText(/AI/)).not.toBeInTheDocument();
 });
+
+test("labels corrected and archived updates without hiding their history", () => {
+  const story = {
+    id: "corrected", title: "Corrected update", publisher: "USCIS", canonicalUrl: "https://www.uscis.gov/news/corrected",
+    editorialState: "archived", lifecycleState: "archived", correctionNote: "The official source withdrew this notice.",
+    reviewHistory: [{ type: "approve", decidedAt: "2026-10-01T00:00:00.000Z", reasonCode: "verified-official-source" }, { type: "archive", decidedAt: "2026-10-14T00:00:00.000Z", reasonCode: "source-withdrawn" }],
+  };
+  render(<MemoryRouter><NewsDetailPage item={story} /></MemoryRouter>);
+  expect(screen.getByText(/archived update/i)).toBeInTheDocument();
+  expect(screen.getByText(/official source withdrew/i)).toBeInTheDocument();
+  expect(screen.getByText(/review history/i)).toBeInTheDocument();
+  expect(screen.getByText(/approved/i)).toBeInTheDocument();
+});

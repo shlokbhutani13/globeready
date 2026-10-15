@@ -120,6 +120,14 @@ export function fetchCoverageLedger() {
   return apiRequest("/api/news/coverage");
 }
 
+export function fetchReviewCandidates() {
+  return apiRequest("/api/admin/news/candidates");
+}
+
+export function submitReviewDecision(candidateId, decision) {
+  return apiRequest(`/api/admin/news/candidates/${encodeURIComponent(candidateId)}/decision`, { method: "POST", body: JSON.stringify(decision) });
+}
+
 export function fetchNewsDigests() {
   return apiRequest("/api/news/digests");
 }
