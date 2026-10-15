@@ -120,6 +120,7 @@ describe("zero-cost release contract", () => {
     const workflow = await readFile(new URL(".github/workflows/propose-news-update.yml", root), "utf8");
     expect(workflow).toMatch(/--snapshot-input\s+data\/news-source-snapshots\/federal-register\.json/u);
     expect(workflow).toMatch(/--snapshot-output\s+data\/news-source-snapshots\/federal-register\.json/u);
+    expect(workflow).toMatch(/git fetch origin refs\/heads\/automation\/public-news-review/u);
     expect(workflow).toContain("additions, edits, redirects, confirmed removals, or collection failures");
   });
 

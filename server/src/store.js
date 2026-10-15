@@ -585,7 +585,7 @@ export function createDemoStore({ seedConsent = [] } = {}) {
     const candidate = candidateItems.get(id);
     if (!candidate || candidate.publicationState !== "unreviewed") throw new Error("Review candidate was not found or was already decided.");
     const clean = validateCandidateDecision(candidate, decision);
-    const resolution = { type: clean.type, reasonCode: clean.reasonCode, reviewerUid, reviewedAt };
+    const resolution = { type: clean.type, reasonCode: clean.reasonCode, reviewerUid, reviewedAt, decision: clean };
     const next = { ...candidate, publicationState: clean.type === "defer" ? "deferred" : "resolved", resolution, updatedAt: reviewedAt };
     candidateItems.set(id, next);
     return { candidateId: id, resolution };

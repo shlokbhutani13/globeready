@@ -124,6 +124,10 @@ export function fetchReviewCandidates() {
   return apiRequest("/api/admin/news/candidates");
 }
 
+export function importReviewCandidates(items) {
+  return apiRequest("/api/admin/news/candidates/import", { method: "POST", body: JSON.stringify({ items }) });
+}
+
 export function submitReviewDecision(candidateId, decision) {
   return apiRequest(`/api/admin/news/candidates/${encodeURIComponent(candidateId)}/decision`, { method: "POST", body: JSON.stringify(decision) });
 }
