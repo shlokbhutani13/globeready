@@ -227,6 +227,9 @@ export function adminNewsRouter(store, {
     } catch (cause) {
       return error(response, 422, "invalid_review_candidates", cause.message);
     }
+    if (new Set(items.map((candidate) => candidate.id)).size !== items.length) {
+      return error(response, 409, "review_candidate_conflict", "The candidate artifact contains duplicate identities.");
+    }
     const existingItems = await Promise.all(items.map((candidate) => store.reviewCandidates.get(candidate.id)));
     for (const [index, candidate] of items.entries()) {
       const existing = existingItems[index];

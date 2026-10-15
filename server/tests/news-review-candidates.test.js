@@ -54,6 +54,8 @@ describe("official-source review candidates", () => {
     expect(() => validateReviewCandidate({ ...candidate, current: { ...candidate.current, sourceExcerpt: "x".repeat(2_001) } }, source)).toThrow(/evidence|excerpt/iu);
     expect(() => validateReviewCandidate({ ...candidate, current: { ...candidate.current, title: "Tampered title" } }, source)).toThrow(/identity/iu);
     expect(() => validateReviewCandidate({ ...candidate, diffs: ["title"] }, source)).toThrow(/identity/iu);
+    const changed = buildReviewCandidate({ source, current: item, previous: { ...item, title: "Earlier guidance" }, collectedAt: "2026-10-14T12:00:00.000Z", changeType: "changed" });
+    expect(() => validateReviewCandidate({ ...changed, previous: { ...changed.previous, title: "Fabricated history" }, diffs: ["title"] }, source)).toThrow(/identity/iu);
   });
 
   test("does not change fingerprints for whitespace or tracking parameters", () => {

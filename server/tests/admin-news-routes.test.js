@@ -88,6 +88,8 @@ describe("admin news routes", () => {
     });
     const app = createApp({ store, auth: liveAuth({ admin: true }), assistant: null });
     const admin = (method, path) => request(app)[method](path).set("authorization", "Bearer token");
+    await admin("post", "/api/admin/news/candidates/import").send({ items: [candidate, candidate] }).expect(409);
+    expect((await store.reviewCandidates.listGlobal())).toEqual([]);
     await admin("post", "/api/admin/news/candidates/import").send({ items: [candidate] }).expect(201);
     expect((await admin("get", "/api/admin/news/candidates").expect(200)).body.data.items).toHaveLength(1);
     const decision = { type: "reject", reasonCode: "needs-more-evidence", privateNote: "Keep this note" };

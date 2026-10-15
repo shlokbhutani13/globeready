@@ -99,6 +99,10 @@ function fieldDiffs(previous, current) {
   return [...evidenceFields].filter((field) => JSON.stringify(previous[field] ?? null) !== JSON.stringify(current[field] ?? null)).sort();
 }
 
+function candidateId({ sourceId, changeType, fingerprint, current, previous, diffs, collectedAt }) {
+  return `review-candidate:${createHash("sha256").update(JSON.stringify(stable({ sourceId, changeType, fingerprint, current, previous, diffs, collectedAt }))).digest("hex")}`;
+}
+
 export function buildReviewCandidate({ source, current = null, previous = null, collectedAt, changeType }) {
   if (!sourceIdPattern.test(source?.id || "")) throw new Error("Candidate source ID is invalid.");
   if (!changeTypes.has(changeType)) throw new Error("Candidate change type is invalid.");
@@ -107,7 +111,9 @@ export function buildReviewCandidate({ source, current = null, previous = null, 
   const previousEvidence = evidence(previous, source);
   const basis = current || previous;
   const fingerprint = candidateFingerprint(basis);
-  const id = `review-candidate:${createHash("sha256").update(JSON.stringify([source.id, changeType, fingerprint])).digest("hex")}`;
+  const stamp = isoTimestamp(collectedAt);
+  const diffs = fieldDiffs(previousEvidence, currentEvidence);
+  const id = candidateId({ sourceId: source.id, changeType, fingerprint, current: currentEvidence, previous: previousEvidence, diffs, collectedAt: stamp });
   return validateReviewCandidate({
     schemaVersion: candidateSchemaVersion,
     id,
@@ -116,10 +122,10 @@ export function buildReviewCandidate({ source, current = null, previous = null, 
     changeType,
     publicationState: "unreviewed",
     canonicalUrl: canonicalUrl(basis.canonicalUrl, source),
-    collectedAt: isoTimestamp(collectedAt),
+    collectedAt: stamp,
     current: currentEvidence,
     previous: previousEvidence,
-    diffs: fieldDiffs(previousEvidence, currentEvidence),
+    diffs,
   }, source);
 }
 
@@ -139,8 +145,8 @@ export function validateReviewCandidate(value, source) {
   if (!Array.isArray(value.diffs) || value.diffs.length > evidenceFields.size || value.diffs.some((field) => !evidenceFields.has(field))) throw new Error("Review candidate diffs are invalid.");
   const basis = current || previous;
   const fingerprint = candidateFingerprint(basis);
-  const id = `review-candidate:${createHash("sha256").update(JSON.stringify([source.id, value.changeType, fingerprint])).digest("hex")}`;
   const diffs = fieldDiffs(previous, current);
+  const id = candidateId({ sourceId: source.id, changeType: value.changeType, fingerprint, current, previous, diffs, collectedAt });
   if (value.fingerprint !== fingerprint || value.id !== id || url !== basis.canonicalUrl
     || JSON.stringify([...value.diffs].sort()) !== JSON.stringify(diffs)) {
     throw new Error("Review candidate identity does not match its evidence.");
