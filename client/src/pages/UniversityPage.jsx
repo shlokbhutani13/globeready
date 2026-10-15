@@ -14,7 +14,7 @@ import { officeDirectory } from "../lib/university-workspace";
 import { isOnDomain, officeLinks, universityCoverage, universityLinkCategory, universityResources } from "../lib/university";
 
 const schoolRoles = ["dso", "international-office", "campus-safety"];
-const statusText = { reviewed: "Reviewed", "domain-only": "Not reviewed", "general-only": "Not reviewed", none: "No university added" };
+const statusText = { reviewed: "Reviewed", "general-only": "Not reviewed", none: "No university added" };
 
 export default function UniversityPage({ profile = {}, news = [], contacts = [], savedResources = [], onSaveLink, onRemoveLink }) {
   const coverage = useMemo(() => universityCoverage(profile, news), [profile, news]);

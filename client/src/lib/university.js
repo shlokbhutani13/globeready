@@ -1,5 +1,6 @@
 import { universityIdFor } from "./news-data";
 import { reviewedUniversities } from "../data/university-coverage";
+import { coverageForUniversity } from "./university-registry";
 
 // Offices every university has under some name. Searching a university's own site for these is the quickest way to
 // find the right page, and the right person is always the student's designated school official.
@@ -27,14 +28,15 @@ export function universityCoverage(profile = {}, news = [], reviewed = reviewedU
   const id = profile.universityId || universityIdFor(name);
   const validDomain = domainPattern.test(domain) ? domain : "";
   if (!name) return { status: "none", name: "", domain: "", id: "", updates: [], offices: [], headline: "No university added yet", detail: "Add your university in Profile to see its page." };
-  const entry = reviewed.find((candidate) => candidate.id === id || (validDomain && candidate.domain === validDomain));
+  const registryCoverage = coverageForUniversity(profile, reviewed);
+  const entry = registryCoverage.entry;
   const updates = news.filter((item) => Array.isArray(item.universityIds) && item.universityIds.includes(id));
   if (entry) {
     return { status: "reviewed", name, domain: entry.domain || validDomain, id, updates, offices: entry.offices || [], reviewedOn: entry.reviewedOn,
       headline: "Official office links reviewed", detail: `GlobeReady reviewed these links on ${entry.reviewedOn}. Confirm details with your international office.` };
   }
   if (validDomain) {
-    return { status: "domain-only", name, domain: validDomain, id, updates, offices: [],
+    return { status: "general-only", name, domain: validDomain, id, updates, offices: [],
       headline: "Not reviewed by GlobeReady yet", detail: `You entered ${validDomain}. The links below are searches of that website that GlobeReady generated. We have not checked what they lead to, so confirm with your international office.` };
   }
   return { status: "general-only", name, domain: "", id, updates, offices: [],

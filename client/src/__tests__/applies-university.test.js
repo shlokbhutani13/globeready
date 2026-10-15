@@ -55,10 +55,10 @@ describe("university coverage", () => {
   test("says plainly when nothing was entered", () => {
     expect(universityCoverage({})).toMatchObject({ status: "none", offices: [] });
   });
-  test("says a university is not reviewed when it is not, with or without a website", () => {
+  test("uses general resources when no official domain exists", () => {
     expect(universityCoverage({ university: "Example University" }, news)).toMatchObject({ status: "general-only", headline: "Not reviewed by GlobeReady yet" });
     const withDomain = universityCoverage({ university: "Example University", officialUniversityDomain: "Example.edu" }, news);
-    expect(withDomain).toMatchObject({ status: "domain-only", domain: "example.edu" });
+    expect(withDomain).toMatchObject({ status: "general-only", domain: "example.edu" });
     expect(withDomain.detail).toMatch(/have not checked what they lead to/u);
   });
   test("lists reviewed updates for the university when there are some", () => {
@@ -87,7 +87,7 @@ describe("university coverage", () => {
 
 describe("office links and saved links", () => {
   test("generate one clearly unreviewed search per office type from the entered website", () => {
-    const links = officeLinks({ status: "domain-only", domain: "example.edu", offices: [] });
+    const links = officeLinks({ status: "general-only", domain: "example.edu", offices: [] });
     expect(links).toHaveLength(officeTypes.length);
     expect(links.every((link) => link.reviewed === false)).toBe(true);
     expect(links[0].url).toBe(siteSearchUrl("example.edu", officeTypes[0].query));
