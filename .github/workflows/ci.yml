@@ -34,6 +34,18 @@ jobs:
         run: npm test
       - working-directory: server
         run: npm run news:operations -- --help
+      - name: Generate deterministic news candidates from fixtures only
+        working-directory: server
+        run: |
+          candidate_dir="$(mktemp -d)"
+          npm run news:public -- \
+            --fixture-input tests/fixtures/news-change-ledger/current.json \
+            --snapshot-input tests/fixtures/news-change-ledger/previous.json \
+            --snapshot-output "$candidate_dir/snapshot.json" \
+            --discover-output "$candidate_dir/candidates.json"
+          test -s "$candidate_dir/candidates.json"
+      - working-directory: server
+        run: npm run university:validate
       - working-directory: server
         run: npm audit --omit=dev --audit-level=moderate
 

@@ -12,6 +12,40 @@ The route loop intentionally navigated faster than a person and exhausted the lo
 the resulting 429 responses exercised the existing error states and are not a layout failure. No cloud service,
 deployment, production account, or paid resource was involved.
 
+## Zero-cost completion: deferred live checks
+
+The repository is ready for these steps, but none has been performed or authorized in this completion pass:
+
+- push and GitHub-hosted CI;
+- Firebase project creation and preview deployment;
+- real Google sign-in and email verification delivery;
+- hosting headers, MIME types, service worker, and quota behavior;
+- disposable-account export, restore, and destructive deletion smoke test;
+- domain purchase and DNS;
+- paid production API, Storage, Gemini, email, push, monitoring, and backup services.
+
+The free provisioning boundary is strict: create only Firebase Spark Authentication, Firestore, a Web app, and Hosting
+after separate approval; stop if any console asks for billing or a payment method. Do not create Storage, Cloud Run,
+Gemini, email, push, monitoring, backup, scheduler, domain, or paid resources during the free preview. News review and
+university registry operations are documented in `docs/NEWS_REVIEW_OPERATIONS.md` and
+`docs/UNIVERSITY_COVERAGE.md`. A bad static release rolls back to the last known-good hosting release and reviewed input.
+
+### Local completion evidence
+
+- Client: 83 files, 606 tests passed; production and zero-cost builds passed; production dependency audit found zero
+  vulnerabilities.
+- Server: 76 files passed and 7 skipped; 977 tests passed and 63 skipped. Lint, JavaScript/module syntax, shell syntax,
+  university registry validation, deterministic fixture candidate generation, and the production dependency audit passed.
+- UI: 27 signed-in routes at both 390 px and 1280 px passed the one-heading, overflow, and touch-target checks.
+- Repository: workflow YAML parsed, `git diff --check` passed, local-user still returned HTTP 200, `origin/main` remained
+  `2e405fafb117abd772ec91c407c0003488f8f811`, and no merge, push, deployment, provisioning, or paid call occurred.
+
+The first concurrent server run reproduced the known timing symptom: one five-second scheduler test timed out and one
+launch-journey request reset its local socket. Each test passed immediately in isolation, and the unchanged full suite
+then passed 977/977. No product failure or deterministic regression was found. Treat another occurrence in hosted CI as
+evidence to increase that integration test's explicit time budget and continue investigating resource contention; do not
+silence or skip it.
+
 ## Zero-cost public-beta repair pass (2026-10-14)
 
 An independent review of `e188dd4` found that the beta's tests passed while deployment-only behavior and large-input

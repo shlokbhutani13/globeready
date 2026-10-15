@@ -93,3 +93,30 @@ describe("public news artifact generator", () => {
     expect(JSON.parse(await readFile(first, "utf8"))).toMatchObject({ schemaVersion: 1, sourceHealth: { sourceId: "uscis" } });
   });
 });
+
+describe("zero-cost release contract", () => {
+  test("CI generates fixture candidates validates universities and stays read only", async () => {
+    const workflow = await readFile(new URL(".github/workflows/ci.yml", root), "utf8");
+    expect(workflow).toMatch(/--fixture-input\s+tests\/fixtures\/news-change-ledger\/current\.json/u);
+    expect(workflow).toMatch(/npm run university:validate/u);
+    expect(workflow).toMatch(/permissions:\s*\n\s*contents:\s*read/u);
+    expect(workflow).not.toMatch(/contents:\s*write|pull-requests:\s*write/u);
+    expect(workflow).not.toMatch(/https:\/\/(?:www\.)?(?:uscis|ice|dhs|state)\.gov/iu);
+  });
+
+  test("release documentation lists every separately authorized live check", async () => {
+    const readiness = await readFile(new URL("docs/RELEASE_READINESS.md", root), "utf8");
+    for (const phrase of [
+      "push and GitHub-hosted CI", "Firebase project creation and preview deployment",
+      "real Google sign-in and email verification delivery", "hosting headers, MIME types, service worker, and quota behavior",
+      "disposable-account export, restore, and destructive deletion smoke test", "domain purchase and DNS",
+      "paid production API, Storage, Gemini, email, push, monitoring, and backup services",
+    ]) expect(readiness).toContain(phrase);
+  });
+
+  test("operations and university runbooks are linked from the zero-cost guide", async () => {
+    const guide = await readFile(new URL("docs/ZERO_COST_PUBLIC.md", root), "utf8");
+    expect(guide).toContain("NEWS_REVIEW_OPERATIONS.md");
+    expect(guide).toContain("UNIVERSITY_COVERAGE.md");
+  });
+});
