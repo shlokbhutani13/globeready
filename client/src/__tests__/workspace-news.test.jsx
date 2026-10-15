@@ -164,4 +164,9 @@ describe("university coverage never implies verification it does not have", () =
     expect(screen.getByText("Verification pending")).toBeInTheDocument();
     expect(screen.queryByText(/^Covered$/)).not.toBeInTheDocument();
   });
+
+  test("does not treat federal relevance as university review", () => {
+    render(<MemoryRouter><NewsPage items={[item({ title: "Federal F-1 update", visaTypes: ["f-1"], universityIds: [] })]} profile={{ university: "Example University", visaType: "F-1" }} /></MemoryRouter>);
+    expect(screen.queryByText(/^Reviewed university coverage$/i)).not.toBeInTheDocument();
+  });
 });
