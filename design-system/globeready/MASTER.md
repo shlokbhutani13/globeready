@@ -1,227 +1,91 @@
-# Design System Master File
+# GlobeReady interface system
 
-> **LOGIC:** When building a specific page, first check `design-system/pages/[page-name].md`.
-> If that file exists, its rules **override** this Master file.
-> If not, strictly follow the rules below.
+This file is the design source of truth. Page-specific guidance in `design-system/pages/` may refine layout, but it must not override the accessibility, color, navigation, or interaction rules below.
 
----
+## Direction
 
-**Project:** GlobeReady
-**Generated:** 2026-07-16 15:36:06
-**Category:** Luxury/Premium Brand
-**Design Dials:** Variance 5/10 (Balanced / Modern) | Motion 3/10 (Subtle) | Density 6/10 (Standard)
+GlobeReady is a calm, practical student workspace—not a luxury brand or entertainment product. Interfaces should feel trustworthy, restrained, and easy to scan under stress.
 
----
+- Warm off-white page background with white working surfaces
+- Slate text, one muted-blue action color, pale sage confirmation states
+- Flat surfaces, quiet borders, minimal shadows, and modest 8–10px radii
+- System sans-serif typography; no external font request is required
+- Five main destinations: Home, Plan, Updates, Documents, and Ask
+- Secondary pages use short, horizontal sub-navigation
+- Motion is optional and subtle; the product remains complete with motion disabled
 
-## Global Rules
+## Production tokens
 
-### Color Palette
+The canonical implementation is `client/src/design-system.css`.
 
-| Role | Hex | CSS Variable |
-|------|-----|--------------|
-| Primary | `#1C1917` | `--color-primary` |
-| On Primary | `#FFFFFF` | `--color-on-primary` |
-| Secondary | `#44403C` | `--color-secondary` |
-| Accent/CTA | `#A16207` | `--color-accent` |
-| Background | `#FAFAF9` | `--color-background` |
-| Foreground | `#0C0A09` | `--color-foreground` |
-| Muted | `#E8ECF0` | `--color-muted` |
-| Border | `#D6D3D1` | `--color-border` |
-| Destructive | `#DC2626` | `--color-destructive` |
-| Ring | `#1C1917` | `--color-ring` |
+| Role | Value | Token |
+|---|---:|---|
+| Page background | `#faf9f6` | `--gr-bg` |
+| Surface | `#ffffff` | `--gr-surface` |
+| Soft surface | `#f4f3ee` | `--gr-surface-soft` |
+| Primary text | `#1f2937` | `--gr-ink` |
+| Secondary text | `#4f5b6b` | `--gr-muted` |
+| Border | `#d9d7cf` | `--gr-line` |
+| Strong border | `#b9b6ab` | `--gr-line-strong` |
+| Primary action | `#2c5a87` | `--gr-accent` |
+| Strong action | `#1f4468` | `--gr-accent-strong` |
+| Selected background | `#e9eff5` | `--gr-accent-soft` |
+| Success background | `#eaf0ea` | `--gr-sage-soft` |
+| Success text | `#2b5640` | `--gr-sage-ink` |
+| Danger | `#9f2f1d` | `--gr-danger` |
+| Focus | `#1f4468` | `--gr-focus` |
 
-**Color Notes:** Premium black + gold accent [Accent adjusted from #CA8A04 for WCAG 3:1]
+Spacing uses a 4px base scale. Every interactive target is at least 44px in both relevant dimensions.
 
-### Typography
+## Components
 
-- **Heading Font:** Lora
-- **Body Font:** Raleway
-- **Mood:** calm, wellness, health, relaxing, natural, organic
-- **Google Fonts:** [Lora + Raleway](https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&family=Raleway:wght@300;400;500;600;700&display=swap)
+- Buttons use one of three clear roles: primary, secondary, or danger. Do not use gradients, glow, lift, or scale effects.
+- Cards and panels use white surfaces, a 1px neutral border, and no decorative shadow.
+- Inputs use persistent labels, a 44px minimum height, and an unmistakable focus ring.
+- Status must include text; color alone never communicates meaning.
+- Empty, loading, offline, success, warning, and error states use shared components and plain language.
+- Use Lucide icons only where an icon improves recognition. Icons never replace an essential text label.
 
-**CSS Import:**
-```css
-@import url('https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&family=Raleway:wght@300;400;500;600;700&display=swap');
-```
+## Responsive navigation
 
-### Spacing Variables
+- Desktop: persistent left sidebar, search and reminders above the page content.
+- Mobile: fixed bottom navigation for the five primary destinations plus an Account menu.
+- Page content must not sit behind fixed navigation or create horizontal viewport scrolling.
+- Sub-navigation may scroll horizontally, with complete labels kept visible.
 
-*Density: 6/10 — Standard*
+## Accessibility requirements
 
-| Token | Value | Usage |
-|-------|-------|-------|
-| `--space-xs` | `4px` / `0.25rem` | Tight gaps |
-| `--space-sm` | `8px` / `0.5rem` | Icon gaps, inline spacing |
-| `--space-md` | `16px` / `1rem` | Standard padding |
-| `--space-lg` | `24px` / `1.5rem` | Section padding |
-| `--space-xl` | `32px` / `2rem` | Large gaps |
-| `--space-2xl` | `48px` / `3rem` | Section margins |
-| `--space-3xl` | `64px` / `4rem` | Hero padding |
+- One descriptive `h1` per page and semantic heading order
+- Skip link to the main content
+- Visible `:focus-visible` ring on every control
+- WCAG AA contrast for normal text and meaningful UI boundaries
+- Keyboard access for menus, dialogs, forms, filters, and destructive actions
+- `prefers-reduced-motion` and the in-app reduced-motion preference respected
+- Standard, large, and largest text modes remain usable without clipping
+- Controls remain usable at 390px, 768px, 1024px, and 1440px widths
 
-### Shadow Depths
+## Content principles
 
-| Level | Value | Usage |
-|-------|-------|-------|
-| `--shadow-sm` | `0 1px 2px rgba(0,0,0,0.05)` | Subtle lift |
-| `--shadow-md` | `0 4px 6px rgba(0,0,0,0.1)` | Cards, buttons |
-| `--shadow-lg` | `0 10px 15px rgba(0,0,0,0.1)` | Modals, dropdowns |
-| `--shadow-xl` | `0 20px 25px rgba(0,0,0,0.15)` | Hero images, featured cards |
+- Lead with the task a student can complete, not product terminology.
+- Clearly distinguish official-source facts, GlobeReady explanations, and user-entered information.
+- Never imply legal certainty, automatic eligibility, or that GlobeReady replaces a DSO, attorney, government source, or emergency service.
+- Keep destructive actions explicit and confirm their scope.
 
----
+## Forbidden patterns
 
-## Component Specs
+- Black/gold luxury styling, aurora gradients, glassmorphism, or decorative animation
+- Hidden navigation, icon-only primary actions, or more than one primary CTA per section
+- Hover effects that move layout
+- Color-only statuses, invisible focus states, or touch targets below 44px
+- Dense dashboards that expose every feature at once
+- External fonts or ornamental media that slow the free public beta without improving a task
 
-### Buttons
+## Review checklist
 
-```css
-/* Primary Button */
-.btn-primary {
-  background: #A16207;
-  color: white;
-  padding: 12px 24px;
-  border-radius: 8px;
-  font-weight: 600;
-  transition: all 200ms ease;
-  cursor: pointer;
-}
-
-.btn-primary:hover {
-  opacity: 0.9;
-  transform: translateY(-1px);
-}
-
-/* Secondary Button */
-.btn-secondary {
-  background: transparent;
-  color: #1C1917;
-  border: 2px solid #1C1917;
-  padding: 12px 24px;
-  border-radius: 8px;
-  font-weight: 600;
-  transition: all 200ms ease;
-  cursor: pointer;
-}
-```
-
-### Cards
-
-```css
-.card {
-  background: #FAFAF9;
-  border-radius: 12px;
-  padding: 24px;
-  box-shadow: var(--shadow-md);
-  transition: all 200ms ease;
-  cursor: pointer;
-}
-
-.card:hover {
-  box-shadow: var(--shadow-lg);
-  transform: translateY(-2px);
-}
-```
-
-### Inputs
-
-```css
-.input {
-  padding: 12px 16px;
-  border: 1px solid #E2E8F0;
-  border-radius: 8px;
-  font-size: 16px;
-  transition: border-color 200ms ease;
-}
-
-.input:focus {
-  border-color: #1C1917;
-  outline: none;
-  box-shadow: 0 0 0 3px #1C191720;
-}
-```
-
-### Modals
-
-```css
-.modal-overlay {
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
-}
-
-.modal {
-  background: white;
-  border-radius: 16px;
-  padding: 32px;
-  box-shadow: var(--shadow-xl);
-  max-width: 500px;
-  width: 90%;
-}
-```
-
----
-
-## Style Guidelines
-
-**Style:** Aurora UI
-
-**Keywords:** Vibrant gradients, smooth blend, Northern Lights effect, mesh gradient, luminous, atmospheric, abstract
-
-**Best For:** Modern SaaS, creative agencies, branding, music platforms, lifestyle, premium products, hero sections
-
-**Key Effects:** Large flowing CSS/SVG gradients, subtle 8-12s animations, depth via color layering, smooth morph
-
-### Page Pattern
-
-**Pattern Name:** Bento Grid Showcase
-
-- **Conversion Strategy:** Scannable value props. High information density without clutter. Mobile stack.
-- **CTA Placement:** Floating Action Button or Bottom of Grid
-- **Section Order:** 1. Hero, 2. Bento Grid (Key Features), 3. Detail Cards, 4. Tech Specs, 5. CTA
-
----
-
-## Motion
-
-**Scroll Reveal** (Subtle) — Trigger: scroll (viewport enter) | Duration: 300-400ms | Easing: `power1.out`
-
-```js
-gsap.from(el, { opacity: 0, y: 12, duration: 0.35, ease: 'power1.out', scrollTrigger: { trigger: el, start: 'top 90%', toggleActions: 'play none none reverse' } });
-```
-
-**Framework notes:** Requires the ScrollTrigger plugin registered once via gsap.registerPlugin(ScrollTrigger)
-
-- ✅ Keep the y offset small (8-16px) so it reads as a fade, not a slide
-- ❌ Don't reveal below-the-fold content needed for SEO/crawlers as invisible-by-default without a no-JS fallback
-- ⚡ toggleActions 'play none none reverse' avoids re-triggering on every scroll direction change
-
----
-
-## Anti-Patterns (Do NOT Use)
-
-- ❌ Cheap visuals
-- ❌ Fast animations
-
-### Additional Forbidden Patterns
-
-- ❌ **Emojis as icons** — Use SVG icons (Heroicons, Lucide, Simple Icons)
-- ❌ **Missing cursor:pointer** — All clickable elements must have cursor:pointer
-- ❌ **Layout-shifting hovers** — Avoid scale transforms that shift layout
-- ❌ **Low contrast text** — Maintain 4.5:1 minimum contrast ratio
-- ❌ **Instant state changes** — Always use transitions (150-300ms)
-- ❌ **Invisible focus states** — Focus states must be visible for a11y
-
----
-
-## Pre-Delivery Checklist
-
-Before delivering any UI code, verify:
-
-- [ ] No emojis used as icons (use SVG instead)
-- [ ] All icons from consistent icon set (Heroicons/Lucide)
-- [ ] `cursor-pointer` on all clickable elements
-- [ ] Hover states with smooth transitions (150-300ms)
-- [ ] Light mode: text contrast 4.5:1 minimum
-- [ ] Focus states visible for keyboard navigation
-- [ ] `prefers-reduced-motion` respected
-- [ ] Responsive: 375px, 768px, 1024px, 1440px
-- [ ] No content hidden behind fixed navbars
-- [ ] No horizontal scroll on mobile
+- The five-destination information architecture is intact.
+- The page uses production tokens rather than one-off colors.
+- Desktop and 390px layouts have no horizontal overflow.
+- Keyboard focus, reduced motion, and all three text sizes work.
+- Forms preserve user input after recoverable errors.
+- Loading, empty, offline, failure, and success states are understandable.
+- Claims and reminders state their source and limitations.

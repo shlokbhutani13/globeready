@@ -4,6 +4,8 @@ import { adminCoverageLedger, buildCoverageLedger } from "../news/coverage-ledge
 import { mergedSources } from "../news/coverage.js";
 import { canonicalOfficialHostname, canonicalOfficialUrl } from "../news/official-url.js";
 import { validateOnboardingTransition } from "../news/source-onboarding.js";
+import { validateCandidateDecision } from "../news/review-decisions.js";
+import { validateReviewCandidate } from "../news/review-candidates.js";
 
 const sourceFields = new Set([
   "id", "publisher", "adapter", "url", "allowedHosts", "acceptedContentTypes",
@@ -207,6 +209,59 @@ export function adminNewsRouter(store, {
   router.get("/review", async (_request, response) => {
     const items = await store.reviewQueue.listGlobal();
     response.json({ data: { items } });
+  });
+  router.get("/candidates", async (_request, response) => {
+    if (!store.reviewCandidates?.listGlobal) return error(response, 503, "review_candidates_unavailable", "The candidate review queue is unavailable.");
+    const items = await store.reviewCandidates.listGlobal();
+    response.json({ data: { items: items.slice(0, 500) } });
+  });
+  router.post("/candidates/import", adminMutationLimiter, async (request, response) => {
+    if (!store.reviewCandidates?.upsert || !Array.isArray(request.body?.items) || request.body.items.length > 500) {
+      return error(response, 422, "invalid_review_candidates", "Provide a bounded candidate artifact with an items array.");
+    }
+    const sources = mergedSources(registeredSources, await store.newsSources.listGlobal());
+    const byId = new Map(sources.map((source) => [source.id, source]));
+    let items;
+    try {
+      items = request.body.items.map((candidate) => validateReviewCandidate(candidate, byId.get(candidate?.sourceId)));
+    } catch (cause) {
+      return error(response, 422, "invalid_review_candidates", cause.message);
+    }
+    if (new Set(items.map((candidate) => candidate.id)).size !== items.length) {
+      return error(response, 409, "review_candidate_conflict", "The candidate artifact contains duplicate identities.");
+    }
+    const existingItems = await Promise.all(items.map((candidate) => store.reviewCandidates.get(candidate.id)));
+    for (const [index, candidate] of items.entries()) {
+      const existing = existingItems[index];
+      if (existing && existing.fingerprint !== candidate.fingerprint) {
+        return error(response, 409, "review_candidate_conflict", "A candidate ID already exists with different evidence.");
+      }
+    }
+    const imported = [];
+    for (const [index, candidate] of items.entries()) {
+      const existing = existingItems[index];
+      if (!existing) {
+        const result = await store.reviewCandidates.upsert(candidate.id, candidate);
+        imported.push(result.item);
+      }
+    }
+    response.status(201).json({ data: { imported: imported.length, items: imported } });
+  });
+  router.post("/candidates/:id/decision", adminMutationLimiter, async (request, response) => {
+    if (!/^review-candidate:[a-f0-9]{64}$/u.test(request.params.id || "") || !store.reviewCandidates?.get || !store.reviewCandidates?.decide) {
+      return error(response, 404, "review_candidate_not_found", "Review candidate was not found.");
+    }
+    const candidate = await store.reviewCandidates.get(request.params.id);
+    if (!candidate) return error(response, 404, "review_candidate_not_found", "Review candidate was not found.");
+    let decision;
+    try { decision = validateCandidateDecision(candidate, request.body); } catch (cause) {
+      return error(response, 422, "invalid_review_decision", cause.message);
+    }
+    const result = await store.reviewCandidates.decide(candidate.id, decision, {
+      reviewerUid: request.user.uid,
+      reviewedAt: new Date(clock()).toISOString(),
+    });
+    response.json({ data: result });
   });
   router.patch("/review/:id", adminMutationLimiter, async (request, response) => {
     if (!documentIdPattern.test(request.params.id)) return error(response, 404, "review_not_found", "Review was not found.");

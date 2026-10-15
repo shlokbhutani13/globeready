@@ -1,13 +1,19 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { RefreshCcw } from "lucide-react";
+import PageHelp from "../components/PageHelp";
+import PageHeader from "../components/ui/PageHeader";
+import SubNav, { updatesLinks } from "../components/ui/SubNav";
 import SourceStatus from "../components/SourceStatus";
 import Disclaimer from "../components/Disclaimer";
 import { rankNewsItems } from "../lib/news-data";
 import CoverageLedger from "../components/CoverageLedger";
 import DigestSettings from "../components/DigestSettings";
 import TopStoriesReader from "../components/TopStoriesReader";
-import NewsToolbar from "../components/NewsToolbar";
+import NewsToolbar, { sourcesFromItems } from "../components/NewsToolbar";
 import NewsArchive from "../components/NewsArchive";
+import NewsDiscovery from "../components/NewsDiscovery";
+import { applyDiscovery, discoveryOptions, isUnread, isUpdatedSinceSeen, loadSearches, loadSeen, markSeen, mergeFilters, removeSearch, saveSearch, splitFilters } from "../lib/news-discovery";
+import { localDateKey } from "../lib/reminders";
 
 export const topicOptions = [
   "general", "status", "forms-fees", "employment", "travel-entry",
@@ -19,6 +25,12 @@ export const legalStateOptions = [
   "superseded", "withdrawn", "expired", "informational",
 ];
 
+const remember = (previous, current) => {
+  const values = new Map(previous.map((entry) => [entry.id, entry]));
+  for (const entry of current) values.set(entry.id, entry);
+  return [...values.values()].sort((left, right) => left.label.localeCompare(right.label));
+};
+
 export default function NewsPage({
   items = [], loading = false, error = "", onRetry,
   filters = {}, onFilterChange,
@@ -26,9 +38,27 @@ export default function NewsPage({
   coverage = null, coverageLedger = null, sourceHealth = null, profile = {},
   preferences = {}, digests = [], onUpdatePreferences,
   onLoadMore, hasMore = false,
+  zeroCostMode = false, storageScope = "", storage = typeof localStorage === "undefined" ? undefined : localStorage,
 }) {
   const [showPreferences, setShowPreferences] = useState(false);
-  const ranked = rankNewsItems(items, profile);
+  const [savedOnly, setSavedOnly] = useState(false);
+  const [flags, setFlags] = useState({});
+  const [seen, setSeen] = useState(() => (zeroCostMode ? loadSeen(storage, storageScope) : {}));
+  const [searches, setSearches] = useState(() => (zeroCostMode ? loadSearches(storage, storageScope) : []));
+  const optionCache = useRef({ scope: storageScope, topics: [], visas: [], sources: [] });
+  if (optionCache.current.scope !== storageScope) optionCache.current = { scope: storageScope, topics: [], visas: [], sources: [] };
+  const allRanked = rankNewsItems(items, profile);
+  const discovered = zeroCostMode ? applyDiscovery(allRanked, flags, { profile, seen, today: localDateKey(new Date()) }) : allRanked;
+  const ranked = savedOnly ? discovered.filter((item) => savedIds.has(item.id)) : discovered;
+  const foundOptions = discoveryOptions(items);
+  optionCache.current.topics = remember(optionCache.current.topics, foundOptions.topics);
+  optionCache.current.visas = remember(optionCache.current.visas, foundOptions.visas);
+  optionCache.current.sources = remember(optionCache.current.sources, sourcesFromItems(items));
+  const options = optionCache.current;
+  const unreadCount = items.filter((item) => isUnread(item, seen) || isUpdatedSinceSeen(item, seen)).length;
+  const setFlag = (name, value) => setFlags((current) => ({ ...current, [name]: value || undefined }));
+  const currentSearch = () => mergeFilters(filters, flags);
+  const applySearch = (entry) => { const { feed, flags: saved } = splitFilters(entry.filters); onFilterChange?.(feed); setFlags(saved); };
 
   const toggleTopic = (topic) => {
     const current = preferences.topics || [];
@@ -38,23 +68,33 @@ export default function NewsPage({
 
   return (
     <div className="page">
-      <header className="page-header">
-        <div>
-          <span className="eyebrow">Nationwide updates</span>
-          <h1>Updates for you</h1>
-          <p>Verified updates currently available from monitored sources, ranked for your profile. The complete available feed stays visible.</p>
-        </div>
-        <button className="button secondary" onClick={() => setShowPreferences((value) => !value)}>
-          {showPreferences ? "Hide preferences" : "Edit preferences"}
-        </button>
-      </header>
+      <PageHeader
+        eyebrow="Updates and guides"
+        title="Updates for you"
+        description={zeroCostMode ? "A reviewed official-source feed stored with the app. Search and filters cover the currently published snapshot." : "Verified updates currently available from monitored sources, ranked for your profile. The complete available feed stays visible."}
+        action={!zeroCostMode && <button type="button" className="button secondary" onClick={() => setShowPreferences((value) => !value)}>{showPreferences ? "Hide preferences" : "Edit preferences"}</button>}
+      />
+      <SubNav label="Updates sections" links={updatesLinks} />
+      <PageHelp id="news" />
 
-      <NewsToolbar filters={filters} onChange={onFilterChange} />
+      <NewsToolbar filters={filters} onChange={onFilterChange} sources={zeroCostMode ? options.sources : undefined} />
+
+      {zeroCostMode && (
+        <NewsDiscovery
+          options={options} filters={filters} onFilter={(next) => onFilterChange?.({ ...filters, ...next })} flags={flags} onFlag={setFlag}
+          searches={searches} unreadCount={unreadCount}
+          onSave={(name) => setSearches(saveSearch(storage, storageScope, name, currentSearch()))}
+          onApply={applySearch} onRemove={(id) => setSearches(removeSearch(storage, storageScope, id))}
+          onMarkAllSeen={() => setSeen(markSeen(storage, storageScope, items))}
+        />
+      )}
+
+      {onToggleSave && <div className="saved-toggle"><button type="button" className={`button secondary ${savedOnly ? "active" : ""}`} aria-pressed={savedOnly} onClick={() => setSavedOnly((value) => !value)}>{savedOnly ? "Showing saved updates" : `Show saved updates (${savedIds.size})`}</button></div>}
 
       {sourceHealth?.state === "delayed" && (
         <div className="panel" style={{ marginBottom: 18 }} role="status">
           <SourceStatus state="delayed" />
-          <small className="muted">Delayed sources: {sourceHealth.delayedPublishers.join(", ")}. Updates from these publishers may be missing or late.</small>
+          <small className="muted">{sourceHealth.delayedPublishers?.length ? `Delayed sources: ${sourceHealth.delayedPublishers.join(", ")}. Updates from these publishers may be missing or late.` : "This reviewed feed may be out of date. Check the official sources before relying on it."}</small>
         </div>
       )}
 
@@ -67,9 +107,9 @@ export default function NewsPage({
 
       <CoverageLedger ledger={coverageLedger} />
 
-      <DigestSettings preferences={preferences} digests={digests} onChange={onUpdatePreferences} />
+      {!zeroCostMode && <DigestSettings preferences={preferences} digests={digests} onChange={onUpdatePreferences} />}
 
-      {showPreferences && (
+      {!zeroCostMode && showPreferences && (
         <section className="panel" style={{ marginBottom: 18 }}>
           <div className="panel-title"><h2>Topics you care about</h2></div>
           <div className="filter-row">
@@ -112,15 +152,15 @@ export default function NewsPage({
 
       {!loading && !error && ranked.length === 0 && (
         <div className="empty-state">
-          <h3>No updates match yet</h3>
-          <p>GlobeReady has not published a verified update for these filters. This does not mean nothing has changed — check back soon or adjust your filters.</p>
+          <h3>{savedOnly ? "No saved updates here" : "No updates match yet"}</h3>
+          {savedOnly ? <p>Use the bookmark on an update to keep it here. Saved updates that do not match your current filters are hidden.</p> : <p>GlobeReady has not published a verified update for these filters. This does not mean nothing has changed — check back soon or adjust your filters.</p>}
         </div>
       )}
 
       {!loading && !error && ranked.length > 0 && (
         <>
-          <section className="top-stories-section"><div className="section-heading"><div><span className="eyebrow">Quick briefing</span><h2>Top stories</h2></div></div><TopStoriesReader items={ranked.slice(0, 6)} onToggleSave={onToggleSave} /></section>
-          <NewsArchive items={ranked} savedIds={savedIds} onToggleSave={onToggleSave} onLoadMore={onLoadMore} hasMore={hasMore} />
+          <section className="top-stories-section"><div className="section-heading"><div><span className="eyebrow">Quick briefing</span><h2>Top stories</h2></div></div><TopStoriesReader items={ranked.slice(0, 6)} savedIds={savedIds} onToggleSave={onToggleSave} /></section>
+          <NewsArchive items={ranked} seen={zeroCostMode ? seen : undefined} profile={profile} savedIds={savedIds} onToggleSave={onToggleSave} onLoadMore={onLoadMore} hasMore={hasMore} />
         </>
       )}
 

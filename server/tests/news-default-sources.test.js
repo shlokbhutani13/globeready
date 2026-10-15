@@ -35,4 +35,17 @@ describe("operational default news source registry", () => {
       expect(defaultNewsSource(sourceId).pendingReason).toMatch(/live|current|bounded|stable/i);
     }
   });
+
+  test("declares lifecycle cadence and audience metadata for every monitored source", () => {
+    const allowedStatuses = new Set(["active", "paused", "retired"]);
+    for (const source of defaultNewsSources) {
+      expect(allowedStatuses.has(source.status)).toBe(true);
+      expect(Number.isInteger(source.cadenceHours)).toBe(true);
+      expect(source.cadenceHours).toBeGreaterThan(0);
+      expect(Array.isArray(source.topics)).toBe(true);
+      expect(Array.isArray(source.visaTypes)).toBe(true);
+      expect(source.lastReviewedAt).toMatch(/^\d{4}-\d{2}-\d{2}$/u);
+      expect(source.enabled).toBe(source.status === "active");
+    }
+  });
 });

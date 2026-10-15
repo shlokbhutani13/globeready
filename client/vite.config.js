@@ -1,16 +1,27 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
+import { ocrAssets } from './vite-plugins/ocr-assets.js'
 
 export default defineConfig(({ mode, command }) => {
+  const env = loadEnv(mode, process.cwd(), '')
   if (mode === 'local-user' && command === 'build') {
     throw new Error('Local-user mode is for development only. Run "npm run local-user", not a production build.')
   }
+  if (mode === 'zero-cost-public') {
+    const forbidden = ['VITE_API_URL', 'VITE_FIREBASE_STORAGE_BUCKET', 'VITE_LOCAL_USER_MODE', 'VITE_DEMO_MODE']
+      .filter((name) => env[name] && env[name] !== 'false')
+    if (env.VITE_DOCUMENT_UPLOADS_ENABLED === 'true') forbidden.push('VITE_DOCUMENT_UPLOADS_ENABLED')
+    if (forbidden.length) throw new Error(`zero-cost-public cannot use ${forbidden.join(', ')}.`)
+  }
   return {
-    plugins: [react()],
+    // OCR files are only published in the zero-cost build, the one runtime that reads images in the browser.
+    plugins: [react(), ocrAssets({ emit: mode === 'zero-cost-public' })],
     // Build-time switch for the local emulator wiring. It is false in every build that is not local-user, so the
     // emulator addresses are removed from production bundles rather than only guarded at runtime.
     define: {
       __GLOBEREADY_LOCAL_USER__: JSON.stringify(mode === 'local-user'),
+      __GLOBEREADY_ZERO_COST_PUBLIC__: JSON.stringify(mode === 'zero-cost-public'),
+      'import.meta.env.VITE_ZERO_COST_PUBLIC': JSON.stringify(String(mode === 'zero-cost-public')),
     },
     build: {
       chunkSizeWarningLimit: 650,

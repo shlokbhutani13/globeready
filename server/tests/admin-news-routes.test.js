@@ -3,6 +3,7 @@ import { describe, expect, test, vi } from "vitest";
 
 import { createApp } from "../src/app.js";
 import { validateApprovalDraft } from "../src/news/approval-policy.js";
+import { buildReviewCandidate } from "../src/news/review-candidates.js";
 import { createUserRateLimiter } from "../src/rate-limit.js";
 import { createDemoStore } from "../src/store.js";
 
@@ -72,6 +73,49 @@ describe("admin authorization", () => {
 });
 
 describe("admin news routes", () => {
+  test("the real demo store provides an available candidate queue", async () => {
+    const app = createApp({ store: createDemoStore(), auth: liveAuth({ admin: true }), assistant: null });
+    const response = await request(app).get("/api/admin/news/candidates").set("authorization", "Bearer token").expect(200);
+    expect(response.body.data.items).toEqual([]);
+  });
+
+  test("imports a scheduled candidate artifact and preserves the complete decision", async () => {
+    const store = createDemoStore();
+    const candidate = buildReviewCandidate({
+      source: { id: "federal-register", allowedHosts: ["www.federalregister.gov"] },
+      changeType: "new", collectedAt: "2026-10-15T12:00:00.000Z",
+      current: { externalId: "2026-1", title: "Student notice", canonicalUrl: "https://www.federalregister.gov/documents/2026/01/01/example", publishedAt: "2026-10-15", sourceExcerpt: "Official summary", topics: [], visaTypes: [] },
+    });
+    const app = createApp({ store, auth: liveAuth({ admin: true }), assistant: null });
+    const admin = (method, path) => request(app)[method](path).set("authorization", "Bearer token");
+    await admin("post", "/api/admin/news/candidates/import").send({ items: [candidate, candidate] }).expect(409);
+    expect((await store.reviewCandidates.listGlobal())).toEqual([]);
+    await admin("post", "/api/admin/news/candidates/import").send({ items: [candidate] }).expect(201);
+    expect((await admin("get", "/api/admin/news/candidates").expect(200)).body.data.items).toHaveLength(1);
+    const decision = { type: "reject", reasonCode: "needs-more-evidence", privateNote: "Keep this note" };
+    await admin("post", `/api/admin/news/candidates/${encodeURIComponent(candidate.id)}/decision`).send(decision).expect(200);
+    expect((await store.reviewCandidates.get(candidate.id)).resolution.decision).toEqual(decision);
+  });
+
+  test("lists bounded review candidates and validates decisions before persistence", async () => {
+    const store = createDemoStore();
+    const candidate = { id: `review-candidate:${"a".repeat(64)}`, sourceId: "uscis", publicationState: "unreviewed" };
+    const decide = vi.fn(async (_id, decision) => ({ candidateId: candidate.id, ...decision }));
+    store.reviewCandidates = {
+      listGlobal: vi.fn(async () => [candidate]),
+      get: vi.fn(async (id) => id === candidate.id ? candidate : null),
+      decide,
+    };
+    const app = createApp({ store, auth: liveAuth({ admin: true }), assistant: null });
+    const admin = (method, path) => request(app)[method](path).set("authorization", "Bearer token");
+    expect((await admin("get", "/api/admin/news/candidates").expect(200)).body.data.items).toEqual([candidate]);
+    await admin("post", `/api/admin/news/candidates/${encodeURIComponent(candidate.id)}/decision`)
+      .send({ type: "approve", confirmations: {} }).expect(422);
+    await admin("post", `/api/admin/news/candidates/${encodeURIComponent(candidate.id)}/decision`)
+      .send({ type: "reject", reasonCode: "needs-more-evidence", privateNote: "Check again" }).expect(200);
+    expect(decide).toHaveBeenCalledWith(candidate.id, expect.objectContaining({ type: "reject" }), expect.objectContaining({ reviewerUid: "user-1" }));
+  });
+
   test("moves a university source through verified onboarding and refuses ordinary users", async () => {
     const store = createDemoStore();
     await store.newsSources.upsert("example-u", {

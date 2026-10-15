@@ -3,7 +3,7 @@ import React from "react";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, test } from "vitest";
 
-import { authHeadersForMode, firebaseAppName, resolveClientMode } from "../lib/runtime-mode";
+import { authHeadersForMode, firebaseAppName, resolveClientMode, validateZeroCostPublicConfig } from "../lib/runtime-mode";
 import LoginPage from "../pages/LoginPage";
 
 afterEach(cleanup);
@@ -40,9 +40,28 @@ describe("client runtime mode", () => {
     expect(() => resolveClientMode({ VITE_LOCAL_USER_MODE: "true" }, { DEV: false, PROD: true })).toThrow(/production/i);
   });
 
+  test("zero-cost-public is an explicit production runtime and cannot combine with development modes", () => {
+    expect(resolveClientMode({ VITE_ZERO_COST_PUBLIC: "true" }, { DEV: false, PROD: true })).toBe("zero-cost-public");
+    expect(() => resolveClientMode({ VITE_ZERO_COST_PUBLIC: "true" }, { DEV: true, PROD: false })).toThrow(/production build/i);
+    expect(() => resolveClientMode({ VITE_ZERO_COST_PUBLIC: "true", VITE_DEMO_MODE: "true" }, { DEV: false, PROD: true })).toThrow(/cannot be combined/i);
+  });
+
+  test("zero-cost-public rejects API, Storage, uploads, and emulator configuration", () => {
+    expect(validateZeroCostPublicConfig({ VITE_ZERO_COST_PUBLIC: "true", VITE_FIREBASE_PROJECT_ID: "free-project" })).toBe(true);
+    for (const forbidden of [
+      { VITE_API_URL: "https://api.example.com" },
+      { VITE_FIREBASE_STORAGE_BUCKET: "bucket.example" },
+      { VITE_DOCUMENT_UPLOADS_ENABLED: "true" },
+      { VITE_LOCAL_USER_MODE: "true" },
+    ]) {
+      expect(() => validateZeroCostPublicConfig({ VITE_ZERO_COST_PUBLIC: "true", ...forbidden })).toThrow(/zero-cost-public/i);
+    }
+  });
+
   test("invalid flag values are refused", () => {
     expect(() => resolveClientMode({ VITE_LOCAL_USER_MODE: "on" }, { DEV: true, PROD: false })).toThrow();
     expect(() => resolveClientMode({ VITE_DEMO_MODE: "on" }, { DEV: true, PROD: false })).toThrow();
+    expect(() => resolveClientMode({ VITE_ZERO_COST_PUBLIC: "on" }, { DEV: false, PROD: true })).toThrow();
   });
 
   test("the login page labels the local Google identity accurately", () => {

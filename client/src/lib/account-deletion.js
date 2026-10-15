@@ -2,7 +2,12 @@ export async function deleteAccountWithReauth({ removeAccount, hasGoogleProvider
   try {
     return await removeAccount();
   } catch (error) {
-    if (error?.code !== "recent_login_required" || !hasGoogleProvider()) throw error;
+    const recentLoginRequired = error?.code === "recent_login_required" || error?.code === "auth/requires-recent-login";
+    if (!recentLoginRequired) throw error;
+    if (!hasGoogleProvider()) {
+      if (error?.code === "recent_login_required") throw error;
+      throw Object.assign(new Error("Sign out, sign back in, and try deleting your account again."), { code: "recent_login_required" });
+    }
     try {
       await reauthenticateGoogle();
     } catch {

@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { consentVersion } from "./consent.js";
 import { isPublished, publicNewsItem } from "./news/schema.js";
+import { validateCandidateDecision } from "./news/review-decisions.js";
 
 function createCollection() {
   const byUser = new Map();
@@ -575,9 +576,20 @@ export function createDemoStore({ seedConsent = [] } = {}) {
   const sourceItems = new Map();
   const runItems = new Map();
   const reviewItems = new Map();
+  const candidateItems = new Map();
   const auditItems = new Map();
   const operationItems = new Map();
   const reviewQueue = createGlobalCollection({ leases, items: reviewItems });
+  const reviewCandidates = createGlobalCollection({ leases, items: candidateItems });
+  reviewCandidates.decide = async (id, decision, { reviewerUid, reviewedAt } = {}) => {
+    const candidate = candidateItems.get(id);
+    if (!candidate || candidate.publicationState !== "unreviewed") throw new Error("Review candidate was not found or was already decided.");
+    const clean = validateCandidateDecision(candidate, decision);
+    const resolution = { type: clean.type, reasonCode: clean.reasonCode, reviewerUid, reviewedAt, decision: clean };
+    const next = { ...candidate, publicationState: clean.type === "defer" ? "deferred" : "resolved", resolution, updatedAt: reviewedAt };
+    candidateItems.set(id, next);
+    return { candidateId: id, resolution };
+  };
   reviewQueue.resolve = async (id, { decision, reviewerUid, reviewedAt } = {}) => {
     const review = reviewItems.get(id);
     if (!review || review.type !== "source-suggestion" || review.status !== "pending"
@@ -657,6 +669,7 @@ export function createDemoStore({ seedConsent = [] } = {}) {
       },
     },
     reviewQueue,
+    reviewCandidates,
     reviewAudit: readOnlyGlobalCollection(auditItems),
     leases,
     newsPreferences,
