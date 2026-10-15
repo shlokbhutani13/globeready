@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { describe, expect, test } from "vitest";
-import { buildDiscoveryArtifact, buildProposals, buildPublicArtifacts } from "../scripts/build-public-news-artifact.mjs";
+import { buildDiscoveryArtifact, buildProposals, buildPublicArtifacts, mergePendingCandidates } from "../scripts/build-public-news-artifact.mjs";
 
 const root = new URL("../../", import.meta.url);
 const exec = promisify(execFile);
@@ -103,6 +103,13 @@ describe("public news artifact generator", () => {
     expect(missingOnce.artifact.proposals).toEqual([]);
     const missingTwice = buildDiscoveryArtifact({ source, previous: missingOnce.snapshot, entries: [], collectedAt: "2026-10-15T12:00:00Z" });
     expect(missingTwice.artifact.proposals[0].changeType).toBe("removed");
+  });
+
+  test("keeps unresolved proposals while adding later discoveries", () => {
+    const pending = [{ id: "review-candidate:a", sourceId: "federal-register", marker: "pending" }];
+    const current = [{ id: "review-candidate:b", sourceId: "federal-register" }];
+    expect(mergePendingCandidates(pending, current)).toEqual([...pending, ...current]);
+    expect(mergePendingCandidates(pending, [{ ...pending[0], marker: "newer" }])[0].marker).toBe("newer");
   });
 });
 
