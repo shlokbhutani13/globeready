@@ -1,13 +1,18 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { ShieldCheck } from "lucide-react";
 
 // Shows the consent wording the server returned, and records the student's choice through onSave.
 // The AI choice is only available once document reading is on, because AI answers read the same documents.
-export default function ConsentPanel({ consent, onSave, compact = false }) {
+export default function ConsentPanel({ consent, onSave, compact = false, aiAvailable = true }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [documents, setDocuments] = useState(Boolean(consent?.documents));
   const [aiGeneration, setAiGeneration] = useState(Boolean(consent?.aiGeneration));
+  // Consent usually loads after the panel first renders; keep the checkboxes in step with the stored choice.
+  useEffect(() => {
+    setDocuments(Boolean(consent?.documents));
+    setAiGeneration(Boolean(consent?.aiGeneration));
+  }, [consent?.documents, consent?.aiGeneration]);
 
   if (!consent) {
     return <p className="muted">Checking your privacy choices…</p>;
@@ -46,13 +51,13 @@ export default function ConsentPanel({ consent, onSave, compact = false }) {
         <input
           type="checkbox"
           checked={aiGeneration}
-          disabled={busy || !documents}
+          disabled={busy || !documents || !aiAvailable}
           onChange={(event) => {
             setAiGeneration(event.target.checked);
             save({ documents: true, aiGeneration: event.target.checked });
           }}
         />
-        Allow AI-written answers from my document passages
+        {aiAvailable ? "Allow AI-written answers from my document passages" : "Cloud AI answers are unavailable in the free public beta"}
       </label>
       <p className="muted">{consent.text?.aiGeneration}</p>
       <p className="muted">{consent.text?.withdraw}</p>

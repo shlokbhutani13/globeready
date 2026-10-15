@@ -20,6 +20,14 @@ describe("API origin for a build", () => {
     expect(() => resolveApiUrl({ VITE_API_URL: "https://api.globeready-prod.test/v1" }, { PROD: true })).toThrow(/origin only/);
     expect(() => resolveApiUrl({ VITE_API_URL: "not a url" }, { PROD: false })).toThrow(/absolute URL/);
   });
+
+  test("zero-cost-public has no API origin and refuses an injected one", () => {
+    expect(resolveApiUrl({ VITE_ZERO_COST_PUBLIC: "true" }, { PROD: true })).toBeNull();
+    expect(() => resolveApiUrl({
+      VITE_ZERO_COST_PUBLIC: "true",
+      VITE_API_URL: "https://api.globeready.test",
+    }, { PROD: true })).toThrow(/zero-cost-public/i);
+  });
 });
 
 describe("API responses are read without trusting their shape", () => {

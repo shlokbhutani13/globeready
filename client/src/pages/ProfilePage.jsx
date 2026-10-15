@@ -1,26 +1,45 @@
 import React, { useEffect, useState } from "react";
 import { Save } from "lucide-react";
 import { universityIdFor } from "../lib/news-data";
+import { domainPattern } from "../lib/university";
 
-export default function ProfilePage({ profile, onSave }) {
+const topicLabels = {
+  general: "General", status: "Maintaining status", "forms-fees": "Forms and fees", employment: "Work and training",
+  "travel-entry": "Travel and entry", "taxes-social-security": "Taxes and Social Security", emergency: "Emergencies",
+  "campus-life": "Campus life", university: "My university",
+};
+
+export default function ProfilePage({ profile, onSave, showTopics = false }) {
   const [form, setForm] = useState(profile);
   const [error, setError] = useState("");
+  const [saved, setSaved] = useState(false);
+  const [busy, setBusy] = useState(false);
   useEffect(() => setForm(profile), [profile]);
-  const field = (name) => ({ value: form[name] || "", onChange: (event) => setForm({ ...form, [name]: event.target.value }) });
-  const submit = (event) => {
+  const field = (name) => ({ value: form[name] || "", onChange: (event) => { setSaved(false); setForm({ ...form, [name]: event.target.value }); } });
+  const submit = async (event) => {
     event.preventDefault();
     setError("");
+    setSaved(false);
     const domain = (form.officialUniversityDomain || "").trim().toLowerCase();
-    if (domain && !/^[a-z0-9.-]+\.edu$/.test(domain)) {
-      setError("Enter the school's website domain, such as school.edu.");
+    const validDomain = showTopics ? domainPattern.test(domain) : /^[a-z0-9.-]+\.edu$/u.test(domain);
+    if (domain && !validDomain) {
+      setError(showTopics ? "Enter the school's website domain without https:// or a path, such as school.edu or university.ac.uk." : "Enter the school's official .edu domain, such as school.edu.");
       return;
     }
-    onSave({
+    if (form.startDate && form.graduationDate && form.graduationDate < form.startDate) {
+      setError("Graduation date must be on or after your start date.");
+      return;
+    }
+    setBusy(true);
+    // The app reports a failed save through its own error banner and resolves to false.
+    const result = await onSave({
       ...form,
       universityId: universityIdFor(form.university),
       officialUniversityDomain: domain,
       timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
     });
+    setBusy(false);
+    setSaved(result !== false);
   };
   return (
     <div className="page">
@@ -28,12 +47,20 @@ export default function ProfilePage({ profile, onSave }) {
       <form className="panel profile-form" onSubmit={submit}>
         <label>Full name<input {...field("fullName")} /></label><label>Home country<input {...field("homeCountry")} /></label>
         <label>University<input {...field("university")} /></label><label>Program<input {...field("program")} /></label>
-        <label>Official university website domain (optional)<input {...field("officialUniversityDomain")} placeholder="school.edu" /></label>
+        <label>Official university website domain (optional)<input {...field("officialUniversityDomain")} placeholder={showTopics ? "school.edu or university.ac.uk" : "school.edu"} /></label>
         <p className="muted profile-note">A domain is reviewed by GlobeReady before its updates are shown as covered. Until then your school is marked as verification pending.</p>
+        <label>Degree level<select {...field("degreeLevel")}><option value="">Select…</option><option>Undergraduate</option><option value="Master's">Master's</option><option>Doctoral</option><option>Non-degree / exchange</option></select></label>
         <label>Visa type<select {...field("visaType")}><option>F-1</option><option>J-1</option><option>Other</option></select></label>
+        <label>Program start date<input type="date" {...field("startDate")} /></label>
+        <label>Expected graduation date<input type="date" {...field("graduationDate")} /></label>
         <label>Journey stage<select {...field("journeyStage")}><option>Preparing for arrival</option><option>Newly arrived</option><option>Current student</option><option>Preparing for graduation</option></select></label>
+        {showTopics && <fieldset className="topic-fieldset"><legend>Topics I want flagged in Updates</legend>
+          <p className="muted profile-note">Used only to label updates that may be relevant. It is informational and never decides what applies to you.</p>
+          <div className="topic-grid">{Object.entries(topicLabels).map(([id, label]) => <label className="check-row" key={id}><input type="checkbox" checked={(form.topics || []).includes(id)} onChange={(event) => { setSaved(false); const current = form.topics || []; setForm({ ...form, topics: event.target.checked ? [...current, id] : current.filter((topic) => topic !== id) }); }} /><span>{label}</span></label>)}</div>
+        </fieldset>}
         {error && <p className="inline-error" role="alert">{error}</p>}
-        <button className="button primary"><Save size={17} /> Save profile</button>
+        {saved && <p className="inline-notice" role="status">Profile saved.</p>}
+        <button className="button primary" disabled={busy}><Save size={17} /> {busy ? "Saving…" : "Save profile"}</button>
       </form>
     </div>
   );

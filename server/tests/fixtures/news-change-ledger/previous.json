@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "externalId": "notice-1",
+      "title": "Earlier notice",
+      "canonicalUrl": "https://www.uscis.gov/news/notice-1",
+      "publishedAt": "2026-10-01",
+      "updatedAt": null,
+      "effectiveAt": null,
+      "sourceExcerpt": "Earlier official excerpt.",
+      "topics": ["status"],
+      "visaTypes": ["f-1"]
+    }
+  ],
+  "absenceCounts": {},
+  "resolvedFingerprints": []
+}

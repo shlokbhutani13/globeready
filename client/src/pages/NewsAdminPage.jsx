@@ -2,12 +2,17 @@ import React, { useEffect, useState } from "react";
 import { Check, ShieldAlert, X } from "lucide-react";
 import { apiRequest } from "../lib/api";
 import CoverageLedger from "../components/CoverageLedger";
+import NewsReviewQueue from "../components/NewsReviewQueue";
+import NewsReviewDetail from "../components/NewsReviewDetail";
+import { fetchReviewCandidates, importReviewCandidates, submitReviewDecision } from "../lib/news-data";
 
 export default function NewsAdminPage({ isAdmin = false }) {
   const [sources, setSources] = useState([]);
   const [reviewQueue, setReviewQueue] = useState([]);
   const [health, setHealth] = useState(null);
   const [coverage, setCoverage] = useState(null);
+  const [candidates, setCandidates] = useState([]);
+  const [selectedCandidate, setSelectedCandidate] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -18,11 +23,13 @@ export default function NewsAdminPage({ isAdmin = false }) {
       apiRequest("/api/admin/news/sources"),
       apiRequest("/api/admin/news/review"),
       apiRequest("/api/admin/news/health"),
+      fetchReviewCandidates(),
     ])
-      .then(([sourcesData, reviewData, healthData]) => {
+      .then(([sourcesData, reviewData, healthData, candidateData]) => {
         setSources(sourcesData.items || []);
         setReviewQueue(reviewData.items || []);
         setHealth(healthData);
+        setCandidates(candidateData.items || []);
       })
       .catch((caught) => setError(caught.message))
       .finally(() => setLoading(false));
@@ -57,12 +64,33 @@ export default function NewsAdminPage({ isAdmin = false }) {
     }
   };
 
+  const decideCandidate = async (candidate, decision) => {
+    await submitReviewDecision(candidate.id, decision);
+    setSelectedCandidate(null);
+    setCandidates((items) => items.filter((item) => item.id !== candidate.id));
+  };
+
+  const importCandidates = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    try {
+      const artifact = JSON.parse(await file.text());
+      const result = await importReviewCandidates(artifact.proposals || artifact.items);
+      setError("");
+      await load();
+      if (!result.imported) setError("No new candidates were found in that artifact.");
+    } catch (caught) {
+      setError(caught.message || "The candidate artifact could not be imported.");
+    }
+  };
+
   if (!isAdmin) {
     return (
       <div className="page">
         <div className="empty-state">
           <ShieldAlert size={28} />
-          <h3>Admin access required</h3>
+          <h1>Admin access required</h1>
           <p>This area is limited to GlobeReady editorial administrators.</p>
         </div>
       </div>
@@ -79,12 +107,15 @@ export default function NewsAdminPage({ isAdmin = false }) {
         </div>
       </header>
 
-      {error && <div className="inline-error" role="alert">{error}</div>}
-      {loading && <div className="empty-state"><p>Loading…</p></div>}
+      {error && <div className="inline-error" role="alert"><p>{error}</p><button type="button" className="button secondary" onClick={load}>Retry</button></div>}
+      {loading && <div className="empty-state" role="status"><p>Loading…</p></div>}
 
       {!loading && (
         <>
           <CoverageLedger ledger={coverage} admin />
+          <section className="section-card"><h2>Import review artifact</h2><p className="muted">Download the candidate JSON from the scheduled GitHub review run, then import it here. Importing never publishes an update.</p><label className="button secondary">Choose candidate JSON<input type="file" accept="application/json,.json" onChange={importCandidates} hidden /></label></section>
+          <NewsReviewQueue candidates={candidates} onSelect={setSelectedCandidate} />
+          {selectedCandidate && <NewsReviewDetail candidate={selectedCandidate} onDecision={decideCandidate} />}
           {health && (
             <section className="metric-grid" style={{ marginBottom: 18 }}>
               <div className="metric-card"><div><span className="metric-label">Registered sources</span><strong>{health.sourceCount}</strong></div></div>

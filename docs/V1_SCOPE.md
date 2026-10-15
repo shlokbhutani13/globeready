@@ -8,7 +8,8 @@ limited. It is the reference for launch decisions and for the release notes.
 - **Accounts.** Email and password, and Google sign-in, through Firebase Authentication. Password reset. Sign out.
 - **Profile.** Name, home country, university, a verified `.edu` domain (pending until an administrator verifies it),
   degree, program, visa type, journey stage, dates, and time zone.
-- **Tasks and calendar.** Create, complete, and delete. Due dates, priorities, and a month view.
+- **Tasks and calendar.** Create, edit, complete, repeat, connect, and delete. Due dates, priorities, reminder dates, a
+  month view, and `.ics` export.
 - **Reminders.** In-app only. A reminder is created when a task is due, by a check at sign-in, every 15 minutes while
   the app is open, when the window regains focus, and after the task list changes. A rescheduled task earns a new
   reminder. Reminders do not arrive when the app is closed.
@@ -20,7 +21,11 @@ limited. It is the reference for launch decisions and for the release notes.
   AI key configured, a written answer is also offered, after a separate choice.
 - **Privacy choices.** Document reading and AI answers, each with its own recorded choice, changeable at any time.
 - **Account.** Export of the student's data as JSON, and account deletion.
-- **Administration.** Review of source suggestions and of proposed update summaries, for listed administrators.
+- **Administration.** Evidence-based approve, correct, reject, defer, and archive decisions for monitored official-source
+  candidates, with deterministic public artifacts and preserved correction history.
+- **University workspace.** Validated reviewed-link registry, labelled official-domain searches where coverage is absent,
+  student-entered links and contacts, and appointment preparation. The first public registry stays empty until real links
+  are independently checked.
 - **Coverage and digests.** Students can inspect per-source status and last success, see approved correction/supersession/withdrawal state, choose daily/weekly/off, and read generated digests in app. Email remains disabled until a provider is provisioned.
 
 ## Not included
@@ -30,7 +35,6 @@ limited. It is the reference for launch decisions and for the release notes.
 - Scanned or image-only PDFs, and handwriting. These are reported as having no readable text.
 - Vector search and embeddings.
 - Native mobile apps.
-- Calendar export.
 - Live university catalogues. A university's updates appear only after an administrator verifies its source.
 - Automatic discovery of every university. University sources follow a proposed → verifying → verified-disabled → enabled lifecycle and require an official domain, robots decision, parser contract, cadence, topics, and an administrator decision.
 - Sharing between students, and any social feature.

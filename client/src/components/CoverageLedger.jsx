@@ -3,12 +3,21 @@ import React, { useState } from "react";
 const labels = {
   active: "Active", pending: "Verification pending", disabled: "Disabled",
   delayed: "Delayed", failing: "Latest check failed", "not-checked": "Not checked yet",
+  planned: "Planned — not monitored yet",
 };
 
-function formatDate(value) {
-  if (!value) return "No successful check recorded";
-  const date = new Date(value);
-  return Number.isNaN(date.valueOf()) ? "No successful check recorded" : `Last successful check ${date.toLocaleString()}`;
+function formatted(value) {
+  const date = value ? new Date(value) : null;
+  return date && !Number.isNaN(date.valueOf()) ? date.toLocaleString() : "";
+}
+
+// Only an active source has a check to report. lastSuccessAt comes from automated checks (full product);
+// lastVerifiedAt is when a person last reviewed the source for the static zero-cost feed.
+export function checkLabel(entry) {
+  if (entry.status === "planned" || entry.status === "disabled") return "Not monitored";
+  if (formatted(entry.lastSuccessAt)) return `Last successful check ${formatted(entry.lastSuccessAt)}`;
+  if (entry.status === "active" && formatted(entry.lastVerifiedAt)) return `Last reviewed ${formatted(entry.lastVerifiedAt)}`;
+  return "No successful check recorded";
 }
 
 export default function CoverageLedger({ ledger, admin = false }) {
@@ -30,7 +39,7 @@ export default function CoverageLedger({ ledger, admin = false }) {
       <p className="muted">Coverage depends on verified sources and recent successful checks. Missing or delayed checks can mean updates are late.</p>
       {open && <div className="coverage-list">
         {ledger.entries.map((entry) => <div className="coverage-row" key={entry.id}>
-          <div><strong>{entry.publisher}</strong><small>{labels[entry.status] || entry.status} · {formatDate(entry.lastSuccessAt)}</small></div>
+          <div><strong>{entry.publisher || entry.name}</strong><small>{labels[entry.status] || entry.status} · {checkLabel(entry)}</small></div>
           <span className={`coverage-state ${entry.status}`}>{labels[entry.status] || entry.status}</span>
           {entry.safeReason && <p>{entry.safeReason}</p>}
           {admin && <small className="coverage-admin-detail">

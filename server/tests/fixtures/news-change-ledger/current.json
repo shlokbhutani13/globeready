@@ -1,0 +1,22 @@
+{
+  "source": {
+    "id": "uscis",
+    "publisher": "USCIS",
+    "allowedHosts": ["www.uscis.gov"]
+  },
+  "collectedAt": "2026-10-14T12:00:00.000Z",
+  "ok": true,
+  "entries": [
+    {
+      "externalId": "notice-1",
+      "title": "Updated notice",
+      "canonicalUrl": "https://www.uscis.gov/news/notice-1",
+      "publishedAt": "2026-10-01",
+      "updatedAt": "2026-10-14",
+      "effectiveAt": null,
+      "sourceExcerpt": "Updated official excerpt.",
+      "topics": ["status"],
+      "visaTypes": ["f-1"]
+    }
+  ]
+}

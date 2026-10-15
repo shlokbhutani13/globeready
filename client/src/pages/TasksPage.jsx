@@ -1,5 +1,16 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Check, ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
+import { dueStatus, localDateKey } from "../lib/reminders";
+import PageHelp from "../components/PageHelp";
+import PageHeader from "../components/ui/PageHeader";
+import SubNav, { planLinks } from "../components/ui/SubNav";
+import { CalendarPlus, Pencil, Repeat, Bell, Link2 } from "lucide-react";
+import { Link } from "react-router-dom";
+import TaskEditor from "../components/TaskEditor";
+import Notice from "../components/ui/Notice";
+import { friendlyError } from "../lib/friendly-error";
+import { recurrenceLabels } from "../lib/recurrence";
+import { resolveLinks } from "../lib/links";
 
 const dayMs = 24 * 60 * 60 * 1000;
 
@@ -30,15 +41,38 @@ export function buildCalendarMonth(tasks, monthDate) {
   return days;
 }
 
-export default function TasksPage({ tasks, onAdd, onToggle, onDelete }) {
+// The calendar opens on the month of the next open deadline, or the current month when nothing is upcoming.
+export function defaultCalendarMonth(tasks = [], now = new Date()) {
+  const today = localDateKey(now);
+  const next = tasks.filter((task) => !task.completed && task.dueDate && task.dueDate >= today).map((task) => task.dueDate).sort()[0];
+  const [year, month] = (next || today).split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, 1));
+}
+
+export default function TasksPage({ tasks, onAdd, onToggle, onDelete, onUpdate, onExportCalendar, linkContext = {}, zeroCostMode = false, now = new Date() }) {
+  const [editingId, setEditingId] = useState("");
+  const [notice, setNotice] = useState({ tone: "", text: "" });
+  const complete = async (task) => {
+    setNotice({ tone: "", text: "" });
+    try {
+      const result = await onToggle(task.id);
+      if (result?.next?.dueDate) setNotice({ tone: "success", text: `Done. The next repeat of “${task.title}” is due ${result.next.dueDate}.` });
+    } catch (reason) { setNotice({ tone: "error", text: friendlyError(reason) }); }
+  };
   const [title, setTitle] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [priority, setPriority] = useState("medium");
-  const [monthDate, setMonthDate] = useState(() => {
-    const firstDue = tasks.map((task) => task.dueDate).filter(Boolean).sort()[0];
-    const base = firstDue ? new Date(`${firstDue}T00:00:00Z`) : new Date();
-    return new Date(Date.UTC(base.getUTCFullYear(), base.getUTCMonth(), 1));
-  });
+  const defaultMonth = defaultCalendarMonth(tasks, now);
+  const [monthDate, setMonthDate] = useState(defaultMonth);
+  // Tasks often arrive after the page opens; follow the default month until the student changes month themselves.
+  const navigated = useRef(false);
+  useEffect(() => {
+    if (!navigated.current) setMonthDate(defaultMonth);
+  }, [defaultMonth.getTime()]);
+  const changeMonth = (delta) => {
+    navigated.current = true;
+    setMonthDate(new Date(Date.UTC(monthDate.getUTCFullYear(), monthDate.getUTCMonth() + delta, 1)));
+  };
   const [selectedDate, setSelectedDate] = useState("");
 
   const calendarDays = useMemo(() => buildCalendarMonth(tasks, monthDate), [tasks, monthDate]);
@@ -56,7 +90,14 @@ export default function TasksPage({ tasks, onAdd, onToggle, onDelete }) {
 
   return (
     <div className="page">
-      <header className="page-header"><div><span className="eyebrow">Action plan</span><h1>Tasks and deadlines</h1><p>Turn complex requirements into a manageable next step.</p></div></header>
+      <PageHeader
+        eyebrow="Plan"
+        title="Tasks and deadlines"
+        description="Everything you need to do, in order of when it is due. Add your own, or start from the journey planner."
+        action={onExportCalendar && <button type="button" className="button secondary" onClick={onExportCalendar}><CalendarPlus size={16} aria-hidden="true" /> Download calendar (.ics)</button>}
+      />
+      <SubNav label="Plan sections" links={zeroCostMode ? planLinks : []} />
+      <PageHelp id="tasks" />
 
       <form className="quick-add" onSubmit={submit}>
         <input aria-label="New task" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Add a task, deadline, or reminder" />
@@ -73,8 +114,8 @@ export default function TasksPage({ tasks, onAdd, onToggle, onDelete }) {
         <div className="panel-title">
           <h2>{monthLabel}</h2>
           <div className="action-row">
-            <button className="icon-button" aria-label="Previous month" onClick={() => setMonthDate(new Date(Date.UTC(monthDate.getUTCFullYear(), monthDate.getUTCMonth() - 1, 1)))}><ChevronLeft size={16} /></button>
-            <button className="icon-button" aria-label="Next month" onClick={() => setMonthDate(new Date(Date.UTC(monthDate.getUTCFullYear(), monthDate.getUTCMonth() + 1, 1)))}><ChevronRight size={16} /></button>
+            <button className="icon-button" aria-label="Previous month" onClick={() => changeMonth(-1)}><ChevronLeft size={16} /></button>
+            <button className="icon-button" aria-label="Next month" onClick={() => changeMonth(1)}><ChevronRight size={16} /></button>
           </div>
         </div>
         <div className="calendar-grid" role="group" aria-label="Calendar of task due dates">
@@ -97,8 +138,41 @@ export default function TasksPage({ tasks, onAdd, onToggle, onDelete }) {
       </section>
 
       <section className="panel task-list">
+        {notice.text && <Notice tone={notice.tone}>{notice.text}</Notice>}
         {visibleTasks.length === 0 && <p className="muted">No tasks for this view.</p>}
-        {visibleTasks.map((task) => <div className={`task-row ${task.completed ? "done" : ""}`} key={task.id}><button className="check-button" aria-label={`Complete ${task.title}`} onClick={() => onToggle(task.id)}>{task.completed && <Check size={15} />}</button><div><strong>{task.title}</strong><small>{task.category || "General"} · {task.priority || "medium"} priority</small></div><time>{task.dueDate || "No deadline"}</time><button className="icon-button" aria-label={`Delete ${task.title}`} onClick={() => onDelete(task.id)}><Trash2 size={16} /></button></div>)}
+        {visibleTasks.map((task) => {
+          const status = dueStatus(task, now);
+          const links = resolveLinks(task.links, linkContext);
+          if (editingId === task.id && onUpdate) {
+            return <TaskEditor key={task.id} task={task} linkItems={links} onSave={onUpdate} onCancel={() => setEditingId("")} />;
+          }
+          return (
+            <div className={`task-row ${task.completed ? "done" : ""}`} key={task.id}>
+              <button className="check-button" aria-pressed={Boolean(task.completed)} aria-label={task.completed ? `Mark ${task.title} as not done` : `Complete ${task.title}`} onClick={() => complete(task)}>{task.completed && <Check size={15} />}</button>
+              <div>
+                <strong>{task.title}</strong>
+                <small>{task.category || "General"} · {task.priority || "medium"} priority{status && status.kind !== "later" ? <> · <span className={`due-status ${status.kind}`}>{status.label}</span></> : null}</small>
+                {(task.recurrence || task.remindOn) && (
+                  <small className="task-extras">
+                    {task.recurrence && <span><Repeat size={13} aria-hidden="true" /> {recurrenceLabels[task.recurrence]}</span>}
+                    {task.remindOn && <span><Bell size={13} aria-hidden="true" /> Remind {task.remindOn}</span>}
+                  </small>
+                )}
+                {task.notes && <p className="task-notes">{task.notes}</p>}
+                {links.length > 0 && (
+                  <ul className="chip-row task-links" aria-label={`Connected to ${task.title}`}>
+                    {links.map((link) => <li key={`${link.type}:${link.id}`}><Link className="chip" to={link.to}><Link2 size={12} aria-hidden="true" /> {link.label}</Link></li>)}
+                  </ul>
+                )}
+              </div>
+              <time>{task.dueDate || "No deadline"}</time>
+              <div className="record-actions">
+                {onUpdate && <button className="icon-button" aria-label={`Edit ${task.title}`} onClick={() => setEditingId(task.id)}><Pencil size={16} /></button>}
+                <button className="icon-button" aria-label={`Delete ${task.title}`} onClick={() => onDelete(task.id)}><Trash2 size={16} /></button>
+              </div>
+            </div>
+          );
+        })}
       </section>
     </div>
   );

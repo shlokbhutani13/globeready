@@ -219,4 +219,15 @@ describeEmulator("Firestore authorization rules", () => {
       await assertFails(setDoc(doc(database, path), { value: true }));
     }
   });
+  test("production rules keep profiles and documents API-owned; zero-cost shapes are refused here", async () => {
+    const alice = environment.authenticatedContext("alice", { email_verified: true }).firestore();
+    const stamp = new Date("2026-01-01T00:00:00Z");
+    await assertFails(setDoc(doc(alice, "users", "alice"), { fullName: "Alice", updatedAt: stamp }, { merge: true }));
+    await assertFails(deleteDoc(doc(alice, "users", "alice")));
+    await assertFails(setDoc(doc(alice, "users", "alice", "documents", "doc-00"), {
+      name: "i20.pdf", category: "Other", contentType: "application/pdf", size: 1024, storageMode: "browser-local",
+      analysisStatus: "indexed", chunks: [{ page: 1, text: "x" }], uploadedAt: stamp, createdAt: stamp, updatedAt: stamp,
+    }));
+    await assertFails(setDoc(doc(alice, "users", "alice", "savedNews", "public"), { newsItemId: "public", createdAt: stamp }));
+  });
 });

@@ -10,6 +10,36 @@ matches your deployment before accepting identity documents.
 - **Local-user mode** keeps data in the local emulators, under `.local/`. Nothing leaves the computer. The Google button
   is a mock identity, not a Google account (`docs/MODES.md`).
 
+## Zero-cost public beta
+
+The free beta (`docs/ZERO_COST_PUBLIC.md`) has no server and stores less:
+
+- **Monitoring is separate from students:** candidate collection and editorial review use public official-source
+  material only. They cannot read student profiles, documents, tasks, browser storage, or student Firestore collections.
+  Private reviewer notes are excluded from public artifacts; only an explicit public correction note may be published.
+
+- **Never stored:** original document files. PDFs and photos are read in the browser; the bytes are discarded after
+  extraction. OCR code and the English model are served from GlobeReady's own site, so no third party receives an image.
+- **Stored in Firestore under the student's UID:** profile fields (including journey dates and chosen topics), privacy
+  choices, tasks, key dates the student typed in (passport, visa, I-20 and similar), private contacts (names, roles,
+  phone numbers, emails, notes), cases the student tracks (names, form and receipt numbers the student typed, dates,
+  statuses, notes; nothing is fetched from any agency), task notes, repeats, reminder dates and links to other items,
+  links the student saves for their university, checklist progress, saved guides, saved update IDs, and, only while document reading is
+  on, the extracted text of up to 50 documents with page numbers. Dates are never read from documents automatically.
+- **Stored only in the browser:** display choices (text size, contrast, animation), which reminders were marked read, which updates were seen and saved news searches, snoozed next steps, and the appointment-preparation workspace (chosen questions, notes on what the university said, term notes). These are keyed to the account on that device, never uploaded, not included in the account export, not restored from it, and removed from the browser when the account is deleted from it. Clearing site data removes them.
+  The same applies to the budget planner (costs and amounts), the documents checklist (marks, typed expiry dates and notes), and the emergency card (typed health, insurance, embassy and campus details and the contacts picked for it). They are never uploaded, are not part of the account export, are keyed to the account on that device, and are removed from the browser when the account is deleted from it. A budget can be exported as a CSV and a card downloaded as text only when the student asks. The documents checklist records the student's own marks and never reads, stores or checks a document.
+  Appointment summaries are produced only by an explicit download, print or copy; they hold only the items the student ticked, mask receipt numbers and leave out case notes unless chosen, and never include document contents.
+  The offline service worker keeps only GlobeReady's public files (app code, reviewed news, icons). It never stores
+  anything from Firebase or Google, any account record, document text, or OCR file.
+- **Backup restore:** importing a GlobeReady export happens in the browser after a preview. It only adds records, skips
+  duplicates, refuses files from another account, and never restores document text or privacy choices.
+- **Device-only backup:** in the free public beta, Settings can download the seven browser-only categories listed above as a separate, versioned JSON file. The file may contain sensitive health, insurance, financial and private notes; it is not encrypted and is never uploaded by GlobeReady. Import is limited to the same signed-in account, validates the whole file, shows a replacement preview, and writes nothing until the student confirms. It replaces only those seven browser-only categories. Account export and restore remain separate.
+- **Never sent to an AI provider:** Ask GlobeReady ranks stored passages in the browser and quotes them.
+- **Withdrawing document reading** stops Ask from searching saved text at once and blocks new documents. Saved text is
+  kept until the student deletes it; the Documents page offers "Delete all saved document text".
+- **Export** downloads every stored record as JSON. **Deletion** confirms the student's password or Google account
+  first, then deletes every record in batches, the profile, and the sign-in identity. Nothing is backed up.
+
 ## What production stores
 
 | Data | Where | Who can read it |

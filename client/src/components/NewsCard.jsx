@@ -1,5 +1,6 @@
 import React from "react";
 import { Bookmark, BookmarkCheck, ExternalLink } from "lucide-react";
+import RelevanceNote from "./RelevanceNote";
 import UpdateLifecycle from "./UpdateLifecycle";
 import { newsImageFor } from "../lib/news-images";
 
@@ -9,7 +10,7 @@ const legalStateCopy = {
   expired: "Expired", informational: "Informational",
 };
 
-export default function NewsCard({ item, saved = false, onToggleSave, compact = false }) {
+export default function NewsCard({ item, saved = false, onToggleSave, compact = false, profile, seenState }) {
   const legalLabel = legalStateCopy[item.legalState] || item.legalState || "Informational";
   const summary = item.editorialState === "approved" && item.plainLanguageSummary
     ? item.plainLanguageSummary
@@ -20,7 +21,10 @@ export default function NewsCard({ item, saved = false, onToggleSave, compact = 
       {!compact && <img className="news-card-image" src={newsImageFor(item).url} alt={newsImageFor(item).alt} />}
       <div className="news-card-top">
         <span className={`legal-state ${item.legalState || "informational"}`}>{legalLabel}</span>
+        {(seenState === "new" || seenState === "updated") && <span className="legal-state pending">{seenState === "new" ? "New" : "Updated"}</span>}
         {!item.sourceVerified && <span className="legal-state pending">Unverified source</span>}
+        {item.editorialState === "archived" && <span className="legal-state withdrawn">Archived update</span>}
+        {item.correctionNote && item.editorialState !== "archived" && <span className="legal-state pending">Corrected</span>}
         {onToggleSave && (
           <button
             className="icon-button"
@@ -34,6 +38,7 @@ export default function NewsCard({ item, saved = false, onToggleSave, compact = 
       <h3>{item.title || "Untitled update"}</h3>
       <p className="news-card-publisher">{item.publisher}</p>
       <UpdateLifecycle item={item} />
+      {profile && <RelevanceNote item={item} profile={profile} />}
       {!compact && summary && <p className="news-card-summary">{summary}</p>}
       <div className="news-card-meta">
         {item.effectiveAt && <span>Effective {item.effectiveAt}</span>}

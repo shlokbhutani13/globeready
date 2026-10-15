@@ -1,19 +1,22 @@
 import React, { useState } from "react";
+import { friendlyError } from "../lib/friendly-error";
 import { ArrowRight, BookOpenCheck, FileLock2, Globe2, Sparkles } from "lucide-react";
 
-export default function LoginPage({ onDemo, auth, localUser = false, demoAvailable = false }) {
+export default function LoginPage({ onDemo, auth, localUser = false, demoAvailable = false, zeroCost = false }) {
   const [mode, setMode] = useState("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const submit = async (event) => {
     event.preventDefault();
     setError("");
+    setNotice("");
     try {
       if (mode === "signup") await auth.signUpEmail(email, password);
       else await auth.signInEmail(email, password);
     } catch (reason) {
-      setError(reason?.message || "Authentication failed.");
+      setError(friendlyError(reason, "Authentication failed."));
     }
   };
   return (
@@ -25,9 +28,9 @@ export default function LoginPage({ onDemo, auth, localUser = false, demoAvailab
           <h1>Everything important,<br />in one clear place.</h1>
           <p>Keep documents, deadlines, verified updates, and reliable answers organized throughout your student journey.</p>
           <div className="login-benefits">
-            <span><FileLock2 /> Secure document vault</span>
+            <span><FileLock2 /> {zeroCost ? "Documents are read on your device" : "Secure document vault"}</span>
             <span><BookOpenCheck /> Trusted student guidance</span>
-            <span><Sparkles /> AI explanations with sources</span>
+            <span><Sparkles /> {zeroCost ? "Exact passages with page citations" : "AI explanations with sources"}</span>
           </div>
         </div>
         <small>Information support, not legal advice.</small>
@@ -40,18 +43,29 @@ export default function LoginPage({ onDemo, auth, localUser = false, demoAvailab
           {demoAvailable && <button className="button primary wide" onClick={onDemo}>Continue in demo mode <ArrowRight size={17} /></button>}
           {localUser && <p className="local-user-note"><strong>Local development environment.</strong> Firebase Authentication, Firestore, and Storage run as emulators on this computer. The Google button opens a mock Google identity from the local emulator. It is not your Google account.</p>}
           <div className="login-divider"><span>{localUser ? "Local emulator sign-in" : "Google or email sign-in"}</span></div>
-          <button className="button secondary wide" disabled={!auth.firebaseConfigured} onClick={() => auth.signInGoogle().catch((reason) => setError(reason.message))}>{localUser ? "Continue with Google (local mock)" : "Continue with Google"}</button>
+          <button className="button secondary wide" disabled={!auth.firebaseConfigured} onClick={() => { setError(""); setNotice(""); auth.signInGoogle().catch((reason) => setError(friendlyError(reason))); }}>{localUser ? "Continue with Google (local mock)" : "Continue with Google"}</button>
           <form className="auth-form" onSubmit={submit}>
             <label>Email<input type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} /></label>
             <label>Password<input type="password" autoComplete={mode === "signup" ? "new-password" : "current-password"} required minLength="6" value={password} onChange={(event) => setPassword(event.target.value)} /></label>
-            {error && <div className="inline-error">{error}</div>}
+            {error && <div className="inline-error" role="alert">{error}</div>}
+            {notice && <div className="inline-notice" role="status">{notice}</div>}
             <button className="button secondary wide" disabled={!auth.firebaseConfigured}>{mode === "signup" ? "Create account" : "Sign in with email"}</button>
           </form>
           <button className="text-button" onClick={() => setMode(mode === "signup" ? "signin" : "signup")}>{mode === "signup" ? "Already have an account? Sign in" : "New to GlobeReady? Create an account"}</button>
-          <button className="text-button" disabled={!email || !auth.firebaseConfigured} onClick={() => auth.resetPassword(email).catch((reason) => setError(reason.message))}>Reset password</button>
+          <button className="text-button" disabled={!auth.firebaseConfigured} onClick={() => {
+            setError(""); setNotice("");
+            if (!email) { setError("Enter your email address above, then choose Reset password."); return; }
+            // The message never says whether an account exists for this address.
+            auth.resetPassword(email)
+              .then(() => setNotice("If an account exists for that address, a password reset link is on its way. Check your spam folder too."))
+              .catch((reason) => setError(friendlyError(reason)));
+          }}>Reset password</button>
           <small>{localUser
             ? "Local development: accounts, documents, and records are stored by the local emulators on this computer. Nothing is sent to Firebase or Google."
-            : auth.firebaseConfigured ? "Authentication is connected. Documents use your Firebase project." : "Connect Firebase to enable live accounts and cloud document storage."}</small>
+            : zeroCost ? (auth.firebaseConfigured
+              ? "Free public beta. New email accounts verify your email before saving anything. Original files are never uploaded; only extracted text you choose to keep is saved."
+              : "Sign-in is not configured for this deployment yet.")
+              : auth.firebaseConfigured ? "Authentication is connected. Documents use your Firebase project." : "Connect Firebase to enable live accounts and cloud document storage."}</small>
         </div>
       </section>
     </main>
