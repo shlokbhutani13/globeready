@@ -75,7 +75,7 @@ export default function NewsAdminPage({ isAdmin = false }) {
       <div className="page">
         <div className="empty-state">
           <ShieldAlert size={28} />
-          <h3>Admin access required</h3>
+          <h1>Admin access required</h1>
           <p>This area is limited to GlobeReady editorial administrators.</p>
         </div>
       </div>
@@ -92,8 +92,8 @@ export default function NewsAdminPage({ isAdmin = false }) {
         </div>
       </header>
 
-      {error && <div className="inline-error" role="alert">{error}</div>}
-      {loading && <div className="empty-state"><p>Loading…</p></div>}
+      {error && <div className="inline-error" role="alert"><p>{error}</p><button type="button" className="button secondary" onClick={load}>Retry</button></div>}
+      {loading && <div className="empty-state" role="status"><p>Loading…</p></div>}
 
       {!loading && (
         <>
