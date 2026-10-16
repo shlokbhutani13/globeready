@@ -83,6 +83,60 @@ describe("static public news", () => {
     unsubscribe();
   });
 
+  test("derives an all-healthy coverage ledger from automatic source reports", async () => {
+    mockFeeds(await artifact(), await liveArtifact({ sourceReports: [
+      { sourceId: "uscis-news", name: "USCIS", state: "current", fetched: 2 },
+      { sourceId: "ice-sevp", name: "SEVP", state: "current", fetched: 4 },
+    ] }));
+
+    const result = await loadStaticNews({}, { now: new Date("2026-10-14T12:00:00Z") });
+
+    expect(result.sourceHealth.state).toBe("current");
+    expect(result.sourceHealth.coverageLedger).toMatchObject({
+      summary: { active: 2, total: 2, failing: 0, disabled: 0 },
+      entries: [
+        { id: "uscis-news", status: "active", fetched: 2, lastSuccessAt: "2026-10-14T06:00:00.000Z" },
+        { id: "ice-sevp", status: "active", fetched: 4, lastSuccessAt: "2026-10-14T06:00:00.000Z" },
+      ],
+    });
+  });
+
+  test("reports one failing automatic source without calling a fresh feed delayed", async () => {
+    mockFeeds(await artifact(), await liveArtifact({ sourceReports: [
+      { sourceId: "uscis-news", name: "USCIS", state: "current", fetched: 2 },
+      { sourceId: "ice-sevp", name: "SEVP", state: "failed", fetched: 0, retained: 3, error: "HTTP 503" },
+    ] }));
+
+    const result = await loadStaticNews({}, { now: new Date("2026-10-14T12:00:00Z") });
+
+    expect(result.sourceHealth.state).toBe("current");
+    expect(result.sourceHealth.coverageLedger.summary).toMatchObject({ active: 1, total: 2, failing: 1 });
+    expect(result.sourceHealth.coverageLedger.entries[1]).toMatchObject({ id: "ice-sevp", status: "failing", safeReason: "HTTP 503" });
+  });
+
+  test("marks an otherwise healthy automatic feed delayed only after twelve hours", async () => {
+    mockFeeds(await artifact(), await liveArtifact({ generatedAt: "2026-10-14T00:00:00.000Z" }));
+
+    const fresh = await loadStaticNews({}, { now: new Date("2026-10-14T11:59:59Z") });
+    const stale = await loadStaticNews({}, { now: new Date("2026-10-14T12:00:01Z") });
+
+    expect(fresh.sourceHealth.state).toBe("current");
+    expect(stale.sourceHealth.state).toBe("delayed");
+  });
+
+  test("lists a disabled automatic source honestly without counting it as a failure", async () => {
+    mockFeeds(await artifact(), await liveArtifact({ sourceReports: [
+      { sourceId: "uscis-news", name: "USCIS", state: "current", fetched: 2 },
+      { sourceId: "state-visa-news", name: "State Department", state: "disabled", fetched: 0, reason: "HTTP 403" },
+    ] }));
+
+    const result = await loadStaticNews({}, { now: new Date("2026-10-14T12:00:00Z") });
+
+    expect(result.sourceHealth.state).toBe("current");
+    expect(result.sourceHealth.coverageLedger.summary).toMatchObject({ active: 1, total: 1, failing: 0, disabled: 1 });
+    expect(result.sourceHealth.coverageLedger.entries[1]).toMatchObject({ id: "state-visa-news", status: "disabled", safeReason: "HTTP 403" });
+  });
+
   test("verifies the separate public coverage ledger", async () => {
     const base = { schemaVersion: 1, generatedAt: "2026-10-13T12:00:00.000Z", cadenceHours: 168, entries: [{ id: "uscis", status: "active" }] };
     const body = { ...base, contentHash: await contentHashFor(base) };

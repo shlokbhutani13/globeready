@@ -67,6 +67,38 @@ function mergeNews(reviewedStories, liveStories) {
   return merged.sort((a, b) => String(b.publishedAt || "").localeCompare(String(a.publishedAt || "")) || String(a.title || "").localeCompare(String(b.title || "")));
 }
 
+function coverageStatus(report) {
+  if (report.state === "disabled") return "disabled";
+  if (report.state === "current" && Number(report.fetched) > 0) return "active";
+  if (report.state === "current") return "not-checked";
+  return "failing";
+}
+
+export function coverageLedgerFromLiveFeed({ generatedAt, sourceReports = [] } = {}) {
+  const entries = sourceReports.map((report) => {
+    const status = coverageStatus(report);
+    return {
+      id: report.sourceId,
+      name: report.name,
+      status,
+      fetched: Number(report.fetched) || 0,
+      ...(status === "active" ? { lastSuccessAt: generatedAt } : {}),
+      ...(report.error || report.reason ? { safeReason: report.error || report.reason } : {}),
+    };
+  });
+  const monitored = entries.filter((entry) => entry.status !== "disabled");
+  return {
+    generatedAt,
+    summary: {
+      active: monitored.filter((entry) => entry.status === "active").length,
+      total: monitored.length,
+      failing: monitored.filter((entry) => entry.status === "failing").length,
+      disabled: entries.filter((entry) => entry.status === "disabled").length,
+    },
+    entries,
+  };
+}
+
 export async function loadStaticCoverage({ fetchImpl = fetch } = {}) {
   const artifact = await loadVerifiedArtifact(coverageEndpoint, fetchImpl);
   if (!Array.isArray(artifact.entries)) throw new Error("The news coverage ledger is invalid.");
@@ -85,8 +117,9 @@ export async function loadStaticNews(filters = {}, { now = new Date(), fetchImpl
   const metadata = liveArtifact || reviewedArtifact;
   const generatedAt = Date.parse(metadata.generatedAt);
   if (!Number.isFinite(generatedAt) || !Number.isInteger(metadata.cadenceHours)) throw new Error("The news feed metadata is invalid.");
-  const overdue = now.getTime() - generatedAt > metadata.cadenceHours * 2 * 60 * 60 * 1000;
+  const overdue = now.getTime() - generatedAt > 12 * 60 * 60 * 1000;
   const stories = mergeNews(reviewedArtifact.stories, liveArtifact?.stories);
+  const sourceReports = liveArtifact?.sourceReports || [];
   return {
     items: stories.filter((item) => matches(item, filters)),
     nextCursor: null,
@@ -94,7 +127,8 @@ export async function loadStaticNews(filters = {}, { now = new Date(), fetchImpl
       state: liveError ? "degraded" : overdue ? "delayed" : "current",
       generatedAt: metadata.generatedAt,
       cadenceHours: metadata.cadenceHours,
-      sourceReports: liveArtifact?.sourceReports || [],
+      sourceReports,
+      coverageLedger: coverageLedgerFromLiveFeed({ generatedAt: metadata.generatedAt, sourceReports }),
       ...(liveError ? { message: "Automatic official-source updates are temporarily unavailable; reviewed updates remain available." } : {}),
     },
   };
