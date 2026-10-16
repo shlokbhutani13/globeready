@@ -94,6 +94,8 @@ HTML revalidates on every visit; hashed `/assets/` and `/ocr/` files are cached 
 
 ## Reviewed news operation
 
+The zero-cost Updates page now combines human-reviewed records with a separate, automatically refreshed official-source excerpt feed. Its sources, four-hour schedule, copyright policy, real-run counts, failure behavior and source-addition procedure are documented in [`LIVE_NEWS.md`](LIVE_NEWS.md). Automatic items are always labelled as not yet reviewed and cannot receive personalised relevance claims or reviewed guidance.
+
 The complete candidate, decision, publication, failure, and rollback procedure is in
 [`NEWS_REVIEW_OPERATIONS.md`](NEWS_REVIEW_OPERATIONS.md). The reviewed university-link procedure and validator are in
 [`UNIVERSITY_COVERAGE.md`](UNIVERSITY_COVERAGE.md).
@@ -110,9 +112,7 @@ npm run news:public -- --input data/reviewed-public-news.json
 
 The files carry a SHA-256 content hash that the browser checks to detect corruption; it is not a signature and does not prove who produced them. A server test fails if the committed `client/public/data/*.json` files differ from what the reviewed input generates. The app labels the feed delayed after twice its declared cadence (14 days at the current 7-day cadence), so the feed needs a human review at least every two weeks to stay current.
 
-CI rehearses candidate generation from committed fixtures and validates the university registry. It never contacts a
-government or university site. The weekly proposal workflow may collect official public material, but it still cannot
-publish it without human review.
+CI rehearses candidate generation from committed fixtures and validates the university registry. The scheduled live-news workflow contacts only the allowlisted public sources and publishes short, source-attributed excerpts; it cannot promote those items to reviewed records. The separate weekly proposal workflow still cannot publish reviewed guidance without human review.
 
 ## Preview smoke checks
 
