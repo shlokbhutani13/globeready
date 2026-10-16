@@ -84,8 +84,8 @@ export default function NewsPage({
 
       <NewsToolbar filters={filters} onChange={onFilterChange} sources={zeroCostMode ? options.sources : undefined} />
 
-      {zeroCostMode && sourceHealth?.generatedAt && <p className="muted news-last-updated" role="status">Last updated {new Date(sourceHealth.generatedAt).toLocaleString()}</p>}
-      {zeroCostMode && sourceProblems.length > 0 && <details className="panel source-coverage-notes"><summary>Source coverage notes ({sourceProblems.length})</summary><ul>{sourceProblems.map((report) => <li key={report.sourceId}><strong>{report.name}</strong>: {report.state}{report.reason ? ` — ${report.reason}` : ""}</li>)}</ul></details>}
+      {zeroCostMode && sourceHealth?.generatedAt && <p className="muted news-last-updated" role="status">Updated {new Date(sourceHealth.generatedAt).toLocaleString()}</p>}
+      {zeroCostMode && sourceProblems.length > 0 && <details className="panel source-coverage-notes"><summary>Source coverage notes ({sourceProblems.length})</summary><ul>{sourceProblems.map((report) => <li key={report.sourceId}><strong>{report.name}</strong>: {report.state}{report.reason || report.error ? ` — ${report.reason || report.error}` : ""}</li>)}</ul></details>}
 
       {zeroCostMode && (
         <NewsDiscovery
@@ -99,10 +99,16 @@ export default function NewsPage({
 
       {onToggleSave && <div className="saved-toggle"><button type="button" className={`button secondary ${savedOnly ? "active" : ""}`} aria-pressed={savedOnly} onClick={() => setSavedOnly((value) => !value)}>{savedOnly ? "Showing saved updates" : `Show saved updates (${savedIds.size})`}</button></div>}
 
-      {(sourceHealth?.state === "delayed" || sourceHealth?.state === "degraded") && (
+      {sourceHealth?.state === "delayed" && (
         <div className="panel" style={{ marginBottom: 18 }} role="status">
           <SourceStatus state="delayed" />
           <small className="muted">{sourceHealth.message || (sourceHealth.delayedPublishers?.length ? `Delayed sources: ${sourceHealth.delayedPublishers.join(", ")}. Updates from these publishers may be missing or late.` : "The automatic feed may be out of date. Check the original sources before relying on it.")}</small>
+        </div>
+      )}
+      {sourceHealth?.state === "degraded" && (
+        <div className="panel" style={{ marginBottom: 18 }} role="status">
+          <SourceStatus state="failing" />
+          <small className="muted">{sourceHealth.message || "Automatic official-source updates are temporarily unavailable. Check the original sources before relying on the feed."}</small>
         </div>
       )}
 
