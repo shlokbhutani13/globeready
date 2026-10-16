@@ -58,6 +58,16 @@ function imageRecord(url, alt, source, base) {
   return safe ? { url: safe, alt: sanitizeText(alt || "", 300) || "Illustration from the original source" } : undefined;
 }
 
+export function extractLeadImage(source, html, pageUrl, fallbackAlt = "") {
+  const $ = load(String(html || ""), { decodeEntities: true });
+  const imageUrl = $("meta[property='og:image']").first().attr("content")
+    || $("meta[name='twitter:image']").first().attr("content");
+  const imageAlt = $("meta[property='og:image:alt']").first().attr("content")
+    || $("meta[name='twitter:image:alt']").first().attr("content")
+    || fallbackAlt;
+  return imageRecord(imageUrl, imageAlt, source, new URL(pageUrl));
+}
+
 function story(source, input, base) {
   const title = sanitizeText(input.title, 300);
   if (!title) throw new Error("Story title is missing.");
@@ -85,7 +95,7 @@ function xmlEntries(source, text, base) {
   const atom = source.type === "atom" || Boolean(parsed.feed);
   const entries = atom ? list(parsed?.feed?.entry) : list(parsed?.rss?.channel?.item ?? parsed?.RDF?.item);
   if (!entries.length) throw new Error("Feed has no entries.");
-  return entries.slice(0, source.itemLimit || maxItems).map((entry) => {
+  return entries.slice(0, source.itemLimit || maxItems).flatMap((entry) => {
     const links = list(entry.link);
     const link = atom
       ? links.find((candidate) => typeof candidate === "object" && (!candidate["@_rel"] || candidate["@_rel"] === "alternate")) || links[0]
@@ -94,12 +104,17 @@ function xmlEntries(source, text, base) {
     const enclosure = list(entry.enclosure).find((candidate) => String(candidate?.["@_type"] || "").startsWith("image/"));
     const media = list(entry.content).find((candidate) => String(candidate?.["@_type"] || "").startsWith("image/"));
     const atomImage = links.find((candidate) => typeof candidate === "object" && candidate["@_rel"] === "enclosure" && String(candidate["@_type"] || "").startsWith("image/"));
-    return story(source, {
-      title: textOf(entry.title), url,
-      date: textOf(entry.published ?? entry.updated ?? entry.pubDate ?? entry.date),
-      excerpt: textOf(entry.summary ?? entry.description ?? entry.encoded ?? entry.content),
-      imageUrl: enclosure?.["@_url"] || media?.["@_url"] || atomImage?.["@_href"],
-    }, base);
+    const summaryValue = entry.summary ?? entry.description ?? entry.encoded ?? entry.content;
+    const summaryHtml = textOf(summaryValue);
+    const embeddedImage = load(summaryHtml, { decodeEntities: true }, false)("img[src]").first().attr("src");
+    try {
+      return [story(source, {
+        title: textOf(entry.title), url,
+        date: textOf(entry.published ?? entry.updated ?? entry.pubDate ?? entry.date),
+        excerpt: summaryHtml,
+        imageUrl: enclosure?.["@_url"] || media?.["@_url"] || atomImage?.["@_href"] || embeddedImage,
+      }, base)];
+    } catch { return []; }
   });
 }
 
@@ -108,18 +123,20 @@ function htmlEntries(source, text, base) {
   $("script, style, noscript, template, nav, header, footer, aside").remove();
   const nodes = $(source.itemSelector || "main article, article").toArray().slice(0, source.itemLimit || maxItems);
   if (!nodes.length) throw new Error("HTML source has no matching entries.");
-  return nodes.map((node) => {
+  return nodes.flatMap((node) => {
     const entry = $(node);
     const link = source.linkSelector ? entry.find(source.linkSelector).first() : entry.find("a[href]").first();
     const titleNode = source.titleSelector ? entry.find(source.titleSelector).first() : entry.find("h1,h2,h3").first();
     const dateNode = source.dateSelector ? entry.find(source.dateSelector).first() : entry.find("time").first();
     const excerptNode = source.excerptSelector ? entry.find(source.excerptSelector).first() : entry.find("p").first();
     const imageNode = source.imageSelector ? entry.find(source.imageSelector).first() : entry.find("img").first();
-    return story(source, {
-      title: titleNode.text() || link.text(), url: link.attr("href"),
-      date: dateNode.attr("datetime") || dateNode.text(), excerpt: excerptNode.html() || excerptNode.text(),
-      imageUrl: imageNode.attr("src") || imageNode.attr("data-src"), imageAlt: imageNode.attr("alt"),
-    }, base);
+    try {
+      return [story(source, {
+        title: titleNode.text() || link.text(), url: link.attr("href"),
+        date: dateNode.attr("datetime") || dateNode.text(), excerpt: excerptNode.html() || excerptNode.text(),
+        imageUrl: imageNode.attr("src") || imageNode.attr("data-src"), imageAlt: imageNode.attr("alt"),
+      }, base)];
+    } catch { return []; }
   });
 }
 
@@ -143,9 +160,13 @@ export function parseAutoSource(source, fetched) {
   if (!source?.enabled && source?.enabled !== undefined) return [];
   if (Buffer.byteLength(text) > maxResponseBytes) throw new Error("Source response exceeds five megabytes.");
   const base = new URL(fetched?.finalUrl || source.url);
-  if (source.type === "html") return htmlEntries(source, text, base);
-  if (source.type === "json") return jsonEntries(source, text, base);
-  return xmlEntries(source, text, base);
+  const parsed = source.type === "html"
+    ? htmlEntries(source, text, base)
+    : source.type === "json" ? jsonEntries(source, text, base) : xmlEntries(source, text, base);
+  const keywords = Array.isArray(source.includeKeywords) ? source.includeKeywords.map((value) => String(value).toLocaleLowerCase()) : [];
+  return keywords.length
+    ? parsed.filter((item) => keywords.some((keyword) => `${item.title} ${item.excerpt}`.toLocaleLowerCase().includes(keyword)))
+    : parsed;
 }
 
 const titleKey = (value) => sanitizeText(value, 300).toLocaleLowerCase();

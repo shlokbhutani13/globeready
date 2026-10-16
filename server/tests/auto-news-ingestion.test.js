@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 
 import {
   deduplicateAutoStories,
+  extractLeadImage,
   parseAutoSource,
   sanitizeExcerpt,
   stableStoryId,
@@ -26,6 +27,11 @@ describe("automatic official-source ingestion", () => {
       image: { url: "https://media.agency.gov/lead.jpg", alt: "F-1 & J-1 update" },
     });
     expect(JSON.stringify(story)).not.toMatch(/script|alert\(1\)/i);
+  });
+
+  test("uses the first source-owned image embedded in a feed summary", () => {
+    const xml = `<?xml version="1.0"?><rss><channel><item><title>Campus update</title><link>https://agency.gov/campus</link><description><![CDATA[<img src="https://agency.gov/campus.jpg" alt="International students"><p>Campus summary.</p>]]></description></item></channel></rss>`;
+    expect(parseAutoSource(rssSource, { text: xml, finalUrl: rssSource.url })[0].image).toEqual({ url: "https://agency.gov/campus.jpg", alt: "Campus update" });
   });
 
   test("parses Atom alternate links and enclosures", () => {
@@ -54,7 +60,19 @@ describe("automatic official-source ingestion", () => {
   test("sanitizes, bounds and rejects unsafe text and URLs", () => {
     expect([...sanitizeExcerpt(`<p>${"a".repeat(400)}</p><script>bad()</script>`)]).toHaveLength(300);
     const unsafe = `<?xml version="1.0"?><rss><channel><item><title>Unsafe</title><link>javascript:alert(1)</link><description>Text</description></item></channel></rss>`;
-    expect(() => parseAutoSource(rssSource, { text: unsafe, finalUrl: rssSource.url })).toThrow(/URL|HTTPS|allowlist/i);
+    expect(parseAutoSource(rssSource, { text: unsafe, finalUrl: rssSource.url })).toEqual([]);
+  });
+
+  test("skips one malformed HTML card without dropping the source", () => {
+    const source = { ...rssSource, type: "html", itemSelector: "article", titleSelector: "h2", linkSelector: "a", excerptSelector: "p" };
+    const html = `<article><h2>Bad</h2><a href="javascript:bad()">Bad</a></article><article><h2>Good student update</h2><a href="/good">Good</a><p>Useful summary.</p></article>`;
+    expect(parseAutoSource(source, { text: html, finalUrl: source.url })).toEqual([expect.objectContaining({ title: "Good student update" })]);
+  });
+
+  test("applies configured relevance terms to broad official feeds", () => {
+    const source = { ...rssSource, includeKeywords: ["student", "F-1"] };
+    const xml = `<?xml version="1.0"?><rss><channel><item><title>Unrelated agency release</title><link>https://agency.gov/a</link></item><item><title>F-1 student filing update</title><link>https://agency.gov/b</link></item></channel></rss>`;
+    expect(parseAutoSource(source, { text: xml, finalUrl: source.url }).map((item) => item.title)).toEqual(["F-1 student filing update"]);
   });
 
   test("deduplicates canonical URLs and normalized titles deterministically", () => {
@@ -64,5 +82,11 @@ describe("automatic official-source ingestion", () => {
       { id: "c", sourceId: "c", title: "Different", canonicalUrl: "https://a.gov/1", publishedAt: "2026-10-13" },
     ];
     expect(deduplicateAutoStories(items).map((item) => item.id)).toEqual(["a"]);
+  });
+
+  test("extracts only an allowlisted HTTPS Open Graph image", () => {
+    const html = `<meta property="og:image" content="https://media.agency.gov/lead.jpg"><meta property="og:image:alt" content="Students on campus">`;
+    expect(extractLeadImage(rssSource, html, "https://agency.gov/news/one", "Fallback")).toEqual({ url: "https://media.agency.gov/lead.jpg", alt: "Students on campus" });
+    expect(extractLeadImage(rssSource, `<meta property="og:image" content="javascript:bad()">`, "https://agency.gov/news/one", "Fallback")).toBeUndefined();
   });
 });
