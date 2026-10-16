@@ -46,6 +46,8 @@ GlobeReady stores only the headline, source name, publication date, original URL
 
 Images are not downloaded or re-hosted. The browser may display an HTTPS lead-image URL supplied by that same source. If no permitted image exists or it fails, the page uses an original GlobeReady illustration. Source owners can change or remove a hotlinked image at any time.
 
+NAFSA images are not displayed because its published terms reserve reuse of site images without prior written consent. NAFSA stories therefore use GlobeReady's local illustration fallback while retaining the short attributed excerpt and original-source link.
+
 ## Human review and limits
 
 Every automatic story also becomes an `unreviewed` record in `server/data/live-news-candidates.json`. An operator can import it into the existing local/full-backend review workflow, verify all required evidence, and deliberately promote an approved record through `server/data/reviewed-public-news.json`. Automation cannot mark a record reviewed.

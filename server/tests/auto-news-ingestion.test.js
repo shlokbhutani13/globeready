@@ -1,4 +1,5 @@
 import { describe, expect, test } from "vitest";
+import { readFileSync } from "node:fs";
 
 import {
   deduplicateAutoStories,
@@ -14,6 +15,13 @@ const rssSource = {
 };
 
 describe("automatic official-source ingestion", () => {
+  test("does not hotlink NAFSA images without reuse permission", () => {
+    const registry = JSON.parse(readFileSync(new URL("../../config/news-sources.json", import.meta.url), "utf8"));
+    const nafsa = registry.sources.find((source) => source.id === "nafsa-press");
+    expect(nafsa.imageHosts).toEqual([]);
+    expect(extractLeadImage(nafsa, '<meta property="og:image" content="https://www.nafsa.org/logo.jpg">', nafsa.url, "NAFSA update")).toBeUndefined();
+  });
+
   test("parses RSS excerpts, dates and media without retaining markup", () => {
     const xml = `<?xml version="1.0"?><rss xmlns:media="http://search.yahoo.com/mrss/"><channel><item><guid>one</guid><title> F-1 &amp; J-1 update </title><link>https://agency.gov/news/one?utm_source=x</link><pubDate>Wed, 14 Oct 2026 12:00:00 GMT</pubDate><description><![CDATA[<p>Short <strong>official</strong> summary.</p><script>alert(1)</script>]]></description><media:content url="https://media.agency.gov/lead.jpg" type="image/jpeg" /></item></channel></rss>`;
     const [story] = parseAutoSource(rssSource, { text: xml, finalUrl: rssSource.url });
