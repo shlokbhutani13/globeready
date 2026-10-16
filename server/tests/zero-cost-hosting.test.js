@@ -83,6 +83,8 @@ describe("Firebase Hosting configuration", () => {
     expect(workflow).toMatch(/globeready-live/u);
     expect(workflow).toMatch(/action-hosting-deploy/u);
     expect(workflow.match(/cp firebase\.zero-cost\.json firebase\.json/gu)).toHaveLength(2);
+    expect(workflow).toMatch(/X-Robots-Tag/u);
+    expect(workflow).toMatch(/noindex, nofollow, noarchive/u);
     expect(workflow).not.toMatch(/firebase\s+(projects:create|use --add)|billing|gcloud\s+projects\s+create/iu);
     expect(workflow).not.toMatch(/^\s+push:/mu);
   });
