@@ -1,4 +1,5 @@
 const endpoint = "/data/news.json";
+const liveEndpoint = "/data/live-news.json";
 const coverageEndpoint = "/data/coverage.json";
 
 function stable(value) {
@@ -40,6 +41,32 @@ async function loadVerifiedArtifact(url, fetchImpl) {
   return artifact;
 }
 
+function dedupeKey(item) {
+  if (item.canonicalUrl) {
+    try {
+      const url = new URL(item.canonicalUrl);
+      url.hash = "";
+      return `url:${url.toString().replace(/\/$/u, "").toLocaleLowerCase()}`;
+    } catch { /* A malformed URL cannot displace a reviewed record. */ }
+  }
+  return `title:${String(item.title || "").trim().replace(/\s+/gu, " ").toLocaleLowerCase()}`;
+}
+
+function mergeNews(reviewedStories, liveStories) {
+  const reviewed = Array.isArray(reviewedStories) ? reviewedStories : [];
+  const live = Array.isArray(liveStories) ? liveStories : [];
+  const keys = new Set(reviewed.flatMap((item) => [dedupeKey(item), `title:${String(item.title || "").trim().replace(/\s+/gu, " ").toLocaleLowerCase()}`]));
+  const merged = [...reviewed];
+  for (const item of live) {
+    const titleKey = `title:${String(item.title || "").trim().replace(/\s+/gu, " ").toLocaleLowerCase()}`;
+    if (keys.has(dedupeKey(item)) || keys.has(titleKey)) continue;
+    keys.add(dedupeKey(item));
+    keys.add(titleKey);
+    merged.push(item);
+  }
+  return merged.sort((a, b) => String(b.publishedAt || "").localeCompare(String(a.publishedAt || "")) || String(a.title || "").localeCompare(String(b.title || "")));
+}
+
 export async function loadStaticCoverage({ fetchImpl = fetch } = {}) {
   const artifact = await loadVerifiedArtifact(coverageEndpoint, fetchImpl);
   if (!Array.isArray(artifact.entries)) throw new Error("The news coverage ledger is invalid.");
@@ -47,14 +74,29 @@ export async function loadStaticCoverage({ fetchImpl = fetch } = {}) {
 }
 
 export async function loadStaticNews(filters = {}, { now = new Date(), fetchImpl = fetch } = {}) {
-  const artifact = await loadVerifiedArtifact(endpoint, fetchImpl);
-  const generatedAt = Date.parse(artifact.generatedAt);
-  if (!Number.isFinite(generatedAt) || !Number.isInteger(artifact.cadenceHours)) throw new Error("The news feed metadata is invalid.");
-  const overdue = now.getTime() - generatedAt > artifact.cadenceHours * 2 * 60 * 60 * 1000;
+  const reviewedArtifact = await loadVerifiedArtifact(endpoint, fetchImpl);
+  let liveArtifact;
+  let liveError = null;
+  try {
+    liveArtifact = await loadVerifiedArtifact(liveEndpoint, fetchImpl);
+  } catch (error) {
+    liveError = error;
+  }
+  const metadata = liveArtifact || reviewedArtifact;
+  const generatedAt = Date.parse(metadata.generatedAt);
+  if (!Number.isFinite(generatedAt) || !Number.isInteger(metadata.cadenceHours)) throw new Error("The news feed metadata is invalid.");
+  const overdue = now.getTime() - generatedAt > metadata.cadenceHours * 2 * 60 * 60 * 1000;
+  const stories = mergeNews(reviewedArtifact.stories, liveArtifact?.stories);
   return {
-    items: (Array.isArray(artifact.stories) ? artifact.stories : []).filter((item) => matches(item, filters)),
+    items: stories.filter((item) => matches(item, filters)),
     nextCursor: null,
-    sourceHealth: { state: overdue ? "delayed" : "current", generatedAt: artifact.generatedAt, cadenceHours: artifact.cadenceHours },
+    sourceHealth: {
+      state: liveError ? "degraded" : overdue ? "delayed" : "current",
+      generatedAt: metadata.generatedAt,
+      cadenceHours: metadata.cadenceHours,
+      sourceReports: liveArtifact?.sourceReports || [],
+      ...(liveError ? { message: "Automatic official-source updates are temporarily unavailable; reviewed updates remain available." } : {}),
+    },
   };
 }
 

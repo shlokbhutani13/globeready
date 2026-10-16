@@ -2,8 +2,17 @@ import "@testing-library/jest-dom/vitest";
 import React from "react";
 import { cleanup, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import NewsDetailPage from "../pages/NewsDetailPage";
+
+test("automatic stories show only source-level context and no personalised or reviewed guidance", () => {
+  render(<MemoryRouter><NewsDetailPage item={{ id: "auto-1", title: "Official feed item", publisher: "USCIS", canonicalUrl: "https://www.uscis.gov/news/auto", publishedAt: "2026-10-14", excerpt: "A short source excerpt.", autoIngested: true, sourceVerified: false, trustLabel: "From official source — not yet reviewed by GlobeReady", topics: ["employment"], visaTypes: ["f-1"] }} profile={{ visaType: "F-1" }} onAddTasks={vi.fn()} /></MemoryRouter>);
+  expect(screen.getByRole("heading", { name: /not yet reviewed/i })).toBeInTheDocument();
+  expect(screen.getByText(/informational only/i)).toBeInTheDocument();
+  expect(screen.queryByText(/may be relevant/i)).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /add a task/i })).not.toBeInTheDocument();
+  expect(screen.getByRole("link", { name: /read more/i })).toHaveAttribute("rel", "noopener noreferrer");
+});
 
 test("renders verified story detail and official source", () => {
   render(<MemoryRouter><NewsDetailPage item={{ id: "n1", title: "OPT rule update", publisher: "USCIS", canonicalUrl: "https://www.uscis.gov/news/n1", publishedAt: "2026-10-01", whyItMatters: "Your filing timeline may change.", detailSections: [{ heading: "What changed", body: "USCIS published a revised filing window." }], topics: ["employment"] }} /></MemoryRouter>);
