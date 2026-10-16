@@ -1,0 +1,94 @@
+{
+  "schemaVersion": 1,
+  "sources": [
+    {
+      "id": "uscis-news",
+      "name": "U.S. Citizenship and Immigration Services",
+      "url": "https://www.uscis.gov/news/rss-feed/59144",
+      "type": "rss",
+      "trustLabel": "Official U.S. government source",
+      "enabled": true,
+      "allowedHosts": ["www.uscis.gov"],
+      "imageHosts": ["www.uscis.gov"],
+      "itemLimit": 20
+    },
+    {
+      "id": "study-in-the-states",
+      "name": "Study in the States",
+      "url": "https://studyinthestates.dhs.gov/rss.xml",
+      "type": "rss",
+      "trustLabel": "Official DHS student source",
+      "enabled": true,
+      "allowedHosts": ["studyinthestates.dhs.gov"],
+      "imageHosts": ["studyinthestates.dhs.gov"],
+      "itemLimit": 20
+    },
+    {
+      "id": "ice-sevp",
+      "name": "Student and Exchange Visitor Program",
+      "url": "https://www.ice.gov/sevis/whats-new",
+      "type": "html",
+      "trustLabel": "Official ICE/SEVP source",
+      "enabled": true,
+      "allowedHosts": ["www.ice.gov", "studyinthestates.dhs.gov", "www.federalregister.gov"],
+      "imageHosts": ["www.ice.gov"],
+      "itemSelector": ".usa-card",
+      "titleSelector": ".usa-card__heading",
+      "linkSelector": ".usa-card__footer a[href]",
+      "excerptSelector": ".usa-card__body p",
+      "imageSelector": ".usa-card__img img",
+      "itemLimit": 20
+    },
+    {
+      "id": "federal-register",
+      "name": "Federal Register",
+      "url": "https://www.federalregister.gov/api/v1/documents.json?per_page=40&order=newest&conditions%5Bterm%5D=%22international+student%22+OR+%22F-1%22+OR+%22J-1%22+OR+%22student+visa%22",
+      "type": "json",
+      "jsonItemsPath": "results",
+      "trustLabel": "Official U.S. government publication",
+      "enabled": true,
+      "allowedHosts": ["www.federalregister.gov"],
+      "imageHosts": ["www.federalregister.gov"],
+      "itemLimit": 40
+    },
+    {
+      "id": "nafsa-press",
+      "name": "NAFSA: Association of International Educators",
+      "url": "https://www.nafsa.org/about/newsroom/press-releases",
+      "type": "html",
+      "trustLabel": "Public international-education association source",
+      "enabled": true,
+      "allowedHosts": ["www.nafsa.org"],
+      "imageHosts": ["www.nafsa.org"],
+      "itemSelector": ".views-row",
+      "titleSelector": "h2, h3",
+      "linkSelector": "a[href]",
+      "dateSelector": "time",
+      "excerptSelector": "p",
+      "imageSelector": "img",
+      "itemLimit": 20
+    },
+    {
+      "id": "mit-iso",
+      "name": "MIT International Students Office",
+      "url": "https://iso.mit.edu/news/feed/",
+      "type": "rss",
+      "trustLabel": "University international-office source",
+      "enabled": true,
+      "allowedHosts": ["iso.mit.edu"],
+      "imageHosts": ["iso.mit.edu"],
+      "itemLimit": 20
+    },
+    {
+      "id": "state-visa-news",
+      "name": "U.S. Department of State Visa News",
+      "url": "https://travel.state.gov/content/travel/en/News/visas-news.html",
+      "type": "html",
+      "trustLabel": "Official U.S. government source",
+      "enabled": false,
+      "disabledReason": "The source returned HTTP 403 to the collector on 2026-10-15.",
+      "allowedHosts": ["travel.state.gov"],
+      "imageHosts": ["travel.state.gov"]
+    }
+  ]
+}
