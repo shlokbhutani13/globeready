@@ -1,7 +1,6 @@
 # News review operations
 
-GlobeReady never publishes a collected legal or status update automatically. Monitoring creates a bounded candidate;
-a human reviewer makes an explicit decision; only reviewed input generates the static student feed.
+GlobeReady may display a bounded headline and short excerpt collected from an allowlisted official or established sector source, but it labels that record as not yet reviewed and provides no personalised or legal interpretation. Monitoring also creates an unreviewed candidate; a human reviewer makes an explicit decision before any item receives GlobeReady's reviewed treatment. See [`LIVE_NEWS.md`](LIVE_NEWS.md).
 
 ## Candidate to publication
 
@@ -9,8 +8,7 @@ a human reviewer makes an explicit decision; only reviewed input generates the s
    source, collection time, source health, old and new values, meaningful field differences, and a stable fingerprint.
 2. The change ledger classifies a candidate as new, changed, redirected, or removed. A removal requires two successful
    collections with the item absent. A failed collection marks source health and cannot remove an item.
-3. The candidate stays `unreviewed`. It is not read by the public artifact builder and contains no AI-written legal
-   interpretation.
+3. The candidate stays `unreviewed`. Its source-only headline and excerpt may appear in `live-news.json`, but it is not read by the reviewed artifact builder and contains no AI-written legal interpretation.
 4. Download `server/data/news-proposals.json` from the review pull request or workflow artifact. In a locally running
    full-backend admin workspace, use **Import review artifact** to load it into the durable candidate queue, then compare
    the evidence with the official page. Importing never publishes. Approving requires confirmation of the

@@ -17,6 +17,7 @@ The free beta (`docs/ZERO_COST_PUBLIC.md`) has no server and stores less:
 - **Monitoring is separate from students:** candidate collection and editorial review use public official-source
   material only. They cannot read student profiles, documents, tasks, browser storage, or student Firestore collections.
   Private reviewer notes are excluded from public artifacts; only an explicit public correction note may be published.
+  The four-hour zero-cost collector stores short source excerpts and source-owned image URLs in repository artifacts; it sends no student data to sources and never downloads or re-hosts article images.
 
 - **Never stored:** original document files. PDFs and photos are read in the browser; the bytes are discarded after
   extraction. OCR code and the English model are served from GlobeReady's own site, so no third party receives an image.

@@ -44,7 +44,7 @@ describe("Firebase Hosting configuration", () => {
     expect(config.hosting.public).toBe("client/dist");
   });
 
-  test("the CSP allows Google sign-in, PDF parsing, and OCR from first-party files only", async () => {
+  test("the CSP allows Google sign-in, local PDF/OCR code, and HTTPS source-owned news images", async () => {
     const csp = cspDirectives(await readJson("firebase.zero-cost.json"));
     expect(csp["default-src"]).toEqual(["'self'"]);
     expect(csp["script-src"]).toEqual(expect.arrayContaining(["'self'", "'wasm-unsafe-eval'", "https://apis.google.com"]));
@@ -53,6 +53,7 @@ describe("Firebase Hosting configuration", () => {
     expect(csp["worker-src"]).toEqual(["'self'"]);
     expect(csp["frame-src"]).toEqual(expect.arrayContaining(["https://*.firebaseapp.com", "https://accounts.google.com"]));
     expect(csp["connect-src"]).toEqual(expect.arrayContaining(["https://*.googleapis.com"]));
+    expect(csp["img-src"]).toEqual(expect.arrayContaining(["'self'", "data:", "https:"]));
     expect(csp["frame-ancestors"]).toEqual(["'none'"]);
     const all = Object.values(csp).flat().join(" ");
     expect(all).not.toMatch(/jsdelivr|projectnaptha|unpkg/u);

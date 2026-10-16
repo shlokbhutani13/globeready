@@ -23,6 +23,6 @@ test("the source filter lists only sources that have published stories in the fr
   const sources = sourcesFromItems([{ sourceId: "federal-register" }, { sourceId: "federal-register" }]);
   expect(sources).toEqual([{ id: "federal-register", label: "Federal Register" }]);
   render(<Toolbar sources={sources} filters={{}} />);
-  const options = screen.getAllByRole("option").map((option) => option.textContent);
-  expect(options).toEqual(["All official sources", "Federal Register"]);
+  const options = screen.getByLabelText("Source").querySelectorAll("option");
+  expect([...options].map((option) => option.textContent)).toEqual(["All official sources", "Federal Register"]);
 });
