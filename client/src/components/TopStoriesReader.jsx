@@ -12,12 +12,13 @@ export default function TopStoriesReader({ items = [], savedIds = new Set(), onT
     if (event.key === "ArrowRight") move(1);
     if (event.key === "ArrowLeft") move(-1);
   }}>
-    <img src={image.url} alt={image.alt} onError={(event) => { event.currentTarget.src = newsImageFor({}).url; }} />
+    <img src={image.url} alt={image.alt} onError={(event) => { event.currentTarget.onerror = null; event.currentTarget.src = image.fallbackUrl || newsImageFor({}).url; }} />
     <div className="top-story-copy">
       <span className="eyebrow">Top story · {item.publisher || "Official source"}</span>
+      {item.autoIngested && <span className="legal-state pending">{item.trustLabel || "From official source — not yet reviewed by GlobeReady"}</span>}
       <h2>{item.title || "Untitled update"}</h2>
       <p>{item.shortSummary || item.excerpt || item.sourceExcerpt || "Open this update for verified details from the official source."}</p>
-      {item.whyItMatters && <div className="why-it-matters"><strong>Why this matters</strong><span>{item.whyItMatters}</span></div>}
+      {!item.autoIngested && item.whyItMatters && <div className="why-it-matters"><strong>Why this matters</strong><span>{item.whyItMatters}</span></div>}
       <div className="top-story-actions">
         <button type="button" aria-label="Previous story" onClick={() => move(-1)}><ChevronLeft /></button>
         <span>{index + 1} of {items.length}</span>

@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from "vitest";
 
-import { collectAutoNews, contentHashForAutoNews } from "../src/news/auto-collector.js";
+import { buildAutoReviewCandidates, collectAutoNews, contentHashForAutoNews } from "../src/news/auto-collector.js";
 
 const sources = [
   { id: "ok", name: "Working Agency", enabled: true, type: "rss", url: "https://ok.gov/feed", allowedHosts: ["ok.gov"] },
@@ -51,5 +51,16 @@ describe("automatic news collector", () => {
       robots: { isAllowed: async () => true }, now: () => new Date("2026-10-15T16:00:00Z"), retryDelays: [],
     });
     expect(artifact.stories[0].image).toEqual({ url: "https://ok.gov/lead.jpg", alt: "Official update" });
+  });
+
+  test("turns every automatic story into an unreviewed candidate for the existing approval flow", async () => {
+    const artifact = await collectAutoNews({
+      sources: [sources[0]], fetcher: async (source) => ({ text: rss, finalUrl: source.url }),
+      robots: { isAllowed: async () => true }, now: () => new Date("2026-10-15T16:00:00Z"), retryDelays: [],
+    });
+    const candidates = buildAutoReviewCandidates(artifact.stories, [sources[0]], artifact.generatedAt);
+    expect(candidates).toHaveLength(1);
+    expect(candidates[0]).toMatchObject({ sourceId: "ok", publicationState: "unreviewed", changeType: "new", current: { title: "Official update", sourceExcerpt: "Official excerpt." } });
+    expect(candidates[0].id).toMatch(/^review-candidate:[a-f0-9]{64}$/u);
   });
 });
