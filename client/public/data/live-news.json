@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-16T02:15:58.762Z",
+  "generatedAt": "2026-10-16T02:22:09.571Z",
   "cadenceHours": 4,
   "stories": [
     {
@@ -943,5 +943,5 @@
       "reason": "The source returned HTTP 403 to the collector on 2026-10-15."
     }
   ],
-  "contentHash": "60335dacea909ef3b6ccae71bcf014795b77db8a4400c46a3cc5589a4b452968"
+  "contentHash": "1fc6ff5b810a9726968f486b92bcea42e4f26ea16d52e111e7865352b797a44f"
 }

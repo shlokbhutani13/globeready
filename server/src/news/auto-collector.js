@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 
 import { deduplicateAutoStories, extractLeadImage, parseAutoSource } from "./auto-ingestion.js";
+import { buildReviewCandidate } from "./review-candidates.js";
 
 const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
@@ -13,6 +14,26 @@ function stable(value) {
 export function contentHashForAutoNews(artifact) {
   const unsigned = Object.fromEntries(Object.entries(artifact).filter(([key]) => key !== "contentHash"));
   return createHash("sha256").update(JSON.stringify(stable(unsigned))).digest("hex");
+}
+
+export function buildAutoReviewCandidates(stories = [], sources = [], collectedAt) {
+  const registry = new Map(sources.map((source) => [source.id, source]));
+  return stories.map((story) => buildReviewCandidate({
+    source: registry.get(story.sourceId),
+    collectedAt,
+    changeType: "new",
+    current: {
+      externalId: story.id,
+      title: story.title,
+      canonicalUrl: story.canonicalUrl,
+      publishedAt: story.publishedAt || null,
+      updatedAt: null,
+      effectiveAt: null,
+      sourceExcerpt: story.excerpt || "",
+      topics: [],
+      visaTypes: [],
+    },
+  }));
 }
 
 async function fetchWithRetry(source, fetcher, retryDelays) {

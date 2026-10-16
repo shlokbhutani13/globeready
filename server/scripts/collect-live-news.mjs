@@ -1,7 +1,7 @@
 import { readFile, rename, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
-import { collectAutoNews } from "../src/news/auto-collector.js";
+import { buildAutoReviewCandidates, collectAutoNews } from "../src/news/auto-collector.js";
 import { fetchSource } from "../src/news/fetch-source.js";
 import { createRobotsPolicy } from "../src/news/robots.js";
 
@@ -13,6 +13,7 @@ const valueAfter = (flag, fallback) => {
 const registryPath = resolve(valueAfter("--registry", "../config/news-sources.json"));
 const outputPath = resolve(valueAfter("--output", "../client/public/data/live-news.json"));
 const reportPath = resolve(valueAfter("--report", "data/live-news-run.json"));
+const candidatesPath = resolve(valueAfter("--candidates", "data/live-news-candidates.json"));
 
 async function readJson(path, fallback) {
   try { return JSON.parse(await readFile(path, "utf8")); }
@@ -50,9 +51,11 @@ const report = {
   totalStories: artifact.stories.length,
   sources: artifact.sourceReports,
 };
+const candidates = { schemaVersion: 1, generatedAt: artifact.generatedAt, candidates: buildAutoReviewCandidates(artifact.stories, registry, artifact.generatedAt) };
 
 await writeJson(outputPath, artifact);
 await writeJson(reportPath, report);
+await writeJson(candidatesPath, candidates);
 for (const source of artifact.sourceReports) {
   const detail = source.state === "current" ? `${source.fetched} stories` : source.error || source.reason || `${source.retained || 0} retained`;
   console.log(`${source.sourceId}: ${source.state} — ${detail}`);
