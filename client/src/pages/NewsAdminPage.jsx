@@ -76,7 +76,7 @@ export default function NewsAdminPage({ isAdmin = false }) {
     if (!file) return;
     try {
       const artifact = JSON.parse(await file.text());
-      const result = await importReviewCandidates(artifact.proposals || artifact.items);
+      const result = await importReviewCandidates(artifact.proposals || artifact.items || artifact.candidates);
       setError("");
       await load();
       if (!result.imported) setError("No new candidates were found in that artifact.");
