@@ -81,4 +81,30 @@ describe("NewsAdminPage", () => {
 
     expect(screen.getByRole("button", { name: /enable/i })).toBeDisabled();
   });
+
+  test("imports candidates from the scheduled live-news artifact", async () => {
+    const candidate = { id: "review-candidate:one", sourceId: "uscis-news", changeType: "new" };
+    apiRequest.mockImplementation((path, options) => {
+      if (path === "/api/admin/news/sources") return Promise.resolve({ items: [] });
+      if (path === "/api/admin/news/review") return Promise.resolve({ items: [] });
+      if (path === "/api/admin/news/health") return Promise.resolve({ sourceCount: 0, runCount: 0 });
+      if (path === "/api/admin/news/candidates") return Promise.resolve({ items: [] });
+      if (path === "/api/admin/news/candidates/import" && options) return Promise.resolve({ imported: 1 });
+      return Promise.reject(new Error(`Unexpected path ${path}`));
+    });
+
+    render(<NewsAdminPage isAdmin />);
+    await screen.findByRole("heading", { name: /source health and review queue/i });
+
+    const input = screen.getByLabelText(/choose candidate json/i);
+    const file = new File([
+      JSON.stringify({ schemaVersion: 1, candidates: [candidate] }),
+    ], "live-news-candidates.json", { type: "application/json" });
+    fireEvent.change(input, { target: { files: [file] } });
+
+    await waitFor(() => expect(apiRequest).toHaveBeenCalledWith(
+      "/api/admin/news/candidates/import",
+      expect.objectContaining({ method: "POST", body: JSON.stringify({ items: [candidate] }) }),
+    ));
+  });
 });
