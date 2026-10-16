@@ -3,6 +3,7 @@ import { relevanceFor } from "../lib/relevance";
 
 // "May be relevant" label with the matching fields spelled out. Informational only; never says an update applies.
 export default function RelevanceNote({ item, profile, explain = false }) {
+  if (item?.autoIngested) return null;
   const relevance = relevanceFor(item, profile);
   if (!relevance) return null;
   return (

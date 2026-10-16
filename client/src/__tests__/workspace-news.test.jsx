@@ -89,6 +89,15 @@ describe("NewsCard", () => {
     expect(screen.getByText(/unverified source/i)).toBeInTheDocument();
   });
 
+  test("labels automatic official-source items and uses a safe external Read more link", () => {
+    render(<NewsCard item={item({ autoIngested: true, sourceVerified: false, trustLabel: "From official source — not yet reviewed by GlobeReady" })} profile={{ visaType: "F-1" }} />);
+    expect(screen.getByText(/not yet reviewed by GlobeReady/i)).toBeInTheDocument();
+    const link = screen.getByRole("link", { name: /read more/i });
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", "noopener noreferrer");
+    expect(screen.queryByText(/may be relevant/i)).not.toBeInTheDocument();
+  });
+
   test("hides the generated summary until the item is administratively approved", () => {
     render(<NewsCard item={item({ editorialState: "published-source-only", plainLanguageSummary: "", excerpt: "Raw source excerpt" })} />);
     expect(screen.getByText("Raw source excerpt")).toBeInTheDocument();

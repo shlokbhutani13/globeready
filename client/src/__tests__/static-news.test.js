@@ -15,27 +15,67 @@ async function artifact(overrides = {}) {
   return { ...base, contentHash: await contentHashFor(base) };
 }
 
+async function liveArtifact(overrides = {}) {
+  const base = {
+    schemaVersion: 1, generatedAt: "2026-10-14T06:00:00.000Z", cadenceHours: 4,
+    stories: [
+      { id: "auto-a", title: "Official automatic update", canonicalUrl: "https://www.uscis.gov/update", publishedAt: "2026-10-14", publisher: "USCIS", sourceId: "uscis-news", autoIngested: true, sourceVerified: false, trustLabel: "From official source — not yet reviewed by GlobeReady" },
+      { id: "auto-duplicate", title: "OPT filing guidance", canonicalUrl: "https://www.uscis.gov/opt", publishedAt: "2026-10-13", autoIngested: true, sourceVerified: false },
+    ],
+    sourceReports: [{ sourceId: "uscis-news", name: "USCIS", state: "current", fetched: 2 }],
+    ...overrides,
+  };
+  return { ...base, contentHash: await contentHashFor(base) };
+}
+
+function mockFeeds(reviewed, live) {
+  return vi.spyOn(globalThis, "fetch").mockImplementation(async (url) => ({
+    ok: true,
+    json: async () => String(url).includes("live-news") ? live : reviewed,
+  }));
+}
+
 describe("static public news", () => {
   test("verifies integrity and filters stories without a demo fallback", async () => {
     const body = await artifact();
-    vi.spyOn(globalThis, "fetch").mockResolvedValue({ ok: true, json: async () => body });
+    mockFeeds(body, await liveArtifact());
     const result = await loadStaticNews({ topic: "employment", q: "filing" }, { now: new Date("2026-10-14T12:00:00Z") });
     expect(result.items.map((item) => item.id)).toEqual(["a"]);
     expect(result.sourceHealth.state).toBe("current");
   });
 
+  test("merges live official items while reviewed records win duplicates", async () => {
+    mockFeeds(await artifact(), await liveArtifact());
+    const result = await loadStaticNews({}, { now: new Date("2026-10-14T12:00:00Z") });
+    expect(result.items.map((item) => item.id)).toEqual(["auto-a", "a", "b"]);
+    expect(result.items.find((item) => item.canonicalUrl.endsWith("/opt"))).toMatchObject({ id: "a" });
+    expect(result.items[0]).toMatchObject({ autoIngested: true, sourceVerified: false, trustLabel: expect.stringMatching(/not yet reviewed/i) });
+    expect(result.sourceHealth).toMatchObject({ generatedAt: "2026-10-14T06:00:00.000Z", sourceReports: expect.any(Array) });
+  });
+
+  test("keeps reviewed news available when the automatic feed fails", async () => {
+    const reviewed = await artifact();
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (url) => String(url).includes("live-news")
+      ? { ok: false, status: 503, json: async () => ({}) }
+      : { ok: true, json: async () => reviewed });
+    const result = await loadStaticNews({}, { now: new Date("2026-10-14T12:00:00Z") });
+    expect(result.items.map((item) => item.id)).toEqual(["a", "b"]);
+    expect(result.sourceHealth.state).toBe("degraded");
+    expect(result.sourceHealth.message).toMatch(/automatic/i);
+  });
+
   test("rejects tampering and unsupported schema versions", async () => {
     const tampered = { ...(await artifact()), stories: [{ id: "evil" }] };
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce({ ok: true, json: async () => tampered });
+    vi.spyOn(globalThis, "fetch").mockResolvedValue({ ok: true, json: async () => tampered });
     await expect(loadStaticNews()).rejects.toThrow(/integrity/i);
     const unknown = await artifact({ schemaVersion: 2 });
-    globalThis.fetch.mockResolvedValueOnce({ ok: true, json: async () => unknown });
+    globalThis.fetch.mockResolvedValue({ ok: true, json: async () => unknown });
     await expect(loadStaticNews()).rejects.toThrow(/version/i);
   });
 
   test("marks overdue artifacts delayed and exposes the subscription shape", async () => {
     const body = await artifact({ generatedAt: "2026-09-01T00:00:00.000Z" });
-    vi.spyOn(globalThis, "fetch").mockResolvedValue({ ok: true, json: async () => body });
+    mockFeeds(body, await liveArtifact({ generatedAt: "2026-09-01T00:00:00.000Z" }));
     const onData = vi.fn();
     const unsubscribe = subscribeStaticNews({}, onData, vi.fn(), { now: new Date("2026-10-14T00:00:00Z"), intervalMs: 60_000 });
     await vi.waitFor(() => expect(onData).toHaveBeenCalled());

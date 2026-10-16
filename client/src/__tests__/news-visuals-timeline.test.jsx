@@ -35,6 +35,11 @@ describe("news illustrations", () => {
     expect(newsImageFor({ image: { url: "//cdn.example.com/x.jpg", alt: "x" }, topics: ["status"] }).url).toBe(topicImage("status"));
     expect(newsImageFor({ image: { url: "/images/story.png" }, topics: ["status"] }).url).toBe(topicImage("status"));
   });
+  it("uses safe source images only for automatically ingested stories and supplies a local fallback", () => {
+    const automatic = newsImageFor({ autoIngested: true, image: { url: "https://www.uscis.gov/story.jpg", alt: "Official story" }, topics: ["status"] });
+    expect(automatic).toMatchObject({ url: "https://www.uscis.gov/story.jpg", alt: "Official story", remote: true, fallbackUrl: topicImage("status") });
+    expect(newsImageFor({ autoIngested: true, image: { url: "javascript:alert(1)", alt: "Bad" }, topics: ["status"] }).url).toBe(topicImage("status"));
+  });
   it("ships only original, self-contained SVG drawings with no outside references or embedded photos", () => {
     const dir = join(process.cwd(), "src", "assets", "news");
     const files = readdirSync(dir).filter((name) => name.endsWith(".svg"));
