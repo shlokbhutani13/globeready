@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-16T02:35:44.433Z",
+  "generatedAt": "2026-10-16T09:00:27.474Z",
   "cadenceHours": 4,
   "stories": [
     {
@@ -29,11 +29,7 @@
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true,
-      "image": {
-        "url": "https://www.nafsa.org/sites/default/files/ektron/image/underscore/nafsa_primary.jpg",
-        "alt": "DHS Proposal to Establish New Optional Practical Training Fees Will Hurt U.S. Economy and Innovation"
-      }
+      "autoIngested": true
     },
     {
       "id": "auto-mit-iso-4762dd2af52e77ba404a",
@@ -61,11 +57,7 @@
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true,
-      "image": {
-        "url": "https://www.nafsa.org/sites/default/files/ektron/image/underscore/nafsa_primary.jpg",
-        "alt": "NAFSA Joins Lawsuit Challenging Changes to Vital Internship Program for International Students"
-      }
+      "autoIngested": true
     },
     {
       "id": "auto-mit-iso-71fdd9e2962c78530c00",
@@ -135,11 +127,7 @@
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true,
-      "image": {
-        "url": "https://www.nafsa.org/sites/default/files/ektron/image/underscore/nafsa_primary.jpg",
-        "alt": "NAFSA and other Plaintiffs’ Statement on Nationwide Preliminary Relief in Duration of Status Lawsuit"
-      }
+      "autoIngested": true
     },
     {
       "id": "auto-mit-iso-dc0720dc88df92d5a9b6",
@@ -167,11 +155,7 @@
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true,
-      "image": {
-        "url": "https://www.nafsa.org/sites/default/files/ektron/image/underscore/nafsa_primary.jpg",
-        "alt": "Statement: Court Hearing on DHS Rule Ending Duration of Status for International Students"
-      }
+      "autoIngested": true
     },
     {
       "id": "auto-mit-iso-5329d0b0cf8e3c1cb37e",
@@ -199,11 +183,7 @@
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true,
-      "image": {
-        "url": "https://www.nafsa.org/sites/default/files/ektron/image/underscore/nafsa_primary.jpg",
-        "alt": "Coalition Files Federal Lawsuit Challenging Rule Ending Duration of Status"
-      }
+      "autoIngested": true
     },
     {
       "id": "auto-nafsa-press-600108249a1fa381de8d",
@@ -217,11 +197,7 @@
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true,
-      "image": {
-        "url": "https://www.nafsa.org/sites/default/files/ektron/image/underscore/nafsa_primary.jpg",
-        "alt": "U.S. Economy Stands to Lose $3.4 Billion from Precipitous Drop in International Students"
-      }
+      "autoIngested": true
     },
     {
       "id": "auto-mit-iso-df51095723d51d8a91fa",
@@ -305,11 +281,7 @@
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true,
-      "image": {
-        "url": "https://www.nafsa.org/sites/default/files/ektron/image/underscore/nafsa_primary.jpg",
-        "alt": "NAFSA: Undermining International Student Stability Weakens U.S. National Interest"
-      }
+      "autoIngested": true
     },
     {
       "id": "auto-mit-iso-e256542605a9dc2b4ea0",
@@ -407,11 +379,7 @@
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true,
-      "image": {
-        "url": "https://www.nafsa.org/sites/default/files/ektron/image/underscore/nafsa_primary.jpg",
-        "alt": "NAFSA Responds to the Introduction of Legislation to Expand Study Abroad"
-      }
+      "autoIngested": true
     },
     {
       "id": "auto-nafsa-press-f60aee68764aac485d5a",
@@ -425,11 +393,7 @@
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true,
-      "image": {
-        "url": "https://www.nafsa.org/sites/default/files/ektron/image/underscore/nafsa_primary.jpg",
-        "alt": "NAFSA Responds to Alleged Instances of OPT Abuses"
-      }
+      "autoIngested": true
     },
     {
       "id": "auto-mit-iso-e7c660e92df6beb19411",
@@ -471,11 +435,7 @@
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true,
-      "image": {
-        "url": "https://www.nafsa.org/sites/default/files/ektron/image/underscore/nafsa_primary.jpg",
-        "alt": "NAFSA Responds to the Decline in F-1 Visa Issuance in the Summer of 2025"
-      }
+      "autoIngested": true
     },
     {
       "id": "auto-mit-iso-4a5128b6e53cbfe3aea2",
@@ -943,5 +903,5 @@
       "reason": "The source returned HTTP 403 to the collector on 2026-10-15."
     }
   ],
-  "contentHash": "e961c96b724be50c3b0c4d9aa255d01b042a29f04122e4e702bde6eb985ba9a3"
+  "contentHash": "adb0a75fea7feed1ae11ed8c6ac2e9ef4e524ff45c4582143654c5019ecfe8be"
 }
