@@ -64,8 +64,18 @@ jobs:
         with:
           name: zero-cost-public-${{ github.run_id }}
           path: client/dist
-      - name: Use the zero-cost Firebase configuration (CSP, cache headers, and zero-cost rules)
-        run: cp firebase.zero-cost.json firebase.json
+      - name: Use the zero-cost Firebase configuration with preview no-index headers
+        run: |
+          cp firebase.zero-cost.json firebase.json
+          node --input-type=module <<'NODE'
+          import { readFileSync, writeFileSync } from "node:fs";
+          const config = JSON.parse(readFileSync("firebase.json", "utf8"));
+          config.hosting.headers.unshift({
+            source: "**",
+            headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" }],
+          });
+          writeFileSync("firebase.json", `${JSON.stringify(config, null, 2)}\n`);
+          NODE
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
