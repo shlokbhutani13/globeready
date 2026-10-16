@@ -7,6 +7,7 @@ const stateCopy = {
   "verification-pending": { label: "Verification pending", detail: "A submitted source has not been verified yet.", icon: Clock3, tone: "pending" },
   "no-verified-source": { label: "No verified source yet", detail: "GlobeReady has not verified an official source for this school.", icon: HelpCircle, tone: "pending" },
   delayed: { label: "Source check delayed", detail: "The last check did not complete. This does not mean nothing has changed.", icon: AlertTriangle, tone: "delayed" },
+  failing: { label: "Automatic feed unavailable", detail: "The latest automatic feed could not be loaded.", icon: AlertTriangle, tone: "delayed" },
 };
 
 export default function SourceStatus({ state, compact = false }) {

@@ -135,7 +135,7 @@ describe("NewsPage", () => {
     const many = Array.from({ length: 24 }, (_, index) => item({ id: `story-${index}`, title: `Live story ${index}`, publishedAt: `2026-09-${String((index % 28) + 1).padStart(2, "0")}`, autoIngested: true, sourceVerified: false }));
     render(<MemoryRouter><NewsPage zeroCostMode items={many} sourceHealth={{ state: "current", generatedAt: "2026-10-14T12:00:00.000Z", sourceReports: [] }} filters={{}} onFilterChange={() => {}} /></MemoryRouter>);
     expect(screen.getByText("24 stories")).toBeInTheDocument();
-    expect(screen.getByText(/last updated/i)).toBeInTheDocument();
+    expect(screen.getByText(/^updated /i)).toBeInTheDocument();
     expect(screen.getAllByRole("article")).toHaveLength(24);
   });
 
@@ -156,6 +156,17 @@ describe("NewsPage", () => {
     render(<MemoryRouter><NewsPage zeroCostMode items={[item()]} sourceHealth={{ state: "current", generatedAt: "2026-10-14T12:00:00Z", sourceReports: [{ sourceId: "state", name: "State Department", state: "disabled", reason: "HTTP 403" }] }} /></MemoryRouter>);
     expect(screen.getByText(/source coverage notes/i)).toBeInTheDocument();
     expect(screen.getByText(/HTTP 403/i)).toBeInTheDocument();
+  });
+
+  test("does not call a fresh partial source run delayed", () => {
+    render(<MemoryRouter><NewsPage zeroCostMode items={[item()]} coverageLedger={{ summary: { active: 1, total: 2, failing: 1 }, entries: [
+      { id: "uscis", name: "USCIS", status: "active", lastSuccessAt: "2026-10-14T12:00:00Z" },
+      { id: "sevp", name: "SEVP", status: "failing", safeReason: "HTTP 503" },
+    ] }} sourceHealth={{ state: "current", generatedAt: "2026-10-14T12:00:00Z", sourceReports: [{ sourceId: "sevp", name: "SEVP", state: "failed", error: "HTTP 503" }] }} /></MemoryRouter>);
+    expect(screen.getByRole("heading", { name: /1 of 2 sources active/i })).toBeInTheDocument();
+    expect(screen.queryByText(/source check delayed/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/source coverage notes/i)).toBeInTheDocument();
+    expect(screen.getByText(/HTTP 503/i)).toBeInTheDocument();
   });
 
   test("shows the student's university coverage status", () => {
