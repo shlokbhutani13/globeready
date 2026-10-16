@@ -60,7 +60,7 @@
       "trustLabel": "Public international-education association source",
       "enabled": true,
       "allowedHosts": ["www.nafsa.org"],
-      "imageHosts": ["www.nafsa.org"],
+      "imageHosts": [],
       "itemSelector": ".views-row",
       "titleSelector": "h2, h3",
       "linkSelector": "a[href]",
