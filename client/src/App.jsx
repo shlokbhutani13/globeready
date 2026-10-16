@@ -64,7 +64,7 @@ import {
 } from "./lib/news-data";
 import { createZeroCostDataStore, nextDocumentSlot } from "./lib/zero-cost-data";
 import { extractLocalDocument } from "./lib/local-documents/extract";
-import { loadStaticCoverage, subscribeStaticNews } from "./lib/static-news";
+import { subscribeStaticNews } from "./lib/static-news";
 import { deleteZeroCostAccount, downloadZeroCostExport, exportZeroCostAccount } from "./lib/zero-cost-account";
 import { blankProfile, workspaceDefaults } from "./lib/workspace-defaults";
 const zeroCostConsentText = {
@@ -187,7 +187,13 @@ export default function App() {
 
     const stopNews = (staticReviewedNewsMode ? subscribeStaticNews : subscribeNews)(
       newsFilters,
-      (items, meta) => { setNewsItems(items); setSourceHealth(meta.sourceHealth); setNewsLoading(false); setNewsError(""); },
+      (items, meta) => {
+        setNewsItems(items);
+        setSourceHealth(meta.sourceHealth);
+        if (staticReviewedNewsMode) setCoverageLedger(meta.sourceHealth?.coverageLedger || null);
+        setNewsLoading(false);
+        setNewsError("");
+      },
       (error) => { setNewsLoading(false); setNewsError(error?.message || "Could not load updates."); },
     );
     const stopSavedNews = zeroCostPublicMode
@@ -196,9 +202,7 @@ export default function App() {
     const stopPreferences = zeroCostPublicMode ? () => {} : subscribeNewsPreferences(auth.user.uid, setNewsPreferences, () => {});
     const stopNotifications = zeroCostPublicMode ? () => {} : subscribeNotifications(auth.user.uid, setNotifications, () => {});
 
-    if (staticReviewedNewsMode) {
-      loadStaticCoverage().then(setCoverageLedger).catch(() => setCoverageLedger(null));
-    } else {
+    if (!staticReviewedNewsMode) {
       apiRequest("/api/admin/news/health").then(() => setIsAdmin(true)).catch(() => setIsAdmin(false));
       fetchCoverageLedger().then(setCoverageLedger).catch(() => setCoverageLedger(null));
       fetchNewsDigests().then((items) => setNewsDigests(Array.isArray(items) ? items : [])).catch(() => setNewsDigests([]));
