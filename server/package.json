@@ -9,6 +9,7 @@
     "dev": "node --watch src/index.js",
     "demo": "DEMO_MODE=true NODE_ENV=development node src/index.js",
     "news:operations": "node scripts/news-operations.mjs",
+    "news:live": "node scripts/collect-live-news.mjs",
     "news:public": "node scripts/build-public-news-artifact.mjs",
     "university:validate": "node scripts/validate-university-coverage.mjs",
     "test": "vitest run",

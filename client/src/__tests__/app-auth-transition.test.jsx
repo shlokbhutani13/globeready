@@ -8,7 +8,7 @@ const state = vi.hoisted(() => ({
 }));
 
 vi.mock("../lib/auth-context", () => ({ useAuth: () => state.auth }));
-vi.mock("../lib/firebase", () => ({ db: {}, demoMode: false, localUserMode: false, storageAvailable: false, zeroCostPublicMode: true }));
+vi.mock("../lib/firebase", () => ({ db: {}, demoMode: false, localUserMode: false, staticReviewedNewsMode: true, storageAvailable: false, zeroCostPublicMode: true }));
 vi.mock("../lib/use-zero-cost-records", () => ({ useZeroCostRecords: () => state.records }));
 vi.mock("../lib/student-data", () => ({ subscribeStudentData: () => [], createTask: vi.fn(), removeDocument: vi.fn(), removeTask: vi.fn(), saveResource: vi.fn(), toggleTask: vi.fn(), uploadDocument: vi.fn() }));
 vi.mock("../lib/static-news", () => ({ subscribeStaticNews: () => () => {}, loadStaticCoverage: () => Promise.resolve(null) }));

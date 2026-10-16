@@ -3,7 +3,7 @@ import React from "react";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, test } from "vitest";
 
-import { authHeadersForMode, firebaseAppName, resolveClientMode, validateZeroCostPublicConfig } from "../lib/runtime-mode";
+import { authHeadersForMode, firebaseAppName, resolveClientMode, usesStaticReviewedNews, validateZeroCostPublicConfig } from "../lib/runtime-mode";
 import LoginPage from "../pages/LoginPage";
 
 afterEach(cleanup);
@@ -28,6 +28,13 @@ describe("client runtime mode", () => {
     expect(authHeadersForMode("local-user", "")).toEqual({});
     expect(authHeadersForMode("production", "")).toEqual({});
     expect(authHeadersForMode("production", "token-1")).toEqual({ Authorization: "Bearer token-1" });
+  });
+
+  test("every non-demo standalone mode reads the reviewed news artifact", () => {
+    expect(usesStaticReviewedNews("zero-cost-public")).toBe(true);
+    expect(usesStaticReviewedNews("local-user")).toBe(true);
+    expect(usesStaticReviewedNews("demo")).toBe(false);
+    expect(usesStaticReviewedNews("production")).toBe(false);
   });
 
   test("Firebase client app identities differ across modes and projects", () => {
@@ -76,6 +83,13 @@ describe("client runtime mode", () => {
     render(<LoginPage auth={auth} onDemo={() => {}} />);
     expect(screen.queryByText(/mock Google identity/i)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /continue in demo mode/i })).not.toBeInTheDocument();
+  });
+
+  test("the public beta never advertises sample or demo data", () => {
+    const auth = { firebaseConfigured: true, signInGoogle: async () => {}, signInEmail: async () => {}, signUpEmail: async () => {}, resetPassword: async () => {} };
+    render(<LoginPage auth={auth} zeroCost onDemo={() => {}} />);
+    expect(screen.queryByText(/sample|demo/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/sign in or create an account to open your private workspace/i)).toBeInTheDocument();
   });
 
   test("the demo entry point appears only when explicit demo mode is available", () => {

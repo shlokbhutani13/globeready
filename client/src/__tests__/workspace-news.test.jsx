@@ -89,6 +89,15 @@ describe("NewsCard", () => {
     expect(screen.getByText(/unverified source/i)).toBeInTheDocument();
   });
 
+  test("labels automatic official-source items and uses a safe external Read more link", () => {
+    render(<NewsCard item={item({ autoIngested: true, sourceVerified: false, trustLabel: "From official source — not yet reviewed by GlobeReady" })} profile={{ visaType: "F-1" }} />);
+    expect(screen.getByText(/not yet reviewed by GlobeReady/i)).toBeInTheDocument();
+    const link = screen.getByRole("link", { name: /read more/i });
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", "noopener noreferrer");
+    expect(screen.queryByText(/may be relevant/i)).not.toBeInTheDocument();
+  });
+
   test("hides the generated summary until the item is administratively approved", () => {
     render(<NewsCard item={item({ editorialState: "published-source-only", plainLanguageSummary: "", excerpt: "Raw source excerpt" })} />);
     expect(screen.getByText("Raw source excerpt")).toBeInTheDocument();
@@ -122,6 +131,14 @@ describe("NewsPage", () => {
     expect(screen.getAllByText("Second update")).not.toHaveLength(0);
   });
 
+  test("renders a large live feed, correct pluralization, and the update timestamp", () => {
+    const many = Array.from({ length: 24 }, (_, index) => item({ id: `story-${index}`, title: `Live story ${index}`, publishedAt: `2026-09-${String((index % 28) + 1).padStart(2, "0")}`, autoIngested: true, sourceVerified: false }));
+    render(<MemoryRouter><NewsPage zeroCostMode items={many} sourceHealth={{ state: "current", generatedAt: "2026-10-14T12:00:00.000Z", sourceReports: [] }} filters={{}} onFilterChange={() => {}} /></MemoryRouter>);
+    expect(screen.getByText("24 stories")).toBeInTheDocument();
+    expect(screen.getByText(/last updated/i)).toBeInTheDocument();
+    expect(screen.getAllByRole("article")).toHaveLength(24);
+  });
+
   test("offers archive search and common time filters", () => {
     const onFilterChange = vi.fn();
     render(<MemoryRouter><NewsPage items={[item()]} filters={{}} onFilterChange={onFilterChange} /></MemoryRouter>);
@@ -131,6 +148,14 @@ describe("NewsPage", () => {
     expect(onFilterChange).toHaveBeenCalledWith(expect.objectContaining({ from: expect.any(String), to: expect.any(String) }));
     expect(screen.getByRole("heading", { name: /top stories/i })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /all news/i })).toBeInTheDocument();
+    fireEvent.change(screen.getByRole("combobox", { name: /sort news/i }), { target: { value: "oldest" } });
+    expect(onFilterChange).toHaveBeenCalledWith(expect.objectContaining({ sort: "oldest" }));
+  });
+
+  test("reports disabled and failed automatic sources", () => {
+    render(<MemoryRouter><NewsPage zeroCostMode items={[item()]} sourceHealth={{ state: "current", generatedAt: "2026-10-14T12:00:00Z", sourceReports: [{ sourceId: "state", name: "State Department", state: "disabled", reason: "HTTP 403" }] }} /></MemoryRouter>);
+    expect(screen.getByText(/source coverage notes/i)).toBeInTheDocument();
+    expect(screen.getByText(/HTTP 403/i)).toBeInTheDocument();
   });
 
   test("shows the student's university coverage status", () => {

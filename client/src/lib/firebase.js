@@ -2,7 +2,7 @@ import { getApps, initializeApp } from "firebase/app";
 import { connectAuthEmulator, getAuth } from "firebase/auth";
 import { connectFirestoreEmulator, getFirestore } from "firebase/firestore";
 import { connectStorageEmulator, getStorage } from "firebase/storage";
-import { firebaseAppName, resolveClientMode, validateZeroCostPublicConfig } from "./runtime-mode";
+import { firebaseAppName, resolveClientMode, usesStaticReviewedNews, validateZeroCostPublicConfig } from "./runtime-mode";
 
 validateZeroCostPublicConfig(import.meta.env);
 
@@ -18,6 +18,7 @@ export const clientMode = resolveClientMode(import.meta.env, import.meta.env);
 export const localUserMode = clientMode === "local-user";
 export const demoMode = clientMode === "demo";
 export const zeroCostPublicMode = clientMode === "zero-cost-public";
+export const staticReviewedNewsMode = usesStaticReviewedNews(clientMode);
 
 export const firebaseConfigured = Boolean(
   firebaseConfig.apiKey
