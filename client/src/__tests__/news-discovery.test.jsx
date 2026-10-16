@@ -100,7 +100,7 @@ describe("NewsPage discovery (free beta)", () => {
   it("narrows with the effective-date option and says it is not a deadline", () => {
     renderPage();
     fireEvent.click(screen.getByLabelText("Has an upcoming effective date"));
-    expect(screen.getByText("1 stories")).toBeTruthy();
+    expect(screen.getByText("1 story")).toBeTruthy();
     expect(screen.getByText(/not a deadline for you/u)).toBeTruthy();
   });
   it("keeps the original topic, visa and source choices after the feed is narrowed", () => {

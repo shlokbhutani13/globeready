@@ -49,13 +49,18 @@ export default function NewsPage({
   if (optionCache.current.scope !== storageScope) optionCache.current = { scope: storageScope, topics: [], visas: [], sources: [] };
   const allRanked = rankNewsItems(items, profile);
   const discovered = zeroCostMode ? applyDiscovery(allRanked, flags, { profile, seen, today: localDateKey(new Date()) }) : allRanked;
-  const ranked = savedOnly ? discovered.filter((item) => savedIds.has(item.id)) : discovered;
+  const chronological = [...discovered].sort((left, right) => {
+    const direction = filters.sort === "oldest" ? 1 : -1;
+    return direction * String(left.publishedAt || "").localeCompare(String(right.publishedAt || ""));
+  });
+  const ranked = savedOnly ? chronological.filter((item) => savedIds.has(item.id)) : chronological;
   const foundOptions = discoveryOptions(items);
   optionCache.current.topics = remember(optionCache.current.topics, foundOptions.topics);
   optionCache.current.visas = remember(optionCache.current.visas, foundOptions.visas);
   optionCache.current.sources = remember(optionCache.current.sources, sourcesFromItems(items));
   const options = optionCache.current;
   const unreadCount = items.filter((item) => isUnread(item, seen) || isUpdatedSinceSeen(item, seen)).length;
+  const sourceProblems = (sourceHealth?.sourceReports || []).filter((report) => report.state !== "current");
   const setFlag = (name, value) => setFlags((current) => ({ ...current, [name]: value || undefined }));
   const currentSearch = () => mergeFilters(filters, flags);
   const applySearch = (entry) => { const { feed, flags: saved } = splitFilters(entry.filters); onFilterChange?.(feed); setFlags(saved); };
@@ -70,14 +75,17 @@ export default function NewsPage({
     <div className="page">
       <PageHeader
         eyebrow="Updates and guides"
-        title="Updates for you"
-        description={zeroCostMode ? "A reviewed official-source feed stored with the app. Search and filters cover the currently published snapshot." : "Verified updates currently available from monitored sources, ranked for your profile. The complete available feed stays visible."}
+        title="Official updates"
+        description={zeroCostMode ? "Recent updates collected automatically from official and established sector sources, alongside GlobeReady-reviewed records. Open the original source for the full text." : "Verified updates currently available from monitored sources, ranked for your profile. The complete available feed stays visible."}
         action={!zeroCostMode && <button type="button" className="button secondary" onClick={() => setShowPreferences((value) => !value)}>{showPreferences ? "Hide preferences" : "Edit preferences"}</button>}
       />
       <SubNav label="Updates sections" links={updatesLinks} />
       <PageHelp id="news" />
 
       <NewsToolbar filters={filters} onChange={onFilterChange} sources={zeroCostMode ? options.sources : undefined} />
+
+      {zeroCostMode && sourceHealth?.generatedAt && <p className="muted news-last-updated" role="status">Last updated {new Date(sourceHealth.generatedAt).toLocaleString()}</p>}
+      {zeroCostMode && sourceProblems.length > 0 && <details className="panel source-coverage-notes"><summary>Source coverage notes ({sourceProblems.length})</summary><ul>{sourceProblems.map((report) => <li key={report.sourceId}><strong>{report.name}</strong>: {report.state}{report.reason ? ` — ${report.reason}` : ""}</li>)}</ul></details>}
 
       {zeroCostMode && (
         <NewsDiscovery
@@ -91,10 +99,10 @@ export default function NewsPage({
 
       {onToggleSave && <div className="saved-toggle"><button type="button" className={`button secondary ${savedOnly ? "active" : ""}`} aria-pressed={savedOnly} onClick={() => setSavedOnly((value) => !value)}>{savedOnly ? "Showing saved updates" : `Show saved updates (${savedIds.size})`}</button></div>}
 
-      {sourceHealth?.state === "delayed" && (
+      {(sourceHealth?.state === "delayed" || sourceHealth?.state === "degraded") && (
         <div className="panel" style={{ marginBottom: 18 }} role="status">
           <SourceStatus state="delayed" />
-          <small className="muted">{sourceHealth.delayedPublishers?.length ? `Delayed sources: ${sourceHealth.delayedPublishers.join(", ")}. Updates from these publishers may be missing or late.` : "This reviewed feed may be out of date. Check the official sources before relying on it."}</small>
+          <small className="muted">{sourceHealth.message || (sourceHealth.delayedPublishers?.length ? `Delayed sources: ${sourceHealth.delayedPublishers.join(", ")}. Updates from these publishers may be missing or late.` : "The automatic feed may be out of date. Check the original sources before relying on it.")}</small>
         </div>
       )}
 
@@ -141,7 +149,7 @@ export default function NewsPage({
         ))}
       </div>
 
-      {loading && <div className="empty-state"><p>Loading verified updates…</p></div>}
+      {loading && <div className="empty-state" role="status"><p>Loading official updates…</p></div>}
 
       {!loading && error && (
         <div className="inline-error" role="alert">
@@ -153,7 +161,7 @@ export default function NewsPage({
       {!loading && !error && ranked.length === 0 && (
         <div className="empty-state">
           <h3>{savedOnly ? "No saved updates here" : "No updates match yet"}</h3>
-          {savedOnly ? <p>Use the bookmark on an update to keep it here. Saved updates that do not match your current filters are hidden.</p> : <p>GlobeReady has not published a verified update for these filters. This does not mean nothing has changed — check back soon or adjust your filters.</p>}
+          {savedOnly ? <p>Use the bookmark on an update to keep it here. Saved updates that do not match your current filters are hidden.</p> : <p>No collected or reviewed updates match these filters. This does not mean nothing has changed — check the original sources, try again later, or adjust your filters.</p>}
         </div>
       )}
 

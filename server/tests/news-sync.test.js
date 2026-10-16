@@ -1476,7 +1476,7 @@ describe("news source synchronization", () => {
       adapters: { fixture: { async collect() { return [officialCandidate()]; } } },
       fetchSource: async () => {
         fetches += 1;
-        await new Promise((resolve) => setTimeout(resolve, 55));
+        await new Promise((resolve) => setTimeout(resolve, 260));
         return { status: 200, text: "fixture body", notModified: false };
       },
       snapshotStore: atomicSnapshotStore({
@@ -1486,12 +1486,12 @@ describe("news source synchronization", () => {
         },
       }),
       sources: [source],
-      leaseDurationMs: 20,
-      leaseHeartbeatMs: 5,
+      leaseDurationMs: 120,
+      leaseHeartbeatMs: 15,
     });
 
     const first = sync.syncSource("federal-register");
-    await new Promise((resolve) => setTimeout(resolve, 30));
+    await new Promise((resolve) => setTimeout(resolve, 160));
     const second = await sync.syncSource("federal-register");
     const completed = await first;
 

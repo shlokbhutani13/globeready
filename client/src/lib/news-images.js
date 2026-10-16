@@ -23,12 +23,20 @@ export function topicImage(topic) {
 }
 
 export function newsImageFor(item = {}) {
-  // A story may name its own picture, but only a file served from this site; an outside address is ignored.
-  if (typeof item.image?.url === "string" && item.image.url.startsWith("/") && !item.image.url.startsWith("//") && item.image.alt) return { ...item.image, credit: item.image.credit || imageCredit };
   const topics = Array.isArray(item.topics) ? item.topics : [];
-  for (const topic of topics) {
-    const url = topicImage(topic);
-    if (url) return { url, alt: `${String(topic).replace(/-/g, " ")} illustration`, credit: imageCredit };
+  const fallback = (() => {
+    for (const topic of topics) {
+      const url = topicImage(topic);
+      if (url) return { url, alt: `${String(topic).replace(/-/g, " ")} illustration`, credit: imageCredit };
+    }
+    return { url: general, alt: `${topics[0] ? String(topics[0]).replace(/-/g, " ") : "General update"} illustration`, credit: imageCredit };
+  })();
+  if (typeof item.image?.url === "string" && item.image.url.startsWith("/") && !item.image.url.startsWith("//") && item.image.alt) return { ...item.image, credit: item.image.credit || imageCredit };
+  if (item.autoIngested && item.image?.alt) {
+    try {
+      const remote = new URL(item.image.url);
+      if (remote.protocol === "https:" && !remote.username && !remote.password) return { ...item.image, remote: true, fallbackUrl: fallback.url };
+    } catch { /* Use the bundled fallback for invalid source image URLs. */ }
   }
-  return { url: general, alt: `${topics[0] ? String(topics[0]).replace(/-/g, " ") : "General update"} illustration`, credit: imageCredit };
+  return fallback;
 }

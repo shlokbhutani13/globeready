@@ -41,6 +41,7 @@ export default function NewsToolbar({ filters = {}, onChange, sources = allSourc
       <label>From<input type="date" value={filters.from || ""} onChange={(e) => update({ from: e.target.value || undefined })} /></label>
       <label>To<input type="date" value={filters.to || ""} onChange={(e) => update({ to: e.target.value || undefined })} /></label>
       <label>Source<select value={filters.sourceId || ""} onChange={(e) => update({ sourceId: e.target.value || undefined })}><option value="">All official sources</option>{sources.map((source) => <option key={source.id} value={source.id}>{source.label}</option>)}</select></label>
+      <label>Sort<select aria-label="Sort news" value={filters.sort || "newest"} onChange={(e) => update({ sort: e.target.value })}><option value="newest">Newest first</option><option value="oldest">Oldest first</option></select></label>
       <button className="news-reset" type="button" onClick={() => onChange?.({})}><X size={15} /> Reset</button>
     </div>
   </section>;

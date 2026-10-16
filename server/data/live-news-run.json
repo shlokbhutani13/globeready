@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-10-16T02:22:09.571Z",
+  "totalStories": 58,
+  "sources": [
+    {
+      "sourceId": "uscis-news",
+      "name": "U.S. Citizenship and Immigration Services",
+      "state": "current",
+      "fetched": 1,
+      "attempts": 1
+    },
+    {
+      "sourceId": "study-in-the-states",
+      "name": "Study in the States",
+      "state": "current",
+      "fetched": 10,
+      "attempts": 1
+    },
+    {
+      "sourceId": "ice-sevp",
+      "name": "Student and Exchange Visitor Program",
+      "state": "current",
+      "fetched": 14,
+      "attempts": 1
+    },
+    {
+      "sourceId": "federal-register",
+      "name": "Federal Register",
+      "state": "current",
+      "fetched": 7,
+      "attempts": 1
+    },
+    {
+      "sourceId": "nafsa-press",
+      "name": "NAFSA: Association of International Educators",
+      "state": "current",
+      "fetched": 10,
+      "attempts": 1
+    },
+    {
+      "sourceId": "mit-iso",
+      "name": "MIT International Students Office",
+      "state": "current",
+      "fetched": 20,
+      "attempts": 1
+    },
+    {
+      "sourceId": "state-visa-news",
+      "name": "U.S. Department of State Visa News",
+      "state": "disabled",
+      "fetched": 0,
+      "reason": "The source returned HTTP 403 to the collector on 2026-10-15."
+    }
+  ]
+}

@@ -38,6 +38,10 @@ export function authHeadersForMode(mode, token) {
   return mode === "demo" ? { "x-demo-user": "globeready-demo" } : {};
 }
 
+export function usesStaticReviewedNews(mode) {
+  return mode === "zero-cost-public" || mode === "local-user";
+}
+
 export function firebaseAppName(config, mode) {
   const identity = [mode, config.projectId || "", config.appId || "", config.storageBucket || ""].join("|");
   return `globeready-${encodeURIComponent(identity)}`;

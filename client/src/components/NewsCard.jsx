@@ -16,13 +16,14 @@ export default function NewsCard({ item, saved = false, onToggleSave, compact = 
     ? item.plainLanguageSummary
     : (item.excerpt || item.sourceExcerpt || "");
 
+  const image = newsImageFor(item);
   return (
     <article className={`news-card ${compact ? "compact" : ""}`}>
-      {!compact && <img className="news-card-image" src={newsImageFor(item).url} alt={newsImageFor(item).alt} />}
+      {!compact && <img className="news-card-image" src={image.url} alt={image.alt} onError={image.fallbackUrl ? (event) => { event.currentTarget.onerror = null; event.currentTarget.src = image.fallbackUrl; } : undefined} />}
       <div className="news-card-top">
         <span className={`legal-state ${item.legalState || "informational"}`}>{legalLabel}</span>
         {(seenState === "new" || seenState === "updated") && <span className="legal-state pending">{seenState === "new" ? "New" : "Updated"}</span>}
-        {!item.sourceVerified && <span className="legal-state pending">Unverified source</span>}
+        {item.autoIngested ? <span className="legal-state pending">{item.trustLabel || "From official source — not yet reviewed by GlobeReady"}</span> : !item.sourceVerified && <span className="legal-state pending">Unverified source</span>}
         {item.editorialState === "archived" && <span className="legal-state withdrawn">Archived update</span>}
         {item.correctionNote && item.editorialState !== "archived" && <span className="legal-state pending">Corrected</span>}
         {onToggleSave && (
@@ -44,10 +45,10 @@ export default function NewsCard({ item, saved = false, onToggleSave, compact = 
         {item.effectiveAt && <span>Effective {item.effectiveAt}</span>}
         {item.publishedAt && <span>Published {item.publishedAt}</span>}
       </div>
-      {item.id && <a href={`/news/${item.id}`}>Read details</a>}
+      {item.id && <a href={`/news/${item.id}`}>{item.autoIngested ? "View story" : "Read details"}</a>}
       {item.canonicalUrl && (
-        <a href={item.canonicalUrl} target="_blank" rel="noreferrer">
-          Read the official source <ExternalLink size={13} />
+        <a href={item.canonicalUrl} target="_blank" rel="noopener noreferrer">
+          {item.autoIngested ? "Read more" : "Read the official source"} <ExternalLink size={13} />
         </a>
       )}
     </article>
