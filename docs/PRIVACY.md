@@ -12,6 +12,8 @@ matches your deployment before accepting identity documents.
 
 ## Zero-cost public beta
 
+The public, plain-language version of this section is the page at `/privacy` (`client/src/data/privacy-notice.js`). It is readable before sign-in and linked from the sign-in page and Settings. Keep the two in step: `client/src/__tests__/privacy-page.test.jsx` fails if the page stops making its key claims. Set `VITE_PRIVACY_CONTACT` to a real address to show a contact line; until then the page says contact details are not yet published.
+
 The free beta (`docs/ZERO_COST_PUBLIC.md`) has no server and stores less:
 
 - **Monitoring is separate from students:** candidate collection and editorial review use public official-source

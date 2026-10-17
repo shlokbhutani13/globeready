@@ -324,3 +324,10 @@ button, .button, [role="button"], select { min-height: var(--gr-target); }
   .plain-table thead th { font-size: 0.78rem; }
 }
 .plain-table .nowrap { white-space: nowrap; }
+
+/* Privacy notice (public, standalone) */
+.privacy-standalone { max-width: 760px; margin: 0 auto; padding: 24px 16px 56px; }
+.privacy-standalone .text-button { min-height: 44px; display: inline-flex; align-items: center; }
+.privacy-standalone .section-block { margin-top: 28px; }
+.privacy-standalone a { color: #315f8f; }
+.login-privacy-link { display: inline-flex; align-items: center; min-height: 44px; padding: 0 4px; margin-left: 6px; color: #315f8f; text-decoration: underline; }

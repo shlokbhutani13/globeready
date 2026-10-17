@@ -33,7 +33,7 @@ export default function LoginPage({ onDemo, auth, localUser = false, demoAvailab
             <span><Sparkles /> {zeroCost ? "Exact passages with page citations" : "AI explanations with sources"}</span>
           </div>
         </div>
-        <small>Information support, not legal advice.</small>
+        <small>Information support, not legal advice.{zeroCost && <> <a className="login-privacy-link" href="/privacy">Privacy and your data</a></>}</small>
       </section>
       <section className="login-panel">
         <div className="login-card">

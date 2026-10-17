@@ -15,6 +15,7 @@ import SearchPage from "./pages/SearchPage";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import AppShell from "./components/AppShell";
 import LoginPage from "./pages/LoginPage";
+import PrivacyPage from "./pages/PrivacyPage";
 import DashboardPage from "./pages/DashboardPage";
 import DocumentsPage from "./pages/DocumentsPage";
 import TasksPage from "./pages/TasksPage";
@@ -240,6 +241,8 @@ export default function App() {
     return splitSnoozed(steps, loadSnoozes(localStorage, auth.user?.uid || "", reminderClock)).active.length;
   }, [zeroCostPublicMode, live, tasks, watchedDates, records.planner, profile, reminderClock, lifeExtra, lifeVersion, auth.user?.uid]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // The privacy notice is public: people can read it before they sign in.
+  if (zeroCostPublicMode && window.location.pathname.replace(/\/+$/, "") === "/privacy") return <PrivacyPage />;
   if (auth.loading) return <div className="app-loading">Preparing GlobeReady…</div>;
   if (!auth.user && !demo) return <LoginPage onDemo={async () => {
     // The direct build-time flag lets Vite omit the fixture module entirely from every non-demo build.
