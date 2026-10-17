@@ -1,41 +1,41 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-16T22:49:33.229Z",
-  "totalStories": 58,
+  "generatedAt": "2026-10-17T03:32:25.397Z",
+  "totalStories": 44,
   "sources": [
     {
       "sourceId": "uscis-news",
       "name": "U.S. Citizenship and Immigration Services",
       "state": "current",
-      "fetched": 1,
+      "fetched": 0,
       "attempts": 1
     },
     {
       "sourceId": "study-in-the-states",
       "name": "Study in the States",
       "state": "current",
-      "fetched": 10,
+      "fetched": 4,
       "attempts": 1
     },
     {
       "sourceId": "ice-sevp",
       "name": "Student and Exchange Visitor Program",
       "state": "current",
-      "fetched": 14,
+      "fetched": 7,
       "attempts": 1
     },
     {
       "sourceId": "federal-register",
       "name": "Federal Register",
       "state": "current",
-      "fetched": 7,
+      "fetched": 5,
       "attempts": 1
     },
     {
       "sourceId": "nafsa-press",
       "name": "NAFSA: Association of International Educators",
       "state": "current",
-      "fetched": 10,
+      "fetched": 9,
       "attempts": 1
     },
     {
