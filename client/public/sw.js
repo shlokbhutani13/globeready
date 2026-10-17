@@ -63,3 +63,24 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(cacheFirst(request, SHELL));
   }
 });
+
+// Push reminders (opt-in). The payload is a short title and body written by GlobeReady's reminder job; it never
+// contains document text. Tapping a notification opens the app.
+self.addEventListener("push", (event) => {
+  let payload = {};
+  try { payload = event.data ? event.data.json() : {}; } catch { payload = {}; }
+  const data = payload.data || payload;
+  const title = String(data.title || "GlobeReady reminder").slice(0, 120);
+  const body = String(data.body || "Open GlobeReady to see what is coming up.").slice(0, 240);
+  event.waitUntil(self.registration.showNotification(title, { body, icon: "/icons/icon-192.png", tag: String(data.tag || "globeready-reminder"), data: { path: "/" } }));
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  event.waitUntil((async () => {
+    const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+    const open = windows.find((client) => new URL(client.url).origin === self.location.origin);
+    if (open) return open.focus();
+    return self.clients.openWindow("/");
+  })());
+});

@@ -54,7 +54,7 @@ import { useAuth } from "./lib/auth-context";
 import { apiDownload, apiRequest } from "./lib/api";
 import { deleteAccountWithReauth } from "./lib/account-deletion";
 import { fetchConsent, saveConsent } from "./lib/consent";
-import { db, demoMode, localUserMode, staticReviewedNewsMode, storageAvailable, zeroCostPublicMode } from "./lib/firebase";
+import { db, demoMode, firebaseApp, localUserMode, staticReviewedNewsMode, storageAvailable, zeroCostPublicMode } from "./lib/firebase";
 import {
   createTask, removeDocument, removeTask, saveResource, subscribeStudentData,
   toggleTask, uploadDocument,
@@ -542,6 +542,7 @@ export default function App() {
               onShowGettingStarted={() => setShowGettingStarted(true)}
               zeroCostMode={zeroCostPublicMode}
               deviceBackupUid={live && zeroCostPublicMode ? auth.user?.uid : undefined}
+              push={live && zeroCostPublicMode && auth.user?.uid ? { uid: auth.user.uid, firestore: db, app: firebaseApp } : undefined}
               restore={restoreContext}
               signInProviders={live && zeroCostPublicMode ? auth.signInProviders() : []}
             />

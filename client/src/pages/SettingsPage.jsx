@@ -5,11 +5,13 @@ import DisplaySettings from "../components/DisplaySettings";
 import InstallPanel from "../components/InstallPanel";
 import RestorePanel from "../components/RestorePanel";
 import DeviceBackupPanel from "../components/DeviceBackupPanel";
+import PushPanel from "../components/PushPanel";
+import VaultPanel from "../components/VaultPanel";
 import PageHeader from "../components/ui/PageHeader";
 
 export const deletionPhrase = "DELETE MY ACCOUNT";
 
-export default function SettingsPage({ live = true, preferences = {}, onUpdatePreferences, onExport, onDelete, consent, onSaveConsent, onShowGettingStarted, zeroCostMode = false, signInProviders = [], restore, deviceBackupUid }) {
+export default function SettingsPage({ live = true, preferences = {}, onUpdatePreferences, onExport, onDelete, consent, onSaveConsent, onShowGettingStarted, zeroCostMode = false, signInProviders = [], restore, deviceBackupUid, push }) {
   const [confirmation, setConfirmation] = useState("");
   const [password, setPassword] = useState("");
   const passwordAccount = zeroCostMode && signInProviders.includes("password");
@@ -50,7 +52,7 @@ export default function SettingsPage({ live = true, preferences = {}, onUpdatePr
 
       {zeroCostMode && <InstallPanel />}
 
-      {zeroCostMode && <section className="panel settings-section" aria-labelledby="free-runtime-title"><div className="panel-title"><h2 id="free-runtime-title">Free public beta availability</h2></div><ul className="availability-list"><li>Original-file backup is unavailable; only extracted text is saved.</li><li>Cloud AI answers are unavailable; Ask GlobeReady returns matching passages from your documents.</li><li>Email and push delivery are unavailable; check the app and official sources for changes.</li></ul></section>}
+      {zeroCostMode && <section className="panel settings-section" aria-labelledby="free-runtime-title"><div className="panel-title"><h2 id="free-runtime-title">Free public beta availability</h2></div><ul className="availability-list"><li>Original files are never uploaded to GlobeReady. Only extracted text is saved, and you can optionally keep originals in your own Google Drive.</li><li>Cloud AI answers are unavailable; Ask GlobeReady returns matching passages from your documents.</li><li>Email reminders are not offered. Optional push reminders can be turned on above; check the app and official sources for changes.</li></ul></section>}
 
       <section className="panel settings-section"><div className="panel-title"><h2>Help</h2></div><p className="muted">Reopen the short guide to where everything is.</p><button className="button secondary" onClick={onShowGettingStarted}>Show getting started guide</button></section>
 
@@ -80,6 +82,10 @@ export default function SettingsPage({ live = true, preferences = {}, onUpdatePr
         <p className="muted">{zeroCostMode ? "Download your profile, tasks, key dates, contacts, checklists, saved guides and updates, and locally extracted document text as a JSON file. Original files are not stored." : "Download your profile, tasks, document text, saved updates, and assistant conversations as a JSON file."}</p>
         <button className="button secondary" onClick={onExport}><Download size={16} /> Export my data</button>
       </section>
+
+      {zeroCostMode && push?.uid && <PushPanel uid={push.uid} firestore={push.firestore} app={push.app} />}
+
+      {zeroCostMode && push?.uid && <VaultPanel />}
 
       {zeroCostMode && deviceBackupUid && <DeviceBackupPanel uid={deviceBackupUid} />}
 
