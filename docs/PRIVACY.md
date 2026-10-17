@@ -155,3 +155,8 @@ record holds no address.
   is sent to Google.
 
 Publish how a student contacts you about these rights.
+
+## Optional features in the free public beta (off until the student turns them on)
+
+- **Push reminders.** Enabling saves a push address (FCM token) for that device under `users/{uid}/pushTokens`. A daily scheduled job (`send-push-reminders.yml`) reads only that student's key dates and open tasks, sends a notification containing their titles, and deletes addresses Firebase reports as gone. It never reads documents. Disabling push deletes the device's address. `pushTokens` is included in export and account deletion.
+- **Google Drive vault.** The browser asks Google for the `drive.appdata` scope only, keeps the access token in memory, and stores original files in the student's own hidden app-data folder. GlobeReady's servers never receive the files. The files are not encrypted by GlobeReady.

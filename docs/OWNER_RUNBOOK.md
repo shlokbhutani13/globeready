@@ -25,3 +25,19 @@ Work arrives as a patch file. Apply it on a fresh branch from `main` with `git a
 - Remove unused entries from Firebase Authentication, Authorized domains.
 - Resolve the `source-map-js` dependency alert when a fixed release is available.
 - Keep billing disabled. The deploy workflow is gated to refuse anything that would add cost.
+
+## 6. Turn on push reminders and the Google Drive vault
+Both features are built and stay hidden until you set public values. None of these steps involves a password or private key in chat.
+
+**Push reminders**
+1. Firebase console, project `globe-ready`: Project settings, Cloud Messaging, Web Push certificates, Generate key pair. Copy the public key.
+2. GitHub, Settings, Secrets and variables, Actions, Variables: add `VITE_FCM_VAPID_KEY` with that public key.
+3. Google Cloud, IAM: give `globeready-hosting-preview@globe-ready.iam.gserviceaccount.com` the roles **Cloud Datastore User** and **Firebase Cloud Messaging API Admin**. Enable the **Firebase Cloud Messaging API** in APIs & Services.
+4. Add the variable `PUSH_REMINDERS_ENABLED` = `true`. The daily job then runs. Until you do, it is skipped.
+5. Redeploy live. Sign in, open Settings, and turn on push reminders on a test device. On iPhone, add the app to the Home Screen first.
+
+**Google Drive vault**
+1. Google Cloud, APIs & Services: enable the **Google Drive API**. Set up the **OAuth consent screen** (External, app name GlobeReady, your contact email) with only the scope `.../auth/drive.appdata`, then publish it.
+2. Credentials, Create credentials, OAuth client ID, Web application, authorized JavaScript origin `https://globe-ready.web.app`.
+3. GitHub variable `VITE_GOOGLE_CLIENT_ID` = the client ID (public, not the secret).
+4. Redeploy live. Settings then shows the Drive vault section.
