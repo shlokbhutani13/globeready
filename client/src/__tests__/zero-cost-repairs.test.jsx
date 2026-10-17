@@ -18,7 +18,7 @@ describe("zero-cost trust repairs", () => {
       { id: "uscis", name: "USCIS", status: "planned", lastVerifiedAt: "2026-10-13T12:00:00Z" },
     ] }} />);
     fireEvent.click(screen.getByRole("button", { name: /show source details/i }));
-    expect(screen.getByText(/1 of 2 sources active/i)).toBeInTheDocument();
+    expect(screen.getByText(/1 of 2 sources reachable, 1 with relevant stories/i)).toBeInTheDocument();
     expect(screen.getAllByText(/planned — not monitored yet/i).length).toBeGreaterThan(0);
     expect(checkLabel({ status: "planned", lastVerifiedAt: "2026-10-13T12:00:00Z" })).toBe("Not monitored");
     expect(checkLabel({ status: "active", lastVerifiedAt: "2026-10-13T12:00:00Z" })).toMatch(/^Last reviewed /u);

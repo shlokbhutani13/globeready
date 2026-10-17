@@ -93,12 +93,22 @@ describe("static public news", () => {
 
     expect(result.sourceHealth.state).toBe("current");
     expect(result.sourceHealth.coverageLedger).toMatchObject({
-      summary: { active: 2, total: 2, failing: 0, disabled: 0 },
+      summary: { active: 2, reachable: 2, withRelevantStories: 2, total: 2, failing: 0, disabled: 0 },
       entries: [
         { id: "uscis-news", status: "active", fetched: 2, lastSuccessAt: "2026-10-14T06:00:00.000Z" },
         { id: "ice-sevp", status: "active", fetched: 4, lastSuccessAt: "2026-10-14T06:00:00.000Z" },
       ],
     });
+  });
+
+  test("counts a reachable source with zero relevant stories without calling it failed", async () => {
+    mockFeeds(await artifact(), await liveArtifact({ sourceReports: [
+      { sourceId: "uscis-news", name: "USCIS", state: "current", fetched: 0 },
+      { sourceId: "ice-sevp", name: "SEVP", state: "current", fetched: 4 },
+    ] }));
+    const result = await loadStaticNews({}, { now: new Date("2026-10-14T12:00:00Z") });
+    expect(result.sourceHealth.coverageLedger.summary).toMatchObject({ reachable: 2, withRelevantStories: 1, total: 2, failing: 0 });
+    expect(result.sourceHealth.coverageLedger.entries[0]).toMatchObject({ status: "active", fetched: 0, lastSuccessAt: "2026-10-14T06:00:00.000Z" });
   });
 
   test("reports one failing automatic source without calling a fresh feed delayed", async () => {
