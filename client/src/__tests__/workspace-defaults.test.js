@@ -5,7 +5,10 @@ import { workspaceDefaults } from "../lib/workspace-defaults";
 describe("workspace defaults", () => {
   test("a real account starts empty instead of inheriting demo records", () => {
     expect(workspaceDefaults({ demo: false })).toEqual({
-      profile: { fullName: "", homeCountry: "", university: "", program: "", visaType: "F-1", journeyStage: "Preparing for arrival" },
+      profile: {
+        fullName: "", homeCountry: "", university: "", program: "", programLevel: "other",
+        visaCategory: "f-1", studentStage: "pre-arrival", trainingStatus: "not-reported",
+      },
       tasks: [],
       documents: [],
     });

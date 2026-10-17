@@ -15,13 +15,15 @@ The reviewed record wins when the same canonical URL or title appears in both fe
 - `server/data/live-news-run.json`
 - `server/data/live-news-candidates.json`
 
-One failed source is recorded and isolated; successful sources still update. Previously collected items for the failed source remain available. Collection uses an honest GlobeReady user agent, bounded responses, timeouts, retries, host allowlists and robots.txt checks.
+One failed source is recorded and isolated; successful sources still update. Previously collected items for the failed source remain available and are identified as retained. Each report preserves the last successful refresh and the start of the current failure. After an enabled source has been failing for 24 hours, the workflow opens one GitHub issue with a stable source marker; it closes that issue after recovery or intentional disabling. Collection uses an honest GlobeReady user agent, bounded responses, timeouts, retries, host allowlists and robots.txt checks.
 
 ## Relevance filtering and tags
 
 Study in the States and SEVP are explicitly marked as student-specific sources, so their items enter the feed by default and receive deterministic tags wherever supported terms occur. Broader sources must match an international-student topic and any configured source-specific relevance terms. The vocabulary includes F/J/M classifications, nonimmigrants, academic students, exchange visitors, DSO, SEVP, SEVIS, admission periods, duration of status, extensions of stay and student-program fee terms. The supported visible topics are Visa (`status`), Forms and fees (`forms-fees`), Work authorization (`employment`), Travel (`travel-entry`), Tax (`taxes-social-security`) and University (`university`). Visa types are tagged only when an explicit visa term such as F-1, J-1 or M-1 appears. Keyword matching is boundary-aware so a term such as `OPT` cannot match an unrelated word such as “adoption.”
 
 This is a conservative text filter, not an AI or legal classifier. It can miss a relevant update, and a tag only describes the words in the source excerpt. Reviewed records remain separate and retain their human-reviewed treatment.
+
+Each automatic record also has a deterministic `updateType`: proposed rule, final rule, announcement, court development or guidance. Federal Register structured document metadata controls its rule type and supplies a separate effective date when one is published; other parsers use bounded explicit wording and otherwise fall back to announcement/guidance. `publishedAt` and `effectiveAt` are never treated as the same date. Exact Federal Register document numbers, or an exact normalized title plus publication date, form conservative cross-source clusters. Clustering does not delete a story: every source record remains available through **Show all** and source filters.
 
 ## Enabled sources and verified dry run
 
@@ -62,4 +64,4 @@ Every automatic story also becomes an `unreviewed` record in `server/data/live-n
 
 Automatic collection can be delayed by GitHub scheduling, source outages, feed changes, robots rules or rate limits. A source excerpt can omit important context. The interface therefore shows the last successful artifact time, source coverage notes and a direct original-source link. The feed is informational and is not legal advice or proof that no other rule has changed.
 
-The public source indicator reports both sources reached successfully and sources that returned at least one relevant story. A reachable source with zero matching stories is not presented as failed; an intentionally disabled source is listed separately with its reason and excluded from the monitored-source denominator. On the unfiltered News page, automatic stories are initially capped at six per source so one publisher cannot dominate the page. **Show all** and the source filter reveal every collected story; reviewed records are never capped.
+The public source indicator reports both sources reached successfully and sources that returned at least one relevant story. It shows failure duration and how many older stories are retained when applicable. A reachable source with zero matching stories is not presented as failed; an intentionally disabled source is listed separately with its reason and excluded from the monitored-source denominator. On the unfiltered News page, automatic stories are initially capped at six per source so one publisher cannot dominate the page. **Show all** and the source filter reveal every collected story; reviewed records are never capped.

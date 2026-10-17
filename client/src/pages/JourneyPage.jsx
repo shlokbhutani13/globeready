@@ -6,10 +6,11 @@ import SubNav, { planLinks } from "../components/ui/SubNav";
 import Notice from "../components/ui/Notice";
 import { journeyDisclaimer, journeyItemsFor, journeyStages } from "../data/journey-templates";
 import { friendlyError } from "../lib/friendly-error";
+import { visaCategoryFor } from "../lib/student-profile";
 import { isPlanned, stageProgress, suggestedDueDate, tasksFromItems } from "../lib/planner";
 
 export default function JourneyPage({ profile = {}, tasks = [], added = [], onAddTasks }) {
-  const items = useMemo(() => journeyItemsFor(profile.visaType), [profile.visaType]);
+  const items = useMemo(() => journeyItemsFor(profile), [profile.visaCategory, profile.visaType, profile.trainingStatus]);
   const [selected, setSelected] = useState(new Set());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -33,7 +34,7 @@ export default function JourneyPage({ profile = {}, tasks = [], added = [], onAd
       <PageHeader
         eyebrow="Plan"
         title="Journey planner"
-        description={`Common steps for ${/j-?1/i.test(profile.visaType || "") ? "J-1" : /f-?1/i.test(profile.visaType || "") ? "F-1" : "international"} students, from arrival to life after your program. Choose the steps you want and add them to your tasks.`}
+        description={`Common steps for ${visaCategoryFor(profile) === "j-1" ? "J-1" : visaCategoryFor(profile) === "f-1" ? "F-1" : "international"} students, from arrival to life after your program. Choose the steps you want and add them to your tasks.`}
         action={<button type="button" className="button primary" disabled={busy || chosenItems.length === 0} onClick={() => addSelected(chosenItems)}>Add {chosenItems.length || ""} selected to Tasks</button>}
       />
       <SubNav label="Plan sections" links={planLinks} />

@@ -32,7 +32,7 @@ export default function LifeHubPage({ profile = {}, tasks = [], added = [], onAd
       <nav className="jump-links" aria-label="Topics">{lifeTopics.map((topic) => <a key={topic.id} href={`#topic-${topic.id}`}>{topic.label}</a>)}</nav>
 
       {lifeTopics.map((topic) => {
-        const steps = topicSteps(topic, profile.visaType);
+        const steps = topicSteps(topic, profile.visaCategory || profile.visaType);
         const open = steps.filter((step) => !isPlanned(step, tasks, added));
         const links = (topic.links || []).map(resolveLifeLink).filter(Boolean);
         return (

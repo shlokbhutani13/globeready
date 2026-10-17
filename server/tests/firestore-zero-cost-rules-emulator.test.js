@@ -50,6 +50,9 @@ describeEmulator("zero-cost Firestore rules", () => {
     await assertFails(setDoc(ref, profile({ startDate: "next week" })));
     await assertFails(setDoc(ref, profile({ isAdmin: true })));
     await assertFails(setDoc(ref, profile({ updatedAt: new Date("2020-01-01T00:00:00Z") })));
+    await assertSucceeds(setDoc(ref, profile({ programLevel: "masters", visaCategory: "f-1", studentStage: "studying", trainingStatus: "considering-opt" })));
+    await assertFails(setDoc(ref, profile({ visaCategory: "j-1", trainingStatus: "considering-opt" })));
+    await assertFails(setDoc(ref, profile({ programLevel: "law-school" })));
     await assertFails(setDoc(ref, consent(true, { aiGeneration: true }), { merge: true }));
     await assertFails(setDoc(ref, consent(true, { scope: "everything" }), { merge: true }));
   });

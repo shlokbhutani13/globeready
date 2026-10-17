@@ -5,7 +5,8 @@ import { deriveDateReminders, upcomingDates } from "./lib/key-dates";
 import { useZeroCostRecords } from "./lib/use-zero-cost-records";
 import { buildIcs, downloadIcs } from "./lib/ics";
 import { tasksFromItems } from "./lib/planner";
-import { guides } from "./data/guides";
+import { guidesForVisa } from "./data/guides";
+import { normalizeStudentProfile, visaCategoryFor } from "./lib/student-profile";
 import KeyDatesPage from "./pages/KeyDatesPage";
 import ContactsPage from "./pages/ContactsPage";
 import JourneyPage from "./pages/JourneyPage";
@@ -68,7 +69,7 @@ import { subscribeStaticNews } from "./lib/static-news";
 import { deleteZeroCostAccount, downloadZeroCostExport, exportZeroCostAccount } from "./lib/zero-cost-account";
 import { blankProfile, workspaceDefaults } from "./lib/workspace-defaults";
 const zeroCostConsentText = {
-  documents: "GlobeReady extracts text on this device, then saves only the text and document metadata to your account.",
+  documents: "GlobeReady reads the entire readable text on this device, then saves that text and document metadata in your private account. The original file is not uploaded. Before saving, GlobeReady tries to mask labelled passport, visa, USCIS receipt and SEVIS numbers, but masking can miss identifiers or OCR errors. Other readable personal information remains in the saved text, so do not add a file if you do not want that information stored.",
   aiGeneration: "Cloud AI is unavailable in the free public beta. Ask GlobeReady uses deterministic passage matching in your browser.",
   withdraw: "You can turn document reading off at any time. Ask stops searching your saved text immediately, and you can delete all saved document text from the Vault.",
 };
@@ -176,7 +177,7 @@ export default function App() {
     const unsubscribers = subscribeStudentData(auth.user.uid, {
       profile: (value) => {
         const { consent: storedConsent, ...profileValue } = value;
-        setProfile({ ...blankProfile(), fullName: auth.user.displayName || "", ...profileValue });
+        setProfile(normalizeStudentProfile({ ...blankProfile(), fullName: auth.user.displayName || "", ...profileValue }));
         if (zeroCostPublicMode) setConsent({ documents: false, aiGeneration: false, ...storedConsent, text: zeroCostConsentText });
       },
       tasks: setTasks,
@@ -502,7 +503,7 @@ export default function App() {
           <Route path="news/:id" element={<NewsDetailPage onSeen={zeroCostPublicMode ? (entry) => markNewsSeen(localStorage, auth.user?.uid || "", entry) : undefined} profile={profile} items={newsItems} loading={newsLoading} error={newsError} localMode={zeroCostPublicMode} tasks={tasks} onAddTasks={zeroCostStore ? addTasksFromItems : undefined} />} />
           <Route path="documents" element={<DocumentsPage localProcessing={live && zeroCostPublicMode} processing={processing} onCancelProcessing={cancelProcessing} onDeleteAllText={deleteAllDocumentText} consent={live ? consent : undefined} onSaveConsent={saveConsentChoice} documents={documents} uploadProgress={uploadProgress} storageAvailable={!live || storageAvailable} onAdd={addDocument} onDelete={deleteDocument} onAnalyze={analyzeDocument} />} />
           <Route path="tasks" element={<TasksPage zeroCostMode={zeroCostPublicMode} tasks={tasks} onAdd={addTask} onToggle={changeTask} onDelete={deleteTask} onUpdate={zeroCostStore ? (task, input) => zeroCostStore.updateTask(task, input) : undefined} linkContext={{ news: newsItems, dates: records.dates, cases: records.cases }} onExportCalendar={exportCalendar} />} />
-          <Route path="search" element={<SearchPage news={newsItems} newsLoading={newsLoading} guides={guides} tasks={tasks} documents={documents} cases={zeroCostPublicMode ? records.cases : []} />} />
+          <Route path="search" element={<SearchPage news={newsItems} newsLoading={newsLoading} guides={guidesForVisa(visaCategoryFor(profile))} tasks={tasks} documents={documents} cases={zeroCostPublicMode ? records.cases : []} />} />
           {zeroCostPublicMode && live && <>
             <Route path="setup" element={<SetupPage profile={profile} dates={records.dates} contacts={records.contacts} journeyHave={records.planner.journey.have} consent={consent} />} />
             <Route path="next" element={<NextStepsPage extra={lifeExtra} tasks={tasks} dates={watchedDates} journeyHave={records.planner.journey.have} profile={profile} now={reminderClock} onToggleTask={changeTask} onAddTasks={addTasksFromItems} storageScope={auth.user?.uid || ""} />} />
@@ -522,7 +523,7 @@ export default function App() {
           <Route path="rules" element={<RulesPage profile={profile} tasks={tasks} onAddTasks={zeroCostStore ? addTasksFromItems : undefined} />} />
           <Route path="resources" element={<ResourcesPage />} />
           <Route path="help" element={<HelpPage zeroCostMode={zeroCostPublicMode} />} />
-          <Route path="guides" element={<GuidesPage onSave={saveGuide} onRemove={zeroCostStore ? (id) => zeroCostStore.removeResource(id) : undefined} savedResources={savedResources} savedUrls={savedResources.map((resource) => resource.url)} />} />
+          <Route path="guides" element={<GuidesPage profile={profile} onSave={saveGuide} onRemove={zeroCostStore ? (id) => zeroCostStore.removeResource(id) : undefined} savedResources={savedResources} savedUrls={savedResources.map((resource) => resource.url)} />} />
           <Route path="assistant" element={<AssistantPage localMode={zeroCostPublicMode} documentsAllowed={!zeroCostPublicMode || consent?.documents === true} localChunks={localChunks} documents={documents.filter((document) => document.analysisStatus === "indexed")} />} />
           <Route path="notifications" element={<NotificationsPage localMode={zeroCostPublicMode} notifications={shownNotifications} onMarkRead={markRead} onMarkAllRead={markAllRead} />} />
           <Route path="profile" element={<ProfilePage profile={profile} onSave={updateProfile} showTopics={zeroCostPublicMode} />} />

@@ -75,7 +75,7 @@ export default function DocumentsPage({
     : localProcessing ? "Read a document on this device" : "Upload a document";
   const zoneText = atLimit ? "Delete a document you no longer need to add another."
     : gated && localProcessing ? "GlobeReady reads documents only after you allow it above."
-    : localProcessing ? "Text PDFs up to 100 pages, or PNG/JPEG photos of printed English text up to 25 megapixels; 10 MB maximum. The original file never leaves this device and is not backed up. Scanned PDFs and handwriting cannot be read."
+    : localProcessing ? "Text PDFs up to 100 pages, or PNG/JPEG photos of printed English text up to 25 megapixels; 10 MB maximum. The original file never leaves this device, but the entire readable text is saved to your private account. GlobeReady tries to mask common labelled immigration ID numbers before saving; masking can miss them. Scanned PDFs and handwriting cannot be read."
     : documentInputAvailable ? "Text-based PDFs, or PNG/JPEG photos of printed text, up to 10 MB. Scanned PDFs and handwriting cannot be read."
     : "Document uploads need Storage to be enabled for this deployment.";
   return (

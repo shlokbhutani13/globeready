@@ -16,6 +16,17 @@ const text = {
 };
 
 describe("privacy choices are explicit and reversible", () => {
+  test("free document wording says the entire readable text is stored and masking can miss identifiers", () => {
+    const honest = {
+      documents: "GlobeReady reads the entire readable text on this device and saves that text and document metadata in your private account. It tries to mask labelled passport, visa, USCIS receipt and SEVIS numbers before saving, but masking can miss identifiers.",
+      aiGeneration: "Cloud AI is unavailable.",
+      withdraw: "Delete saved text from the Vault.",
+    };
+    render(<ConsentPanel consent={{ documents: false, aiGeneration: false, text: honest }} onSave={() => {}} aiAvailable={false} />);
+    expect(screen.getByText(/entire readable text/iu)).toBeInTheDocument();
+    expect(screen.getByText(/masking can miss identifiers/iu)).toBeInTheDocument();
+  });
+
   test("document reading is off by default and the wording is shown before any choice", () => {
     render(<ConsentPanel consent={{ documents: false, aiGeneration: false, text }} onSave={() => {}} />);
     expect(screen.getByRole("checkbox", { name: /read my documents/i })).not.toBeChecked();

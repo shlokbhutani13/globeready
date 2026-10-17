@@ -23,7 +23,7 @@ describeEmulator("zero-cost browser data layer against its rules", () => {
   test("every write the client makes is accepted for a verified student", async () => {
     const firestore = environment.authenticatedContext("maya", { email_verified: true }).firestore();
     const store = createZeroCostDataStore({ firestore, uid: "maya", sdk });
-    await store.saveProfile({ fullName: "Maya Singh", homeCountry: "India", university: "Example University", visaType: "F-1", startDate: "2026-08-20", graduationDate: "" });
+    await store.saveProfile({ fullName: "Maya Singh", homeCountry: "India", university: "Example University", programLevel: "masters", visaCategory: "f-1", studentStage: "studying", trainingStatus: "considering-opt", startDate: "2026-08-20", graduationDate: "" });
     await store.saveConsent({ documents: true });
     const task = await store.createTask({ title: "Renew passport", dueDate: "2026-11-01", priority: "high" });
     await store.toggleTask({ id: task.id, completed: false });
