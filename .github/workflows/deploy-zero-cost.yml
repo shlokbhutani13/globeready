@@ -91,6 +91,11 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
+      - uses: google-github-actions/auth@v3
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      - name: Deploy zero-cost Firestore rules
+        run: npx --yes firebase-tools@15.33.0 deploy --only firestore:rules --project "$VITE_FIREBASE_PROJECT_ID" --config firebase.zero-cost.json
       - uses: actions/download-artifact@v7
         with:
           name: zero-cost-public-${{ github.run_id }}
