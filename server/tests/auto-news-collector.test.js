@@ -16,7 +16,10 @@ describe("automatic news collector", () => {
       if (source.id === "down") throw new Error("HTTP 503");
       return { text: rss, finalUrl: source.url };
     });
-    const previous = { stories: [{ id: "old", sourceId: "down", title: "Prior official item", canonicalUrl: "https://down.gov/old", publishedAt: "2026-10-14", editorialState: "source-only" }] };
+    const previous = { stories: [
+      { id: "old", sourceId: "down", title: "Prior F-1 visa item", excerpt: "International student update.", canonicalUrl: "https://down.gov/old", publishedAt: "2026-10-14", editorialState: "source-only" },
+      { id: "unrelated", sourceId: "down", title: "Prior professional athlete item", excerpt: "A general newsroom update.", canonicalUrl: "https://down.gov/unrelated", publishedAt: "2026-10-13", editorialState: "source-only" },
+    ] };
 
     const artifact = await collectAutoNews({ sources, fetcher, robots: { isAllowed: async () => true }, previous, now: () => new Date("2026-10-15T16:00:00Z"), retryDelays: [0, 0] });
 
@@ -27,6 +30,8 @@ describe("automatic news collector", () => {
       expect.objectContaining({ sourceId: "disabled", state: "disabled", reason: "HTTP 403" }),
     ]));
     expect(fetcher.mock.calls.filter(([source]) => source.id === "down")).toHaveLength(3);
+    expect(artifact.stories.find((item) => item.id === "old")).toMatchObject({ topics: ["status", "university"], visaTypes: ["f-1"] });
+    expect(artifact.stories.some((item) => item.id === "unrelated")).toBe(false);
     expect(artifact.contentHash).toBe(await contentHashForAutoNews(artifact));
   });
 
