@@ -41,6 +41,18 @@ flowchart LR
 
 The client reads a student's own records through Firebase rules. The API verifies identity on every protected request, derives the student from the verified token, and performs document reading, answer generation, publication, administration, and account deletion. [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) describes each component.
 
+## Design decisions and trade-offs
+
+A few constraints shaped the implementation:
+
+- **Separate identity from request data.** The React client signs in with Firebase, but the Express API verifies the ID token itself. Protected routes use the verified UID rather than trusting an account identifier supplied by the browser.
+- **Treat retrieved text as evidence, not authority.** Document answers cite extracted material and say when the available sources cannot support an answer. The assistant is not a substitute for a DSO or an immigration professional.
+- **Keep source coverage explicit.** Registering a university or agency does not make its updates trustworthy. A source stays pending until its extraction and verification process is tested.
+- **Make local development possible without cloud services.** Demo mode is useful for UI work; local-user mode exercises Firebase Auth, Firestore, and Storage rules against emulators. Neither mode should be mistaken for a production deployment.
+- **Ship a narrower beta rather than imply missing infrastructure exists.** The zero-cost public build omits server-side AI, email delivery, push, and cloud document storage. These limitations are intentional and visible.
+
+The main trade-off is operational complexity: the full application has a client, API, Firebase services, source-ingestion workflows, and different runtime modes. The zero-cost build reduces that footprint, but it cannot offer all of the server-backed features. For the exact boundaries, see [architecture](docs/ARCHITECTURE.md), [modes](docs/MODES.md), and [release readiness](docs/RELEASE_READINESS.md).
+
 ## Run locally
 
 Requirements: Node.js 22 (`.nvmrc`). Local-user mode also needs Java 21 for the Firebase emulators.
