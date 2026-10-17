@@ -90,12 +90,15 @@ describe("NewsCard", () => {
   });
 
   test("labels automatic official-source items and uses a safe external Read more link", () => {
-    render(<NewsCard item={item({ autoIngested: true, sourceVerified: false, trustLabel: "From official source — not yet reviewed by GlobeReady" })} profile={{ visaType: "F-1" }} />);
+    render(<NewsCard item={item({ autoIngested: true, sourceVerified: false, trustLabel: "From official source — not yet reviewed by GlobeReady", topics: ["employment"] })} profile={{ visaType: "F-1", topics: ["employment"] }} />);
     expect(screen.getByText(/not yet reviewed by GlobeReady/i)).toBeInTheDocument();
     const link = screen.getByRole("link", { name: /read more/i });
     expect(link).toHaveAttribute("target", "_blank");
     expect(link).toHaveAttribute("rel", "noopener noreferrer");
-    expect(screen.queryByText(/may be relevant/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/may be relevant to you/i)).toBeInTheDocument();
+    expect(screen.getByText(/matched on .*saved topics/i)).toBeInTheDocument();
+    expect(screen.getByText("Work authorization")).toBeInTheDocument();
+    expect(screen.getByText(/not yet reviewed by GlobeReady/i)).toBeInTheDocument();
   });
 
   test("hides the generated summary until the item is administratively approved", () => {

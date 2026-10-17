@@ -8,7 +8,7 @@ const sources = [
   { id: "disabled", name: "Disabled", enabled: false, disabledReason: "HTTP 403", type: "html", url: "https://disabled.gov/news", allowedHosts: ["disabled.gov"] },
 ];
 
-const rss = `<?xml version="1.0"?><rss><channel><item><title>Official update</title><link>https://ok.gov/update</link><pubDate>Thu, 15 Oct 2026 12:00:00 GMT</pubDate><description>Official excerpt.</description></item></channel></rss>`;
+const rss = `<?xml version="1.0"?><rss><channel><item><title>F-1 OPT official update</title><link>https://ok.gov/update</link><pubDate>Thu, 15 Oct 2026 12:00:00 GMT</pubDate><description>Official employment authorization excerpt.</description></item></channel></rss>`;
 
 describe("automatic news collector", () => {
   test("isolates a failed source, retries it, and preserves its previous stories", async () => {
@@ -50,7 +50,7 @@ describe("automatic news collector", () => {
       sources: [sources[0]], fetcher: async (source) => ({ text: rss, finalUrl: source.url }), detailFetcher,
       robots: { isAllowed: async () => true }, now: () => new Date("2026-10-15T16:00:00Z"), retryDelays: [],
     });
-    expect(artifact.stories[0].image).toEqual({ url: "https://ok.gov/lead.jpg", alt: "Official update" });
+    expect(artifact.stories[0].image).toEqual({ url: "https://ok.gov/lead.jpg", alt: "F-1 OPT official update" });
   });
 
   test("turns every automatic story into an unreviewed candidate for the existing approval flow", async () => {
@@ -60,7 +60,7 @@ describe("automatic news collector", () => {
     });
     const candidates = buildAutoReviewCandidates(artifact.stories, [sources[0]], artifact.generatedAt);
     expect(candidates).toHaveLength(1);
-    expect(candidates[0]).toMatchObject({ sourceId: "ok", publicationState: "unreviewed", changeType: "new", current: { title: "Official update", sourceExcerpt: "Official excerpt." } });
+    expect(candidates[0]).toMatchObject({ sourceId: "ok", publicationState: "unreviewed", changeType: "new", current: { title: "F-1 OPT official update", sourceExcerpt: "Official employment authorization excerpt.", topics: ["status", "employment"], visaTypes: ["f-1"] } });
     expect(candidates[0].id).toMatch(/^review-candidate:[a-f0-9]{64}$/u);
   });
 });

@@ -20,4 +20,11 @@ describe("update relevance", () => {
     const result = relevanceFor(item, { visaType: "J-1" });
     expect(result.explanation).not.toMatch(/\b(applies to you\.|you must|you are required|eligible)\b/i);
   });
+
+  test("uses the same informational wording for an automatic source-only item", () => {
+    const result = relevanceFor({ autoIngested: true, topics: ["employment"], visaTypes: ["f-1"] }, { visaType: "F-1", topics: ["employment"] });
+    expect(result.label).toBe("May be relevant to you");
+    expect(result.explanation).toMatch(/informational match/i);
+    expect(result.explanation).toMatch(/does not mean the update legally applies/i);
+  });
 });

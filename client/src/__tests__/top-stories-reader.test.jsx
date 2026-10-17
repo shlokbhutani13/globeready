@@ -12,8 +12,10 @@ const stories = [
 
 describe("TopStoriesReader", () => {
   test("moves through stories with controls and keyboard", () => {
-    render(<TopStoriesReader items={stories} />);
+    render(<TopStoriesReader items={stories} profile={{ visaType: "F-1", topics: ["employment"] }} />);
     expect(screen.getByText("First update")).toBeInTheDocument();
+    expect(screen.getByText("Work authorization")).toBeInTheDocument();
+    expect(screen.getByText(/may be relevant to you/i)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /next story/i }));
     expect(screen.getByText("Second update")).toBeInTheDocument();
     fireEvent.keyDown(screen.getByRole("region", { name: /top stories/i }), { key: "ArrowLeft" });

@@ -169,6 +169,7 @@ label { color: var(--gr-ink); font-weight: 550; }
 .topic-fieldset { grid-column: 1 / -1; border: 1px solid var(--gr-line); border-radius: var(--gr-radius); padding: var(--gr-space-4); margin: 0; }
 .topic-fieldset legend { font-weight: 650; padding: 0 6px; }
 .topic-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0 var(--gr-space-4); }
+.news-topic-list { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 8px; }
 
 .home-dates { list-style: none; margin: 8px 0 12px; padding: 0; display: grid; gap: 4px; }
 .home-dates a { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: baseline; min-height: var(--gr-target); padding: 8px 0; text-decoration: none; color: var(--gr-ink); }

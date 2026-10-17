@@ -3,7 +3,7 @@
 GlobeReady's zero-cost site combines two separate feeds:
 
 - `client/public/data/news.json` contains human-reviewed records. These records may include GlobeReady summaries, lifecycle context and cautious profile matching.
-- `client/public/data/live-news.json` contains short, automatically collected source excerpts. They are labelled **From official source — not yet reviewed by GlobeReady** and never receive personalised relevance claims, legal conclusions or suggested deadlines.
+- `client/public/data/live-news.json` contains short, automatically collected source excerpts. They are labelled **From official source — not yet reviewed by GlobeReady**. A deterministic classifier adds only the supported topic and visa tags found in the headline and excerpt. Those tags can produce the existing **May be relevant to you** profile match, but never a legal conclusion, applicability decision or suggested deadline.
 
 The reviewed record wins when the same canonical URL or title appears in both feeds. Both artifacts have deterministic SHA-256 content hashes that the browser verifies before rendering. A failed automatic feed does not hide the reviewed feed.
 
@@ -17,24 +17,30 @@ The reviewed record wins when the same canonical URL or title appears in both fe
 
 One failed source is recorded and isolated; successful sources still update. Previously collected items for the failed source remain available. Collection uses an honest GlobeReady user agent, bounded responses, timeouts, retries, host allowlists and robots.txt checks.
 
-## Enabled sources and verified run
+## Relevance filtering and tags
 
-The registry is `config/news-sources.json`. On the real collection completed 2026-10-16 UTC, the enabled sources returned:
+Automatic stories must match at least one international-student topic before they enter the public artifact or review queue. The supported visible topics are Visa (`status`), Work authorization (`employment`), Travel (`travel-entry`), Tax (`taxes-social-security`) and University (`university`). Visa types are tagged only when an explicit visa term such as F-1, J-1 or M-1 appears. Source-specific `studentContextKeywords` can require an explicit international-student term before a broad newsroom item is accepted. Keyword matching is boundary-aware so a term such as `OPT` cannot match an unrelated word such as “adoption.”
+
+This is a conservative text filter, not an AI or legal classifier. It can miss a relevant update, and a tag only describes the words in the source excerpt. Reviewed records remain separate and retain their human-reviewed treatment.
+
+## Enabled sources and verified dry run
+
+The registry is `config/news-sources.json`. A local real-source dry run completed 2026-10-16 UTC after relevance filtering returned:
 
 | Source | Type | Items parsed |
 | --- | --- | ---: |
-| U.S. Citizenship and Immigration Services | RSS | 1 |
-| Study in the States | RSS | 10 |
-| Student and Exchange Visitor Program | HTML | 14 |
-| Federal Register | JSON | 7 |
-| NAFSA press releases | HTML | 10 |
+| U.S. Citizenship and Immigration Services | RSS | 0 |
+| Study in the States | RSS | 4 |
+| Student and Exchange Visitor Program | HTML | 7 |
+| Federal Register | JSON | 5 |
+| NAFSA press releases | HTML | 9 |
 | MIT International Students Office | RSS | 20 |
 
-Cross-source deduplication produced 58 public stories. The U.S. Department of State Visa News page returned HTTP 403 to the collector on 2026-10-15, so it is explicitly disabled and remains visible in the run report rather than being presented as monitored.
+Cross-source deduplication produced 44 relevant public stories, all with at least one supported topic. The USCIS newsroom was reachable but its current item did not contain explicit international-student context, so it correctly contributed zero rather than admitting an unrelated story. The U.S. Department of State Visa News page returned HTTP 403 to the collector on 2026-10-15, so it is explicitly disabled and remains visible in the run report rather than being presented as monitored. This dry run does not update or deploy the checked-in public artifact; the scheduled workflow will regenerate it after merge.
 
 ## Adding or repairing a source
 
-1. Add an entry to `config/news-sources.json` with a unique slug, source name, HTTPS URL, parser type, trust label, enabled flag, exact allowed hosts and exact image hosts.
+1. Add an entry to `config/news-sources.json` with a unique slug, source name, HTTPS URL, parser type, trust label, enabled flag, exact allowed hosts and exact image hosts. Add `studentContextKeywords` when a broad source must mention an international-student term before an item is accepted.
 2. For HTML, provide narrow item, title, link, date, excerpt and image selectors. For JSON, add a bounded items path. Do not enable a URL until it returns real data with the production fetch policy.
 3. Add a parser fixture and tests for malformed input, unsafe URLs and sanitization. Run `npm run news:live` from `server/` against the actual source.
 4. Inspect `server/data/live-news-run.json`, the generated stories and candidate count. Disable the source with a dated reason if it fails or blocks collection.
@@ -44,9 +50,11 @@ Cross-source deduplication produced 58 public stories. The U.S. Department of St
 
 GlobeReady stores only the headline, source name, publication date, original URL, and a source-supplied excerpt capped at about 300 characters. It does not copy full article bodies. **Read more** opens the original page in a new tab with `noopener noreferrer`.
 
-Images are not downloaded or re-hosted. The browser may display an HTTPS lead-image URL supplied by that same source. If no permitted image exists or it fails, the page uses an original GlobeReady illustration. Source owners can change or remove a hotlinked image at any time.
+Images are not downloaded or re-hosted. The browser may display an HTTPS lead-image URL supplied by that same source when its terms permit it. If no permitted image exists or it fails, the page uses a distinct, original GlobeReady illustration for that source. These local illustrations contain no source seals or logos. Source owners can change or remove a hotlinked image at any time.
 
 NAFSA images are not displayed because its published terms reserve reuse of site images without prior written consent. NAFSA stories therefore use GlobeReady's local illustration fallback while retaining the short attributed excerpt and original-source link.
+
+No new image-bearing source was enabled in this change. The IRS and U.S. Department of Labor were evaluated from their official reuse policies. Both warn that third-party material can appear within otherwise public-domain federal content, and the IRS did not expose a suitable structured, student-focused newsroom feed. The Department of Labor has an official releases feed, but it is broad rather than international-student focused and does not provide blanket rights for every supplied image. Adding either merely to increase image count would reduce relevance or create avoidable rights ambiguity. See [IRS use of content](https://www.irs.gov/about-irs/use-of-content-from-irsgov) and [Department of Labor copyright policy](https://www.dol.gov/general/aboutdol/copyright).
 
 ## Human review and limits
 

@@ -30,8 +30,8 @@ export function buildAutoReviewCandidates(stories = [], sources = [], collectedA
       updatedAt: null,
       effectiveAt: null,
       sourceExcerpt: story.excerpt || "",
-      topics: [],
-      visaTypes: [],
+      topics: story.topics || [],
+      visaTypes: story.visaTypes || [],
     },
   }));
 }
