@@ -53,7 +53,8 @@ describe("Privacy notice", () => {
     expect(document.querySelector("a[href='mailto:help@example.org']")).toBeTruthy();
     expect(contactLink("not an address")).toBe("");
     expect(contactLink("a@b.co\" onclick=\"x")).toBe("");
-    expect(contactLink(undefined)).toBe("");
+    expect(contactLink(null)).toBe("");
+    expect(contactLink("")).toBe("");
   });
 
   it("is linked from the sign-in page in the free beta only", () => {
