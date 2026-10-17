@@ -4,6 +4,7 @@ import { ArrowUp, Bot, ExternalLink, History, RefreshCcw, Sparkles } from "lucid
 import Disclaimer from "../components/Disclaimer";
 import { apiRequest } from "../lib/api";
 import { answerFromLocalChunks } from "../lib/local-assistant";
+import { answerFromSources } from "../lib/grounded-search";
 
 export function assistantMessageFromResponse(answer) {
   return {
@@ -15,15 +16,38 @@ export function assistantMessageFromResponse(answer) {
     evidence: answer.evidence || null,
     kind: answer.kind || "answer",
     passages: answer.passages || [],
+    results: answer.results || [],
     notice: answer.notice || "",
     referral: answer.referral?.message || "",
   };
 }
 
 const localSuggestions = ["What is my program end date?", "When does my lease end?", "What is my program start date?"];
+const sourceSuggestions = ["What is OPT?", "What is duration of status?", "How do I avoid immigration scams?", "Who do I call in an emergency?"];
 const serverSuggestions = ["What should I bring to an SSN appointment?", "Explain my I-20 travel signature", "How do I choose a bank account?"];
 
-export default function AssistantPage({ requestAnswer = apiRequest, documents = [], localMode = false, localChunks = [], documentsAllowed = true }) {
+function SourceResults({ message }) {
+  const count = message.results.length;
+  return (
+    <div className="message assistant passages source-results">
+      <h2 className="passages-title">{count ? `${count} source${count === 1 ? "" : "s"} matched` : "No source matched"}</h2>
+      {message.results.map((result) => <figure className="passage" key={result.id}>
+        <strong className="passage-title">{result.title}</strong>
+        <blockquote>{result.excerpt}</blockquote>
+        <figcaption>{result.label}{result.publisher ? ` \u00b7 ${result.publisher}` : ""}{result.date ? ` \u00b7 ${result.date}` : ""}</figcaption>
+        <p className="source-link">
+          {result.url && <a href={result.url} target="_blank" rel="noopener noreferrer">Read the source <ExternalLink size={13} aria-hidden="true" /></a>}
+          {!result.url && result.internal && <Link to={result.internal}>Open in GlobeReady</Link>}
+          {result.phone && <a href={`tel:${result.phone.replace(/[^\d+]/g, "")}`}>Call {result.phone}</a>}
+        </p>
+      </figure>)}
+      {message.notice && <p className="assistant-notice" role="note">{message.notice}</p>}
+      {message.referral && <p className="assistant-referral">{message.referral}</p>}
+    </div>
+  );
+}
+
+export default function AssistantPage({ requestAnswer = apiRequest, documents = [], localMode = false, localChunks = [], documentsAllowed = true, grounded = null }) {
   const [question, setQuestion] = useState("");
   const [documentId, setDocumentId] = useState("");
   const [messages, setMessages] = useState([]);
@@ -33,8 +57,11 @@ export default function AssistantPage({ requestAnswer = apiRequest, documents = 
   const [lastQuestion, setLastQuestion] = useState("");
   const [history, setHistory] = useState(null);
 
-  const blocked = localMode && !documentsAllowed;
-  const noDocuments = localMode && documentsAllowed && documents.length === 0 && localChunks.length === 0;
+  const [mode, setMode] = useState(grounded ? "sources" : "documents");
+  const sources = localMode && Boolean(grounded) && mode === "sources";
+  const switchMode = (next) => { setMode(next); setMessages([]); setError(""); setQuestion(""); };
+  const blocked = localMode && !sources && !documentsAllowed;
+  const noDocuments = localMode && !sources && documentsAllowed && documents.length === 0 && localChunks.length === 0;
   const send = async (text) => {
     if (!text.trim() || blocked || noDocuments) return;
     setLastQuestion(text);
@@ -45,7 +72,9 @@ export default function AssistantPage({ requestAnswer = apiRequest, documents = 
       const body = { question: text };
       if (documentId) body.documentId = documentId;
       if (conversationId) body.conversationId = conversationId;
-      const answer = localMode
+      const answer = sources
+        ? answerFromSources({ question: text, news: grounded.news, visaCategory: grounded.visaCategory })
+        : localMode
         ? answerFromLocalChunks({ question: text, chunks: localChunks, documentId })
         : await requestAnswer("/api/assistant", { method: "POST", body: JSON.stringify(body) });
       if (answer.conversationId) setConversationId(answer.conversationId);
@@ -97,9 +126,13 @@ export default function AssistantPage({ requestAnswer = apiRequest, documents = 
     <div className="assistant-page">
       <header className="assistant-header">
         <span><Bot size={19} /></span>
-        <div><h1>{localMode ? "Search your documents" : "GlobeReady Assistant"}</h1><p>{localMode ? "Finds exact passages in your saved document text. The search runs privately in this browser and never writes an answer for you." : "Answers from your uploaded documents and trusted official resources"}</p></div>
+        <div><h1>{sources ? "Ask GlobeReady" : localMode ? "Search your documents" : "GlobeReady Assistant"}</h1><p>{sources ? "Looks up GlobeReady\u2019s reviewed rules, guides, glossary, resources and news. It shows where each result comes from, never writes an answer, and says so when nothing matches." : localMode ? "Finds exact passages in your saved document text. The search runs privately in this browser and never writes an answer for you." : "Answers from your uploaded documents and trusted official resources"}</p></div>
         {!localMode && <button type="button" className="text-button history-toggle" onClick={openHistory}><History size={14} /> History</button>}
       </header>
+      {localMode && grounded && <div className="assistant-mode" role="group" aria-label="What to search">
+        <button type="button" aria-pressed={sources} className={sources ? "active" : ""} onClick={() => switchMode("sources")}>Guides and official sources</button>
+        <button type="button" aria-pressed={!sources} className={!sources ? "active" : ""} onClick={() => switchMode("documents")}>My documents</button>
+      </div>}
       {history && (
         <div className="conversation-history panel">
           {history.length === 0 && <p className="muted">No earlier conversations yet.</p>}
@@ -111,8 +144,8 @@ export default function AssistantPage({ requestAnswer = apiRequest, documents = 
       <div className="conversation">
         {blocked && <div className="assistant-empty" role="status"><span><Sparkles size={25} /></span><h2>Document reading is off</h2><p>Ask searches your saved document text only while document reading is on. Turn it on in <Link to="/documents">Documents</Link>, or delete your saved text there.</p></div>}
         {noDocuments && <div className="assistant-empty" role="status"><span><Sparkles size={25} /></span><h2>No saved documents to search</h2><p>Add a text PDF or a photo of printed text in <Link to="/documents">Documents</Link>. It is read on this device, and only the extracted text is saved.</p></div>}
-        {!blocked && !noDocuments && messages.length === 0 && <div className="assistant-empty"><span><Sparkles size={25} /></span><h2>{localMode ? "Which passage are you looking for?" : "What can I help you prepare for?"}</h2><p>{localMode ? "Use the words your document uses. Results are exact quotes with the document and page, not an answer." : "Ask about documents, university arrival, SSN, banking, healthcare, housing, CPT, or OPT."}</p><div>{(localMode ? localSuggestions : serverSuggestions).map((item) => <button key={item} onClick={() => setQuestion(item)}>{item}</button>)}</div></div>}
-        {messages.map((message, index) => message.kind === "passages" ? <div className="message assistant passages" key={index}>
+        {!blocked && !noDocuments && messages.length === 0 && <div className="assistant-empty"><span><Sparkles size={25} /></span><h2>{sources ? "What would you like to look up?" : localMode ? "Which passage are you looking for?" : "What can I help you prepare for?"}</h2><p>{sources ? "Ask in plain words. Results are summaries from the sources shown, not advice about your situation." : localMode ? "Use the words your document uses. Results are exact quotes with the document and page, not an answer." : "Ask about documents, university arrival, SSN, banking, healthcare, housing, CPT, or OPT."}</p><div>{(sources ? sourceSuggestions : localMode ? localSuggestions : serverSuggestions).map((item) => <button key={item} onClick={() => setQuestion(item)}>{item}</button>)}</div></div>}
+        {messages.map((message, index) => message.kind === "sources" ? <SourceResults key={index} message={message} /> : message.kind === "passages" ? <div className="message assistant passages" key={index}>
           <h2 className="passages-title">{message.passages.length ? `${message.passages.length} matching passage${message.passages.length === 1 ? "" : "s"} from your documents` : "No matching passage"}</h2>
           {message.passages.map((passage, passageIndex) => <figure className="passage" key={`${passage.documentId}-${passageIndex}`}>
             <blockquote>{passage.excerpt}</blockquote>
@@ -134,7 +167,7 @@ export default function AssistantPage({ requestAnswer = apiRequest, documents = 
           </div>
         )}
       </div>
-      <form className="assistant-composer" onSubmit={ask}>{documents.length > 0 && <select aria-label="Document scope" value={documentId} onChange={(event) => setDocumentId(event.target.value)}><option value="">All indexed documents</option>{documents.map((document) => <option key={document.id} value={document.id}>{document.name}</option>)}</select>}<input aria-label="Ask GlobeReady" disabled={blocked || noDocuments} value={question} onChange={(event) => setQuestion(event.target.value)} placeholder={localMode ? "Search your documents, for example: program end date" : "Ask a question about your student journey"} /><button aria-label="Send question" disabled={busy || blocked || noDocuments}><ArrowUp size={18} /></button></form>
+      <form className="assistant-composer" onSubmit={ask}>{documents.length > 0 && !sources && <select aria-label="Document scope" value={documentId} onChange={(event) => setDocumentId(event.target.value)}><option value="">All indexed documents</option>{documents.map((document) => <option key={document.id} value={document.id}>{document.name}</option>)}</select>}<input aria-label="Ask GlobeReady" disabled={blocked || noDocuments} value={question} onChange={(event) => setQuestion(event.target.value)} placeholder={sources ? "Ask about a term, a rule or a step, for example: what is OPT?" : localMode ? "Search your documents, for example: program end date" : "Ask a question about your student journey"} /><button aria-label="Send question" disabled={busy || blocked || noDocuments}><ArrowUp size={18} /></button></form>
       <Disclaimer compact />
     </div>
   );

@@ -154,3 +154,19 @@ Spark quotas are per project and shared by every student ([Firebase pricing](htt
 | Password-reset emails | 150/day | |
 
 Quota errors are shown to the student and never switch to demo data. Abuse controls in this beta are: verified email before any write, Firebase's per-IP sign-up limit, strict rule validation, and the 50-document cap. App Check is not enabled; a determined attacker with many verified accounts can still exhaust the shared daily quotas. Source updates are best-effort and human-reviewed, not real-time or comprehensive.
+
+## Ask GlobeReady (sources mode)
+
+Ask has two modes in the free beta. **Guides and official sources** (the default) ranks short summaries from content that already ships with the app (the reviewed rules library, guides, glossary, arrival checklists, resources and news) and shows each result with its source, trust label and a link. **My documents** is the existing search over text the student chose to save.
+
+- It never writes an answer and never calls an AI provider; the code is `client/src/lib/grounded-search.js` and uses the same deterministic matching as document search.
+- When nothing matches well enough it says so and suggests the DSO. It does not guess.
+- Automatic news is labelled "not yet reviewed"; only reviewed records are labelled reviewed.
+- F-1-only material is hidden from J-1 students (and the reverse) once a visa category is set.
+- `client/src/__tests__/grounded-search.test.js` holds a 40-question evaluation, including questions that must be refused. Add a case whenever a wrong or missing result is reported.
+
+## Decisions recorded after the vision review
+
+- **No cloud sync of the Life tools.** They hold health, insurance and money notes. Settings already offers a device-only backup and restore, which moves them between devices without placing them in the cloud. Revisit only with encryption the student controls.
+- **No generated AI answers in the free beta.** The free beta has no server, and the free model tiers may use submitted content to improve their products, so student text must never go to them. Browser-local models stay optional and never decide status, eligibility or deadlines.
+- **Calendar export already exists** for tasks and key dates (`client/src/lib/ics.js`); it was not rebuilt.

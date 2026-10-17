@@ -40,7 +40,9 @@ export default function SettingsPage({ live = true, preferences = {}, onUpdatePr
 
   return (
     <div className="page">
-      <PageHeader eyebrow="Account" title="Settings" description="Privacy, display, your data, and account deletion." />
+      <PageHeader eyebrow="Account" title="Settings" description="Privacy, display, your data, and account deletion.">
+        {zeroCostMode && <p><a href="/privacy">Read what GlobeReady stores and where</a></p>}
+      </PageHeader>
 
       {consent !== undefined && <ConsentPanel consent={consent} onSave={onSaveConsent} aiAvailable={!zeroCostMode} />}
 
