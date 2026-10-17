@@ -9,7 +9,7 @@ export const privacySections = [
     id: "never",
     title: "What GlobeReady never stores",
     items: [
-      "Your original files. PDFs and photos are read inside your browser and the file itself is discarded after the text is extracted.",
+      "Your original files. PDFs and photos are read inside your browser and the file itself is discarded after the text is extracted. GlobeReady’s servers never receive a file. If you choose the optional Google Drive vault below, the copy goes to your own Drive, not to GlobeReady.",
       "Images are never sent to a third party. The text-reading tools are served from GlobeReady's own site.",
       "Your immigration case status or records from any agency. GlobeReady does not fetch them. Anything about a case is only what you typed.",
     ],
@@ -44,6 +44,15 @@ export const privacySections = [
       "Display choices, which reminders you read, which news you have seen, saved news searches and snoozed next steps.",
       "The appointment-preparation workspace, the budget planner, the documents checklist and the emergency card.",
       "Settings can download a device-only backup of these. That file can contain sensitive health, insurance, financial and private notes and it is not encrypted, so keep it somewhere safe.",
+    ],
+  },
+  {
+    id: "optional",
+    title: "Optional: push reminders and your Google Drive vault",
+    lead: "Both are off until you turn them on in Settings.",
+    items: [
+      "Push reminders: turning them on saves one push address for that device in your account. Once a day a scheduled GlobeReady job reads only your key dates and open tasks and sends a notification with their titles. It never reads documents. Turning push off deletes that device’s address. Notifications travel through Google’s push service.",
+      "Drive vault: you can keep the original PDF or photo in a hidden folder of your own Google Drive that only GlobeReady can open. GlobeReady asks Google only for that one folder, holds the access in your browser for the visit, and never receives the files. GlobeReady does not encrypt them, so anyone who controls your Google account can open them. Remove access any time at myaccount.google.com/permissions.",
     ],
   },
   {
