@@ -1,10 +1,13 @@
 import { describe, expect, test } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 
 import { newsImageFor, sourceImage } from "../lib/news-images";
 
 describe("source-specific news artwork", () => {
   test("gives every configured source a distinct bundled fallback", () => {
-    const ids = ["uscis-news", "study-in-the-states", "ice-sevp", "federal-register", "nafsa-press", "mit-iso", "state-visa-news"];
+    const registry = JSON.parse(readFileSync(resolve(process.cwd(), "../config/news-sources.json"), "utf8"));
+    const ids = registry.sources.map(({ id }) => id);
     const images = ids.map((sourceId) => sourceImage(sourceId));
     expect(images.every(Boolean)).toBe(true);
     expect(new Set(images).size).toBe(ids.length);

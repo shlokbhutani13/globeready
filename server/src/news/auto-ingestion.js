@@ -74,6 +74,17 @@ export function classifyAutoStory({ title = "", excerpt = "" } = {}) {
   };
 }
 
+export function qualifyAutoStory(source = {}, item = {}) {
+  const classification = classifyAutoStory(item);
+  if (!classification.topics.length) return null;
+  const evidence = `${item.title || ""} ${item.excerpt || ""}`;
+  const keywords = Array.isArray(source.includeKeywords) ? source.includeKeywords.map(keywordPattern) : [];
+  const studentContext = Array.isArray(source.studentContextKeywords) ? source.studentContextKeywords.map(keywordPattern) : [];
+  if (keywords.length && !keywords.some((keyword) => keyword.test(evidence))) return null;
+  if (studentContext.length && !studentContext.some((keyword) => keyword.test(evidence))) return null;
+  return { ...item, ...classification };
+}
+
 function imageRecord(url, alt, source, base) {
   const safe = maybeUrl(url, base, source.imageHosts || source.allowedHosts, "Image");
   return safe ? { url: safe, alt: sanitizeText(alt || "", 300) || "Illustration from the original source" } : undefined;
@@ -188,14 +199,7 @@ export function parseAutoSource(source, fetched) {
   const parsed = source.type === "html"
     ? htmlEntries(source, text, base)
     : source.type === "json" ? jsonEntries(source, text, base) : xmlEntries(source, text, base);
-  const keywords = Array.isArray(source.includeKeywords) ? source.includeKeywords.map(keywordPattern) : [];
-  const studentContext = Array.isArray(source.studentContextKeywords) ? source.studentContextKeywords.map(keywordPattern) : [];
-  const relevant = parsed.filter((item) => item.topics.length > 0);
-  return relevant.filter((item) => {
-    const evidence = `${item.title} ${item.excerpt}`;
-    return (!keywords.length || keywords.some((keyword) => keyword.test(evidence)))
-      && (!studentContext.length || studentContext.some((keyword) => keyword.test(evidence)));
-  });
+  return parsed.map((item) => qualifyAutoStory(source, item)).filter(Boolean);
 }
 
 const titleKey = (value) => sanitizeText(value, 300).toLocaleLowerCase();
