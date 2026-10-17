@@ -331,3 +331,11 @@ button, .button, [role="button"], select { min-height: var(--gr-target); }
 .privacy-standalone .section-block { margin-top: 28px; }
 .privacy-standalone a { color: #315f8f; }
 .login-privacy-link { display: inline-flex; align-items: center; min-height: 44px; padding: 0 4px; margin-left: 6px; color: #315f8f; text-decoration: underline; }
+
+/* Ask GlobeReady: source-grounded mode */
+.assistant-mode { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 4px; }
+.assistant-mode button { min-height: 44px; padding: 0 14px; border: 1px solid var(--line, #d9e2ea); border-radius: 8px; background: #fff; color: #315f8f; font: inherit; cursor: pointer; }
+.assistant-mode button.active { background: #f1f5f8; border-color: #315f8f; font-weight: 600; }
+.source-results .passage-title { display: block; margin-bottom: 4px; }
+.source-results .source-link { display: flex; flex-wrap: wrap; gap: 14px; margin: 8px 0 0; }
+.source-results .source-link a { display: inline-flex; align-items: center; gap: 4px; min-height: 44px; color: #315f8f; }
