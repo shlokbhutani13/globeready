@@ -4,6 +4,16 @@ import { canonicalOfficialHostname } from "../news/official-url.js";
 import { cleanText, validDate } from "../validation.js";
 
 const universityIdPattern = /^[A-Za-z0-9][A-Za-z0-9:_-]{0,127}$/u;
+const allowedProfileValues = {
+  programLevel: new Set(["undergraduate", "masters", "phd", "other"]),
+  visaCategory: new Set(["f-1", "j-1", "other"]),
+  studentStage: new Set(["pre-arrival", "arrived", "studying", "post-completion"]),
+};
+const allowedTraining = {
+  "f-1": new Set(["not-reported", "not-planning", "considering-cpt", "cpt-authorized", "considering-opt", "opt-pending", "opt-authorized", "stem-opt-pending", "stem-opt-authorized", "completed"]),
+  "j-1": new Set(["not-reported", "not-planning", "considering-academic-training", "academic-training-authorized", "completed"]),
+  other: new Set(["not-reported", "not-applicable", "other"]),
+};
 
 function validTimeZone(value) {
   if (value === undefined || value === "") return "";
@@ -30,10 +40,18 @@ export function profileRouter(store) {
     const universityId = cleanText(request.body.universityId, 128);
     const domain = officialUniversityDomain(request.body.officialUniversityDomain);
     const timeZone = validTimeZone(request.body.timeZone);
+    const programLevel = cleanText(request.body.programLevel, 40);
+    const visaCategory = cleanText(request.body.visaCategory, 20).toLocaleLowerCase();
+    const studentStage = cleanText(request.body.studentStage, 40);
+    const trainingStatus = cleanText(request.body.trainingStatus, 80);
     if ((universityId && !universityIdPattern.test(universityId))
-      || domain === null || (domain && !universityId) || timeZone === null) {
+      || domain === null || (domain && !universityId) || timeZone === null
+      || (programLevel && !allowedProfileValues.programLevel.has(programLevel))
+      || (visaCategory && !allowedProfileValues.visaCategory.has(visaCategory))
+      || (studentStage && !allowedProfileValues.studentStage.has(studentStage))
+      || (trainingStatus && !allowedTraining[visaCategory || "other"]?.has(trainingStatus))) {
       return response.status(422).json({
-        error: { code: "invalid_profile", message: "Use a valid university ID, official .edu domain, and time zone." },
+        error: { code: "invalid_profile", message: "Use valid university, time-zone, visa, stage, and training values." },
       });
     }
     const input = {
@@ -44,6 +62,10 @@ export function profileRouter(store) {
       program: cleanText(request.body.program),
       visaType: cleanText(request.body.visaType),
       journeyStage: cleanText(request.body.journeyStage),
+      programLevel,
+      visaCategory,
+      studentStage,
+      trainingStatus,
       startDate: request.body.startDate || "",
       graduationDate: request.body.graduationDate || "",
       universityId,

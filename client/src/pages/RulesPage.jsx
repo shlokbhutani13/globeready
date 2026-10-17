@@ -11,13 +11,16 @@ import Disclaimer from "../components/Disclaimer";
 import { effectiveLabel, filterRules, relatedRules, rulesFilters, rulesLibrary, supersessionChain } from "../data/rules-library";
 import { friendlyError } from "../lib/friendly-error";
 import { tasksLinkedTo } from "../lib/links";
+import { visaCategoryFor } from "../lib/student-profile";
 
 const kindLabel = Object.fromEntries(rulesFilters.kinds.map((kind) => [kind.id, kind.label]));
 const statusLabel = { current: "Current rule", reference: "Ongoing reference", superseded: "Superseded" };
 const blankFilters = { query: "", kind: "", status: "", visa: "", topic: "", hideSuperseded: false };
 
 export default function RulesPage({ profile = {}, tasks = [], onAddTasks, initialFilters = {} }) {
-  const [filters, setFilters] = useState({ ...blankFilters, ...initialFilters });
+  const profileVisa = visaCategoryFor(profile);
+  const profileDefaults = { ...blankFilters, visa: profileVisa === "other" ? "" : profileVisa };
+  const [filters, setFilters] = useState({ ...profileDefaults, ...initialFilters });
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState("");
@@ -43,12 +46,13 @@ export default function RulesPage({ profile = {}, tasks = [], onAddTasks, initia
       <SubNav label="Updates sections" links={updatesLinks} />
       <PageHelp id="rules" />
       <Notice tone="info">GlobeReady links to official sources and does not copy form editions or fees. “Listed” means when we added the entry, not a legal review. Ask your designated school official about your own situation.</Notice>
+      {profileVisa !== "other" && <Notice tone="info">Showing {profileVisa.toUpperCase()} entries because that is the visa category you reported. You can choose another category in the filter to research it; this does not change your profile.</Notice>}
       {error && <Notice tone="error">{error}</Notice>}
       {message && <Notice tone="success">{message}</Notice>}
 
       <form className="panel" role="search" aria-label="Search rules and forms" onSubmit={(event) => event.preventDefault()}>
         <div className="form-grid">
-          <label className="field">Search<input type="search" value={filters.query} onChange={set("query")} placeholder="Try I-765, OPT, or SEVIS" autoComplete="off" /></label>
+          <label className="field">Search<input type="search" value={filters.query} onChange={set("query")} placeholder="Try I-765, SEVIS, or DS-2019" autoComplete="off" /></label>
           <label className="field">Type<select value={filters.kind} onChange={set("kind")}><option value="">All types</option>{rulesFilters.kinds.map((kind) => <option key={kind.id} value={kind.id}>{kind.label}</option>)}</select></label>
           <label className="field">Status<select value={filters.status} onChange={set("status")}><option value="">Any status</option>{rulesFilters.statuses.map((status) => <option key={status.id} value={status.id}>{status.label}</option>)}</select></label>
           <label className="field">Visa<select value={filters.visa} onChange={set("visa")}><option value="">Any visa</option>{rulesFilters.visas.map((visa) => <option key={visa.id} value={visa.id}>{visa.label}</option>)}</select></label>
@@ -56,14 +60,14 @@ export default function RulesPage({ profile = {}, tasks = [], onAddTasks, initia
         </div>
         <div className="form-actions">
           <label className="check-row"><input type="checkbox" checked={filters.hideSuperseded} onChange={set("hideSuperseded")} /> Hide superseded entries</label>
-          {filtered && <button type="button" className="button secondary" onClick={() => setFilters(blankFilters)}>Clear filters</button>}
+          {filtered && <button type="button" className="button secondary" onClick={() => setFilters(profileDefaults)}>Clear filters</button>}
         </div>
       </form>
 
       <p className="muted" role="status">{shown.length} of {rulesLibrary.length} entries shown</p>
 
       {shown.length === 0 ? (
-        <EmptyState title="Nothing matches those filters" action={<button type="button" className="button secondary" onClick={() => setFilters(blankFilters)}>Clear filters</button>}>
+        <EmptyState title="Nothing matches those filters" action={<button type="button" className="button secondary" onClick={() => setFilters(profileDefaults)}>Clear filters</button>}>
           Try fewer words, or search by form number such as I-20 or DS-160.
         </EmptyState>
       ) : (

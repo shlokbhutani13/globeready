@@ -47,7 +47,8 @@ service cloud.firestore {
     function validProfile(data) {
       return data.keys().hasOnly([
           'fullName', 'homeCountry', 'university', 'universityId', 'officialUniversityDomain', 'degreeLevel',
-          'program', 'visaType', 'journeyStage', 'startDate', 'graduationDate', 'timeZone', 'topics', 'updatedAt', 'consent'
+          'program', 'visaType', 'journeyStage', 'programLevel', 'visaCategory', 'studentStage', 'trainingStatus',
+          'startDate', 'graduationDate', 'timeZone', 'topics', 'updatedAt', 'consent'
         ])
         && stampedNow(data, 'updatedAt')
         && optionalText(data, 'fullName', 200)
@@ -59,6 +60,17 @@ service cloud.firestore {
         && optionalText(data, 'program', 200)
         && optionalText(data, 'visaType', 40)
         && optionalText(data, 'journeyStage', 80)
+        && optionalText(data, 'programLevel', 40)
+        && optionalText(data, 'visaCategory', 20)
+        && optionalText(data, 'studentStage', 40)
+        && optionalText(data, 'trainingStatus', 80)
+        && (!('programLevel' in data) || data.programLevel in ['undergraduate', 'masters', 'phd', 'other'])
+        && (!('visaCategory' in data) || data.visaCategory in ['f-1', 'j-1', 'other'])
+        && (!('studentStage' in data) || data.studentStage in ['pre-arrival', 'arrived', 'studying', 'post-completion'])
+        && (!('trainingStatus' in data) || !('visaCategory' in data)
+          || (data.visaCategory == 'f-1' && data.trainingStatus in ['not-reported', 'not-planning', 'considering-cpt', 'cpt-authorized', 'considering-opt', 'opt-pending', 'opt-authorized', 'stem-opt-pending', 'stem-opt-authorized', 'completed'])
+          || (data.visaCategory == 'j-1' && data.trainingStatus in ['not-reported', 'not-planning', 'considering-academic-training', 'academic-training-authorized', 'completed'])
+          || (data.visaCategory == 'other' && data.trainingStatus in ['not-reported', 'not-applicable', 'other']))
         && optionalText(data, 'timeZone', 64)
         && (!('topics' in data) || (data.topics is list && data.topics.size() <= 12))
         && optionalDate(data, 'startDate')

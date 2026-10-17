@@ -27,3 +27,13 @@ test("shows approved correction, supersession, and withdrawal states", () => {
   rerender(<UpdateLifecycle item={{ lifecycleState: "withdrawn" }} />);
   expect(screen.getByText(/withdrawn/i)).toBeInTheDocument();
 });
+
+test("discloses failure duration and retained stories", () => {
+  render(<CoverageLedger ledger={{ summary: { total: 1, reachable: 0, withRelevantStories: 0 }, entries: [
+    { id: "sevp", name: "SEVP", status: "failing", failedSince: "2026-10-15T10:00:00Z", safeReason: "HTTP 503", retained: 3 },
+  ] }} />);
+  fireEvent.click(screen.getByRole("button", { name: /show source details/i }));
+  const detail = screen.getByText(/HTTP 503/u);
+  expect(detail).toHaveTextContent(/Failing since/u);
+  expect(detail).toHaveTextContent(/3 stories are retained from an earlier successful fetch/u);
+});

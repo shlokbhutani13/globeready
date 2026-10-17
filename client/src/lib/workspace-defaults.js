@@ -3,8 +3,10 @@ const emptyProfile = {
   homeCountry: "",
   university: "",
   program: "",
-  visaType: "F-1",
-  journeyStage: "Preparing for arrival",
+  programLevel: "other",
+  visaCategory: "f-1",
+  studentStage: "pre-arrival",
+  trainingStatus: "not-reported",
 };
 
 export function workspaceDefaults() {

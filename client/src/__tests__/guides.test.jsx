@@ -24,11 +24,17 @@ describe("GuidesPage", () => {
     const onRemove = vi.fn().mockResolvedValue(undefined);
     const { guides } = await import("../data/guides");
     const first = guides[0];
-    render(<MemoryRouter><GuidesPage onSave={vi.fn()} onRemove={onRemove} savedUrls={[first.url]} savedResources={[{ id: "r1", url: first.url }]} /></MemoryRouter>);
+    render(<MemoryRouter><GuidesPage profile={{ visaCategory: "f-1" }} onSave={vi.fn()} onRemove={onRemove} savedUrls={[first.url]} savedResources={[{ id: "r1", url: first.url }]} /></MemoryRouter>);
     fireEvent.click(screen.getByRole("button", { name: "Saved" }));
     expect(screen.getAllByRole("article")).toHaveLength(1);
     fireEvent.click(screen.getByRole("button", { name: `Remove ${first.title} from saved` }));
     await waitFor(() => expect(onRemove).toHaveBeenCalledWith("r1"));
     await waitFor(() => expect(screen.getByText("No saved guides yet")).toBeTruthy());
+  });
+
+  test("hides F-1-only guides from J-1 and other profiles", () => {
+    render(<MemoryRouter><GuidesPage profile={{ visaCategory: "j-1" }} /></MemoryRouter>);
+    expect(screen.queryByText("CPT and OPT orientation")).toBeNull();
+    expect(screen.getByText("Set up U.S. banking")).toBeTruthy();
   });
 });

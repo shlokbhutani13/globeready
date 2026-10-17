@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  issues: write
 
 concurrency:
   group: zero-cost-live-news
@@ -32,6 +33,37 @@ jobs:
         env:
           NODE_OPTIONS: --no-experimental-webstorage
         run: npm test -- --run tests/auto-news-ingestion.test.js tests/auto-news-collector.test.js
+      - name: Maintain persistent source-failure issues
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const fs = require('fs');
+            const artifact = JSON.parse(fs.readFileSync('client/public/data/live-news.json', 'utf8'));
+            const now = Date.now();
+            const overdue = new Map((artifact.sourceReports || [])
+              .filter(report => ['failed', 'blocked-by-robots'].includes(report.state))
+              .filter(report => Number.isFinite(Date.parse(report.failedSince || '')) && now - Date.parse(report.failedSince) >= 24 * 60 * 60 * 1000)
+              .map(report => [report.sourceId, report]));
+            const { data: issues } = await github.rest.issues.listForRepo({ owner: context.repo.owner, repo: context.repo.repo, state: 'open', per_page: 100 });
+            const managed = issues.filter(issue => /<!-- globeready-news-source:[a-z0-9-]+ -->/u.test(issue.body || ''));
+            for (const [sourceId, report] of overdue) {
+              const marker = `<!-- globeready-news-source:${sourceId} -->`;
+              if (managed.some(issue => (issue.body || '').includes(marker))) continue;
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `News source unavailable for 24 hours: ${report.name || sourceId}`,
+                body: `${marker}\n\nThe automatic collector has not successfully refreshed **${report.name || sourceId}** since ${report.failedSince}.\n\nLatest state: \`${report.state}\`\nLatest safe error: ${report.error || report.reason || 'No detail reported.'}\nRetained stories: ${report.retained || 0}\n\nThis issue was opened automatically. Disabled sources are not treated as failures.`,
+                labels: [],
+              });
+            }
+            for (const issue of managed) {
+              const sourceId = (issue.body || '').match(/<!-- globeready-news-source:([a-z0-9-]+) -->/u)?.[1];
+              if (sourceId && !overdue.has(sourceId)) {
+                await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: issue.number, body: 'The source recovered or is no longer an enabled 24-hour failure. Closing automatically.' });
+                await github.rest.issues.update({ owner: context.repo.owner, repo: context.repo.repo, issue_number: issue.number, state: 'closed', state_reason: 'completed' });
+              }
+            }
       - name: Commit a changed feed
         run: |
           if git diff --quiet -- client/public/data/live-news.json server/data/live-news-run.json server/data/live-news-candidates.json; then

@@ -44,7 +44,7 @@ export function buildNextSteps({ tasks = [], dates = [], journeyHave = [], profi
   rows.push(...extra.filter((entry) => entry.kind !== "suggestion"));
   const haveTitles = new Set(tasks.map((task) => normalize(task.title)));
   const have = new Set(journeyHave);
-  const suggestions = journeyItemsFor(profile.visaType || "")
+  const suggestions = journeyItemsFor(profile)
     .filter((item) => !have.has(item.id) && !haveTitles.has(normalize(item.title)))
     .sort((left, right) => (left.priority === "high" ? 0 : 1) - (right.priority === "high" ? 0 : 1))
     .slice(0, Math.max(0, suggestionLimit - extraSuggestions.length))
