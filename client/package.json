@@ -15,21 +15,21 @@
     "local-user:reset": "bash ../scripts/local-user/reset.sh"
   },
   "dependencies": {
-    "firebase": "^12.1.0",
-    "lucide-react": "^0.468.0",
-    "pdfjs-dist": "^5.4.296",
+    "firebase": "^12.19.0",
+    "lucide-react": "^0.577.0",
+    "pdfjs-dist": "^5.7.284",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-router-dom": "^7.8.0",
+    "react-router-dom": "^7.18.4",
     "tesseract.js": "^7.0.0"
   },
   "devDependencies": {
     "@tesseract.js-data/eng": "^1.0.0",
     "@testing-library/jest-dom": "^6.6.3",
-    "@testing-library/react": "^16.3.2",
-    "@vitejs/plugin-react": "^6.0.3",
+    "@testing-library/react": "^16.3.3",
+    "@vitejs/plugin-react": "^6.1.2",
     "jsdom": "^29.1.1",
-    "vite": "^8.1.5",
+    "vite": "^8.3.4",
     "vitest": "^4.1.10"
   },
   "overrides": {
