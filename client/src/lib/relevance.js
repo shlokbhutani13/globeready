@@ -1,4 +1,5 @@
 import { universityIdFor } from "./news-data";
+import { studentStageFor, visaCategoryFor } from "./student-profile";
 
 // Informational matching between an update's published tags and fields the student entered. It never decides whether
 // an update legally applies to anyone; it only explains why GlobeReady is showing a label.
@@ -13,19 +14,29 @@ const stageAliases = {
   "newly arrived": ["arrived", "arrival", "enrolled"],
   "current student": ["enrolled"],
   "preparing for graduation": ["graduating", "opt"],
+  "pre-arrival": ["pre-arrival", "arriving", "arrival"],
+  arrived: ["arrived", "arrival", "enrolled"],
+  studying: ["enrolled"],
+  "post-completion": ["graduating", "opt"],
 };
 const topicLabel = (topic) => topic.replaceAll("-", " ");
+const stageLabels = {
+  "pre-arrival": "Preparing for arrival",
+  arrived: "Newly arrived",
+  studying: "Current student",
+  "post-completion": "Post-completion",
+};
 
 export function relevanceFor(item = {}, profile = {}) {
   const matches = [];
-  const visa = typeof profile.visaType === "string" ? profile.visaType.trim().toLowerCase() : "";
+  const visa = visaCategoryFor(profile);
   if (visa && Array.isArray(item.visaTypes) && item.visaTypes.includes(visa)) {
-    matches.push({ field: "visaType", label: "visa type", value: profile.visaType.trim() });
+    matches.push({ field: "visaType", label: "visa type", value: visa.toUpperCase() });
   }
-  const stage = typeof profile.journeyStage === "string" ? profile.journeyStage.trim() : "";
+  const stage = studentStageFor(profile);
   const stageTags = stageAliases[stage.toLowerCase()] || [];
   if (stage && Array.isArray(item.journeyStages) && stageTags.some((tag) => item.journeyStages.includes(tag))) {
-    matches.push({ field: "journeyStage", label: "journey stage", value: stage });
+    matches.push({ field: "journeyStage", label: "journey stage", value: stageLabels[stage] || stage });
   }
   const universityId = universityIdFor(profile.university);
   if (universityId && Array.isArray(item.universityIds) && item.universityIds.includes(universityId)) {

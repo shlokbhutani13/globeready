@@ -16,7 +16,7 @@ describe("automatic news collector", () => {
       if (source.id === "down") throw new Error("HTTP 503");
       return { text: rss, finalUrl: source.url };
     });
-    const previous = { stories: [
+    const previous = { sourceReports: [{ sourceId: "down", state: "failed", failedSince: "2026-10-14T10:00:00.000Z", lastSuccessAt: "2026-10-13T10:00:00.000Z" }], stories: [
       { id: "old", sourceId: "down", title: "Prior F-1 visa item", excerpt: "International student update.", canonicalUrl: "https://down.gov/old", publishedAt: "2026-10-14", editorialState: "source-only" },
       { id: "unrelated", sourceId: "down", title: "Prior professional athlete item", excerpt: "A general newsroom update.", canonicalUrl: "https://down.gov/unrelated", publishedAt: "2026-10-13", editorialState: "source-only" },
     ] };
@@ -25,8 +25,8 @@ describe("automatic news collector", () => {
 
     expect(artifact.stories.map((item) => item.id)).toEqual(expect.arrayContaining(["old", expect.stringMatching(/^auto-ok-/u)]));
     expect(artifact.sourceReports).toEqual(expect.arrayContaining([
-      expect.objectContaining({ sourceId: "ok", state: "current", fetched: 1 }),
-      expect.objectContaining({ sourceId: "down", state: "failed", attempts: 3, retained: 1, error: "HTTP 503" }),
+      expect.objectContaining({ sourceId: "ok", state: "current", fetched: 1, lastSuccessAt: "2026-10-15T16:00:00.000Z" }),
+      expect.objectContaining({ sourceId: "down", state: "failed", attempts: 3, retained: 1, error: "HTTP 503", failedSince: "2026-10-14T10:00:00.000Z", lastSuccessAt: "2026-10-13T10:00:00.000Z" }),
       expect.objectContaining({ sourceId: "disabled", state: "disabled", reason: "HTTP 403" }),
     ]));
     expect(fetcher.mock.calls.filter(([source]) => source.id === "down")).toHaveLength(3);
@@ -42,7 +42,7 @@ describe("automatic news collector", () => {
       robots: { isAllowed: async (source) => source.id !== "down" },
       now: () => new Date("2026-10-15T16:00:00Z"), retryDelays: [],
     });
-    expect(artifact.sourceReports.find((entry) => entry.sourceId === "down")).toMatchObject({ state: "blocked-by-robots", fetched: 0 });
+    expect(artifact.sourceReports.find((entry) => entry.sourceId === "down")).toMatchObject({ state: "blocked-by-robots", fetched: 0, reason: expect.stringMatching(/robots\.txt/u), failedSince: "2026-10-15T16:00:00.000Z" });
     expect(artifact.stories).toHaveLength(1);
   });
 

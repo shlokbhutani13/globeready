@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { readImageDimensions, validateLocalFile } from "../lib/local-documents/file-policy";
-import { indexDocumentPages, localIndexLimits } from "../lib/local-documents/chunks";
+import { indexDocumentPages, localIndexLimits, redactSensitiveIdentifiers } from "../lib/local-documents/chunks";
 
 function file(bytes, name, type) {
   return new File([Uint8Array.from(bytes)], name, { type });
@@ -24,6 +24,28 @@ function jpeg(width, height, { exifBytes = 0 } = {}) {
 }
 
 describe("browser-local document policy", () => {
+  test("masks common immigration document identifiers before text is chunked", () => {
+    const text = [
+      "SEVIS ID: N0012345678",
+      "USCIS receipt number IOE0912345678",
+      "Passport Number A12345678",
+      "Visa number 12345678",
+      "Program start date 2026-08-20",
+    ].join("\n");
+    const redacted = redactSensitiveIdentifiers(text);
+    expect(redacted).not.toContain("N0012345678");
+    expect(redacted).not.toContain("IOE0912345678");
+    expect(redacted).not.toContain("A12345678");
+    expect(redacted).not.toContain("Visa number 12345678");
+    expect(redacted).toContain("2026-08-20");
+    expect(redacted.match(/\[REDACTED\]/gu)).toHaveLength(4);
+  });
+
+  test("does not broadly remove unlabeled dates or ordinary numbers", () => {
+    expect(redactSensitiveIdentifiers("Class code 12345678. Date 2026-08-20. Amount $1234."))
+      .toBe("Class code 12345678. Date 2026-08-20. Amount $1234.");
+  });
+
   test("accepts supported files only when MIME type and magic bytes agree", async () => {
     await expect(validateLocalFile(file([0x25, 0x50, 0x44, 0x46, 0x2d], "i20.pdf", "application/pdf"))).resolves.toMatchObject({ contentType: "application/pdf" });
     await expect(validateLocalFile(file(png(1200, 800), "visa.png", "image/png"))).resolves.toMatchObject({ contentType: "image/png", width: 1200, height: 800 });

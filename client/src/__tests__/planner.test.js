@@ -20,6 +20,17 @@ describe("journey templates", () => {
     expect(journeyItemsFor("Other").some((item) => /^(f1|j1)-/.test(item.id))).toBe(false);
   });
 
+  test("F-1 has deep CPT and OPT pathways while J-1 has only Academic Training guidance", () => {
+    const f1Text = journeyItemsFor({ visaCategory: "f-1", trainingStatus: "considering-opt" }).map((item) => item.title).join(" ");
+    const j1Text = journeyItemsFor({ visaCategory: "j-1", trainingStatus: "considering-academic-training" }).map((item) => item.title).join(" ");
+    expect(f1Text).toMatch(/CPT/iu);
+    expect(f1Text).toMatch(/post-completion OPT/iu);
+    expect(f1Text).toMatch(/STEM OPT/iu);
+    expect(f1Text).not.toMatch(/Academic Training/iu);
+    expect(j1Text).toMatch(/Academic Training/iu);
+    expect(j1Text).not.toMatch(/\bCPT\b|\bOPT\b/iu);
+  });
+
   test("items never state a legal conclusion and always route to an official", () => {
     for (const item of journeyItemsFor("F-1")) expect(item.title).not.toMatch(/\byou (are|will be) (eligible|allowed|authorized)\b/i);
   });

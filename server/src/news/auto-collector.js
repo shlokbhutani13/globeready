@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-import { deduplicateAutoStories, extractLeadImage, parseAutoSource, qualifyAutoStory } from "./auto-ingestion.js";
+import { clusterAutoStories, deduplicateAutoStories, extractLeadImage, parseAutoSource, qualifyAutoStory } from "./auto-ingestion.js";
 import { buildReviewCandidate } from "./review-candidates.js";
 
 const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -55,6 +55,8 @@ export async function collectAutoNews({
 } = {}) {
   if (typeof fetcher !== "function") throw new Error("The collector needs a source fetcher.");
   const previousStories = Array.isArray(previous.stories) ? previous.stories : [];
+  const previousReports = new Map((Array.isArray(previous.sourceReports) ? previous.sourceReports : []).map((report) => [report.sourceId, report]));
+  const collectedAt = now().toISOString();
   const successful = [];
   const retained = [];
   const sourceReports = [];
@@ -71,7 +73,8 @@ export async function collectAutoNews({
     try {
       if (robots && !await robots.isAllowed(source)) {
         retained.push(...prior);
-        sourceReports.push({ sourceId: source.id, name: source.name, state: "blocked-by-robots", fetched: 0, retained: prior.length });
+        const priorReport = previousReports.get(source.id) || {};
+        sourceReports.push({ sourceId: source.id, name: source.name, state: "blocked-by-robots", fetched: 0, retained: prior.length, reason: "Collection is blocked by the source's robots.txt policy.", failedSince: priorReport.failedSince || collectedAt, ...(priorReport.lastSuccessAt ? { lastSuccessAt: priorReport.lastSuccessAt } : {}) });
         continue;
       }
       const { fetched, attempts } = await fetchWithRetry(source, fetcher, retryDelays);
@@ -90,18 +93,19 @@ export async function collectAutoNews({
         } catch { stories.push(item); }
       }
       successful.push(...stories);
-      sourceReports.push({ sourceId: source.id, name: source.name, state: "current", fetched: stories.length, attempts });
+      sourceReports.push({ sourceId: source.id, name: source.name, state: "current", fetched: stories.length, attempts, lastSuccessAt: collectedAt });
     } catch (error) {
       retained.push(...prior);
-      sourceReports.push({ sourceId: source.id, name: source.name, state: "failed", fetched: 0, retained: prior.length, attempts: error?.attempts || retryDelays.length + 1, error: safeError(error) });
+      const priorReport = previousReports.get(source.id) || {};
+      sourceReports.push({ sourceId: source.id, name: source.name, state: "failed", fetched: 0, retained: prior.length, attempts: error?.attempts || retryDelays.length + 1, error: safeError(error), failedSince: priorReport.failedSince || collectedAt, ...(priorReport.lastSuccessAt ? { lastSuccessAt: priorReport.lastSuccessAt } : {}) });
     }
   }
 
   const payload = {
     schemaVersion: 1,
-    generatedAt: now().toISOString(),
+    generatedAt: collectedAt,
     cadenceHours: 4,
-    stories: deduplicateAutoStories([...successful, ...retained]).slice(0, 250),
+    stories: clusterAutoStories(deduplicateAutoStories([...successful, ...retained])).slice(0, 250),
     sourceReports,
   };
   return { ...payload, contentHash: contentHashForAutoNews(payload) };

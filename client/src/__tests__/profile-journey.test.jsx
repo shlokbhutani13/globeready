@@ -13,10 +13,17 @@ test("profile collects journey dates and confirms only a successful save", async
   render(<ProfilePage profile={{ fullName: "Maya", visaType: "F-1" }} onSave={onSave} />);
   fireEvent.change(screen.getByLabelText("Program start date"), { target: { value: "2026-08-20" } });
   fireEvent.change(screen.getByLabelText("Expected graduation date"), { target: { value: "2028-05-15" } });
-  fireEvent.change(screen.getByLabelText("Degree level"), { target: { value: "Doctoral" } });
+  fireEvent.change(screen.getByLabelText("Program level"), { target: { value: "phd" } });
   fireEvent.click(screen.getByRole("button", { name: /save profile/i }));
   await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Profile saved."));
-  expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ startDate: "2026-08-20", graduationDate: "2028-05-15", degreeLevel: "Doctoral" }));
+  expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ startDate: "2026-08-20", graduationDate: "2028-05-15", programLevel: "phd", visaCategory: "f-1" }));
+});
+
+test("profile labels student claims as unverified and gates training choices by visa", () => {
+  render(<ProfilePage profile={{ fullName: "Maya", visaCategory: "j-1", studentStage: "studying" }} onSave={vi.fn()} />);
+  expect(screen.getByText(/reported by you, not verified/iu)).toBeInTheDocument();
+  expect(screen.getByLabelText(/OPT\/CPT\/Academic Training status/iu)).toHaveTextContent("Academic Training");
+  expect(screen.getByLabelText(/OPT\/CPT\/Academic Training status/iu)).not.toHaveTextContent("CPT authorized");
 });
 
 test("profile does not claim success when the save failed, and rejects impossible dates", async () => {

@@ -1,12 +1,13 @@
 import { relevanceFor } from "./relevance";
 import { rulesLibrary } from "../data/rules-library";
 import { daysUntil } from "./reminders";
+import { studentStageFor, visaCategoryFor } from "./student-profile";
 
 // "What may apply to me": informational matches between the student's own profile fields and the tags on reviewed
 // updates and library entries. It never says an update or rule legally applies to anyone.
 export const profileInputs = [
-  { id: "visaType", label: "Visa type", value: (profile) => profile.visaType },
-  { id: "journeyStage", label: "Journey stage", value: (profile) => profile.journeyStage },
+  { id: "visaType", label: "Visa type", value: (profile) => visaCategoryFor(profile).toUpperCase() },
+  { id: "journeyStage", label: "Journey stage", value: (profile) => studentStageFor(profile) },
   { id: "university", label: "University", value: (profile) => profile.university },
   { id: "topics", label: "Saved topics", value: (profile) => (Array.isArray(profile.topics) && profile.topics.length ? profile.topics.map((topic) => topic.replaceAll("-", " ")).join(", ") : "") },
 ];

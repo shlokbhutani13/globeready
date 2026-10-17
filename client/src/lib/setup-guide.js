@@ -2,7 +2,7 @@
 export function setupSteps({ profile = {}, dates = [], contacts = [], journeyHave = [], consent } = {}) {
   const has = (value) => typeof value === "string" && value.trim().length > 0;
   return [
-    { id: "profile", title: "Tell us about you", why: "Your visa type, university and journey stage let GlobeReady show what may be relevant.", to: "/profile", action: "Open profile", done: has(profile.visaType) && has(profile.university) && has(profile.journeyStage) },
+    { id: "profile", title: "Tell us about you", why: "Your visa category, university and student stage let GlobeReady show what may be relevant.", to: "/profile", action: "Open profile", done: has(profile.visaCategory || profile.visaType) && has(profile.university) && has(profile.studentStage || profile.journeyStage) },
     { id: "dates", title: "Add your key dates", why: "Passport, visa and I-20 dates are the ones that sneak up on people. You get reminders before each.", to: "/dates", action: "Add dates", done: dates.length > 0 },
     { id: "contact", title: "Save your school contact", why: "Add your DSO or international office so you can reach them quickly.", to: "/contacts", action: "Add a contact", done: contacts.some((contact) => ["dso", "international-office"].includes(contact.role)) },
     { id: "journey", title: "Pick your first steps", why: "The journey planner lists common steps. Add the ones that fit you to Tasks.", to: "/journey", action: "Open planner", done: journeyHave.length > 0 },

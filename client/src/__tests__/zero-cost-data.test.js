@@ -63,6 +63,10 @@ describe("zero-cost Firestore data adapter", () => {
     expect(() => validProfileFields({ startDate: "next week" })).toThrow(/Start date must be a date/i);
     expect(() => validProfileFields({ startDate: "2026-02-31" })).toThrow(/Start date must be.*real date/i);
     expect(validProfileFields({ graduationDate: "" })).toEqual({ graduationDate: "" });
+    expect(validProfileFields({ programLevel: "masters", visaCategory: "f-1", studentStage: "studying", trainingStatus: "considering-opt" }))
+      .toMatchObject({ programLevel: "masters", visaCategory: "f-1", studentStage: "studying", trainingStatus: "considering-opt" });
+    expect(() => validProfileFields({ visaCategory: "j-1", trainingStatus: "considering-opt" })).toThrow(/does not match/i);
+    expect(() => validProfileFields({ programLevel: "law-school" })).toThrow(/invalid/i);
   });
 
   test("creates tasks and https saved resources with the rules' shapes", async () => {

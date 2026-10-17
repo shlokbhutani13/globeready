@@ -26,7 +26,10 @@ The free beta (`docs/ZERO_COST_PUBLIC.md`) has no server and stores less:
   phone numbers, emails, notes), cases the student tracks (names, form and receipt numbers the student typed, dates,
   statuses, notes; nothing is fetched from any agency), task notes, repeats, reminder dates and links to other items,
   links the student saves for their university, checklist progress, saved guides, saved update IDs, and, only while document reading is
-  on, the extracted text of up to 50 documents with page numbers. Dates are never read from documents automatically.
+  on, the extracted text of up to 50 documents with page numbers. Before saving, GlobeReady masks common labelled
+  passport, visa, USCIS receipt and SEVIS-number patterns. That safety net can miss unusual formatting and OCR errors;
+  names, dates, addresses and other personal information in the readable text can still be stored. Dates are never read
+  from documents automatically.
 - **Stored only in the browser:** display choices (text size, contrast, animation), which reminders were marked read, which updates were seen and saved news searches, snoozed next steps, and the appointment-preparation workspace (chosen questions, notes on what the university said, term notes). These are keyed to the account on that device, never uploaded, not included in the account export, not restored from it, and removed from the browser when the account is deleted from it. Clearing site data removes them.
   The same applies to the budget planner (costs and amounts), the documents checklist (marks, typed expiry dates and notes), and the emergency card (typed health, insurance, embassy and campus details and the contacts picked for it). They are never uploaded, are not part of the account export, are keyed to the account on that device, and are removed from the browser when the account is deleted from it. A budget can be exported as a CSV and a card downloaded as text only when the student asks. The documents checklist records the student's own marks and never reads, stores or checks a document.
   Appointment summaries are produced only by an explicit download, print or copy; they hold only the items the student ticked, mask receipt numbers and leave out case notes unless chosen, and never include document contents.
@@ -46,7 +49,7 @@ The free beta (`docs/ZERO_COST_PUBLIC.md`) has no server and stores less:
 | Data | Where | Who can read it |
 | --- | --- | --- |
 | Account identity (email, password hash, provider link) | Firebase Authentication | The student, and the API through the Admin SDK |
-| Profile: name, home country, university, domain, degree, program, visa type, journey stage, dates, time zone | Firestore `users/{uid}` | The student (rules), and the API |
+| Profile: name, home country, university, domain, program and level, reported visa category, student stage, reported practical-training status, dates, time zone | Firestore `users/{uid}` | The student (rules), and the API |
 | Preferences, tasks, saved updates, saved resources, notifications | Firestore `users/{uid}/…` | The student (rules), and the API |
 | Uploaded documents (PDF, PNG, JPEG) | Cloud Storage `users/{uid}/documents/{id}/` | The student (rules), and the API |
 | Extracted document text, with page numbers | Firestore `users/{uid}/ragChunks` | The API only. Client rules deny all access. |

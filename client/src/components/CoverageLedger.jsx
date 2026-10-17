@@ -43,7 +43,7 @@ export default function CoverageLedger({ ledger, admin = false }) {
         {ledger.entries.map((entry) => <div className="coverage-row" key={entry.id}>
           <div><strong>{entry.publisher || entry.name}</strong><small>{labels[entry.status] || entry.status} · {checkLabel(entry)}</small></div>
           <span className={`coverage-state ${entry.status}`}>{labels[entry.status] || entry.status}</span>
-          {entry.safeReason && <p>{entry.safeReason}</p>}
+          {(entry.safeReason || entry.failedSince || entry.retained > 0) && <p>{entry.safeReason || "The latest collection check failed."}{entry.failedSince ? ` Failing since ${formatted(entry.failedSince)}.` : ""}{entry.retained > 0 ? ` ${entry.retained} stor${entry.retained === 1 ? "y is" : "ies are"} retained from an earlier successful fetch.` : ""}</p>}
           {admin && <small className="coverage-admin-detail">
             Failures: {entry.consecutiveFailures || 0} · Last run: {entry.latestRunStatus || "none"} · Contract: {entry.checklistComplete ? "complete" : "incomplete"} · Onboarding: {entry.onboardingState || "not set"}
           </small>}

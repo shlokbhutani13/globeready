@@ -81,7 +81,9 @@ export function coverageLedgerFromLiveFeed({ generatedAt, sourceReports = [] } =
       name: report.name,
       status,
       fetched: Number(report.fetched) || 0,
-      ...(status === "active" ? { lastSuccessAt: generatedAt } : {}),
+      retained: Number(report.retained) || 0,
+      ...(report.lastSuccessAt ? { lastSuccessAt: report.lastSuccessAt } : status === "active" ? { lastSuccessAt: generatedAt } : {}),
+      ...(report.failedSince ? { failedSince: report.failedSince } : {}),
       ...(report.error || report.reason ? { safeReason: report.error || report.reason } : {}),
     };
   });
