@@ -173,7 +173,7 @@ export default function NewsPage({
 
       {!loading && !error && ranked.length > 0 && (
         <>
-          <section className="top-stories-section"><div className="section-heading"><div><span className="eyebrow">Quick briefing</span><h2>Top stories</h2></div></div><TopStoriesReader items={ranked.slice(0, 6)} savedIds={savedIds} onToggleSave={onToggleSave} /></section>
+          <section className="top-stories-section"><div className="section-heading"><div><span className="eyebrow">Quick briefing</span><h2>Top stories</h2></div></div><TopStoriesReader items={ranked.slice(0, 6)} savedIds={savedIds} onToggleSave={onToggleSave} profile={profile} /></section>
           <NewsArchive items={ranked} seen={zeroCostMode ? seen : undefined} profile={profile} savedIds={savedIds} onToggleSave={onToggleSave} onLoadMore={onLoadMore} hasMore={hasMore} />
         </>
       )}

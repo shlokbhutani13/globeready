@@ -11,6 +11,7 @@
       "allowedHosts": ["www.uscis.gov"],
       "imageHosts": ["www.uscis.gov"],
       "includeKeywords": ["international student", "student visa", "F-1", "F-2", "M-1", "M-2", "J-1", "J-2", "OPT", "CPT", "SEVIS", "I-765", "employment authorization"],
+      "studentContextKeywords": ["international student", "student visa", "F-1", "F-2", "M-1", "M-2", "J-1", "J-2", "OPT", "CPT", "SEVIS"],
       "itemLimit": 100
     },
     {

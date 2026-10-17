@@ -6,6 +6,18 @@ import { XMLParser, XMLValidator } from "fast-xml-parser";
 const maxResponseBytes = 5 * 1024 * 1024;
 const maxItems = 100;
 const trackingKey = /^(?:utm_.+|fbclid|gclid|msclkid|mc_.+)$/iu;
+const topicRules = Object.freeze([
+  ["status", /\b(?:visa|immigration|sevis|i-20|ds-2019|duration of status|f-1|f-2|j-1|j-2|m-1|m-2)\b/iu],
+  ["employment", /\b(?:stem opt|opt|cpt|practical training|work authorization|employment authorization|ead|i-765|internship|h-1b|cap-gap)\b/iu],
+  ["travel-entry", /\b(?:travel|re-entry|entry document|port of entry|visa interview|consular|consulate|embassy|passport|travel signature|visa bond)\b/iu],
+  ["taxes-social-security", /\b(?:tax|taxes|irs|1040-nr|1040nr|itin|nonresident alien|social security|ssn)\b/iu],
+  ["university", /\b(?:international students?|international office|iso|dso|campus|university|college|school certification|orientation|enrollment)\b/iu],
+]);
+const visaRules = Object.freeze([
+  ["f-1", /\bf[ -]?1\b/iu], ["f-2", /\bf[ -]?2\b/iu],
+  ["j-1", /\bj[ -]?1\b/iu], ["j-2", /\bj[ -]?2\b/iu],
+  ["m-1", /\bm[ -]?1\b/iu], ["m-2", /\bm[ -]?2\b/iu],
+]);
 
 const list = (value) => value === undefined || value === null ? [] : Array.isArray(value) ? value : [value];
 const textOf = (value) => {
@@ -13,6 +25,7 @@ const textOf = (value) => {
   if (!value || typeof value !== "object") return "";
   return Object.entries(value).filter(([key]) => !key.startsWith("@_")).map(([, child]) => textOf(child)).join(" ");
 };
+const keywordPattern = (value) => new RegExp(`(?:^|[^\\p{L}\\p{N}])${String(value).replace(/[.*+?^${}()|[\]\\]/gu, "\\$&")}(?:$|[^\\p{L}\\p{N}])`, "iu");
 
 export function sanitizeText(value, max = 500) {
   const $ = load(String(value ?? ""), { decodeEntities: true }, false);
@@ -53,6 +66,25 @@ export function stableStoryId(sourceId, canonicalUrl) {
   return `auto-${sourceId}-${createHash("sha256").update(canonicalUrl).digest("hex").slice(0, 20)}`;
 }
 
+export function classifyAutoStory({ title = "", excerpt = "" } = {}) {
+  const evidence = `${sanitizeText(title, 300)} ${sanitizeExcerpt(excerpt)}`;
+  return {
+    topics: topicRules.filter(([, pattern]) => pattern.test(evidence)).map(([topic]) => topic),
+    visaTypes: visaRules.filter(([, pattern]) => pattern.test(evidence)).map(([visa]) => visa),
+  };
+}
+
+export function qualifyAutoStory(source = {}, item = {}) {
+  const classification = classifyAutoStory(item);
+  if (!classification.topics.length) return null;
+  const evidence = `${item.title || ""} ${item.excerpt || ""}`;
+  const keywords = Array.isArray(source.includeKeywords) ? source.includeKeywords.map(keywordPattern) : [];
+  const studentContext = Array.isArray(source.studentContextKeywords) ? source.studentContextKeywords.map(keywordPattern) : [];
+  if (keywords.length && !keywords.some((keyword) => keyword.test(evidence))) return null;
+  if (studentContext.length && !studentContext.some((keyword) => keyword.test(evidence))) return null;
+  return { ...item, ...classification };
+}
+
 function imageRecord(url, alt, source, base) {
   const safe = maybeUrl(url, base, source.imageHosts || source.allowedHosts, "Image");
   return safe ? { url: safe, alt: sanitizeText(alt || "", 300) || "Illustration from the original source" } : undefined;
@@ -72,6 +104,8 @@ function story(source, input, base) {
   const title = sanitizeText(input.title, 300);
   if (!title) throw new Error("Story title is missing.");
   const canonicalUrl = allowedUrl(input.url, base, source.allowedHosts, "Story");
+  const excerpt = sanitizeExcerpt(input.excerpt);
+  const classification = classifyAutoStory({ title, excerpt });
   return {
     id: stableStoryId(source.id, canonicalUrl),
     sourceId: source.id,
@@ -79,7 +113,9 @@ function story(source, input, base) {
     title,
     canonicalUrl,
     publishedAt: dateOnly(input.date),
-    excerpt: sanitizeExcerpt(input.excerpt),
+    excerpt,
+    topics: classification.topics,
+    visaTypes: classification.visaTypes,
     ...(imageRecord(input.imageUrl, input.imageAlt || title, source, base) ? { image: imageRecord(input.imageUrl, input.imageAlt || title, source, base) } : {}),
     editorialState: "source-only",
     legalState: "informational",
@@ -163,10 +199,7 @@ export function parseAutoSource(source, fetched) {
   const parsed = source.type === "html"
     ? htmlEntries(source, text, base)
     : source.type === "json" ? jsonEntries(source, text, base) : xmlEntries(source, text, base);
-  const keywords = Array.isArray(source.includeKeywords) ? source.includeKeywords.map((value) => String(value).toLocaleLowerCase()) : [];
-  return keywords.length
-    ? parsed.filter((item) => keywords.some((keyword) => `${item.title} ${item.excerpt}`.toLocaleLowerCase().includes(keyword)))
-    : parsed;
+  return parsed.map((item) => qualifyAutoStory(source, item)).filter(Boolean);
 }
 
 const titleKey = (value) => sanitizeText(value, 300).toLocaleLowerCase();
