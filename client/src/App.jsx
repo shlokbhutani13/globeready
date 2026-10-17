@@ -527,7 +527,7 @@ export default function App() {
           <Route path="resources" element={<ResourcesPage />} />
           <Route path="help" element={<HelpPage zeroCostMode={zeroCostPublicMode} />} />
           <Route path="guides" element={<GuidesPage profile={profile} onSave={saveGuide} onRemove={zeroCostStore ? (id) => zeroCostStore.removeResource(id) : undefined} savedResources={savedResources} savedUrls={savedResources.map((resource) => resource.url)} />} />
-          <Route path="assistant" element={<AssistantPage localMode={zeroCostPublicMode} documentsAllowed={!zeroCostPublicMode || consent?.documents === true} localChunks={localChunks} documents={documents.filter((document) => document.analysisStatus === "indexed")} />} />
+          <Route path="assistant" element={<AssistantPage localMode={zeroCostPublicMode} grounded={zeroCostPublicMode ? { news: newsItems, visaCategory: visaCategoryFor(profile) } : null} documentsAllowed={!zeroCostPublicMode || consent?.documents === true} localChunks={localChunks} documents={documents.filter((document) => document.analysisStatus === "indexed")} />} />
           <Route path="notifications" element={<NotificationsPage localMode={zeroCostPublicMode} notifications={shownNotifications} onMarkRead={markRead} onMarkAllRead={markAllRead} />} />
           <Route path="profile" element={<ProfilePage profile={profile} onSave={updateProfile} showTopics={zeroCostPublicMode} />} />
           <Route path="settings" element={(
