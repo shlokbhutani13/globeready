@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-import { deduplicateAutoStories, extractLeadImage, parseAutoSource } from "./auto-ingestion.js";
+import { deduplicateAutoStories, extractLeadImage, parseAutoSource, qualifyAutoStory } from "./auto-ingestion.js";
 import { buildReviewCandidate } from "./review-candidates.js";
 
 const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -30,8 +30,8 @@ export function buildAutoReviewCandidates(stories = [], sources = [], collectedA
       updatedAt: null,
       effectiveAt: null,
       sourceExcerpt: story.excerpt || "",
-      topics: [],
-      visaTypes: [],
+      topics: story.topics || [],
+      visaTypes: story.visaTypes || [],
     },
   }));
 }
@@ -64,7 +64,10 @@ export async function collectAutoNews({
       sourceReports.push({ sourceId: source.id, name: source.name, state: "disabled", fetched: 0, reason: source.disabledReason || "Disabled in the registry." });
       continue;
     }
-    const prior = previousStories.filter((story) => story.sourceId === source.id);
+    const prior = previousStories
+      .filter((story) => story.sourceId === source.id)
+      .map((story) => qualifyAutoStory(source, story))
+      .filter(Boolean);
     try {
       if (robots && !await robots.isAllowed(source)) {
         retained.push(...prior);
