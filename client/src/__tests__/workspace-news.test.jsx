@@ -139,7 +139,16 @@ describe("NewsPage", () => {
     render(<MemoryRouter><NewsPage zeroCostMode items={many} sourceHealth={{ state: "current", generatedAt: "2026-10-14T12:00:00.000Z", sourceReports: [] }} filters={{}} onFilterChange={() => {}} /></MemoryRouter>);
     expect(screen.getByText("24 stories")).toBeInTheDocument();
     expect(screen.getByText(/^updated /i)).toBeInTheDocument();
+    expect(screen.getAllByRole("article")).toHaveLength(6);
+    fireEvent.click(screen.getByRole("button", { name: /show all 24 stories/i }));
     expect(screen.getAllByRole("article")).toHaveLength(24);
+  });
+
+  test("shows every matching story when a source filter is selected", () => {
+    const many = Array.from({ length: 10 }, (_, index) => item({ id: `mit-${index}`, sourceId: "mit-iso", publisher: "MIT ISO", title: `MIT story ${index}`, autoIngested: true, sourceVerified: false }));
+    render(<MemoryRouter><NewsPage zeroCostMode items={many} filters={{ sourceId: "mit-iso" }} onFilterChange={() => {}} /></MemoryRouter>);
+    expect(screen.getAllByRole("article")).toHaveLength(10);
+    expect(screen.queryByRole("button", { name: /show all/i })).not.toBeInTheDocument();
   });
 
   test("offers archive search and common time filters", () => {
@@ -166,7 +175,7 @@ describe("NewsPage", () => {
       { id: "uscis", name: "USCIS", status: "active", lastSuccessAt: "2026-10-14T12:00:00Z" },
       { id: "sevp", name: "SEVP", status: "failing", safeReason: "HTTP 503" },
     ] }} sourceHealth={{ state: "current", generatedAt: "2026-10-14T12:00:00Z", sourceReports: [{ sourceId: "sevp", name: "SEVP", state: "failed", error: "HTTP 503" }] }} /></MemoryRouter>);
-    expect(screen.getByRole("heading", { name: /1 of 2 sources active/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /1 of 2 sources reachable, 1 with relevant stories/i })).toBeInTheDocument();
     expect(screen.queryByText(/source check delayed/i)).not.toBeInTheDocument();
     expect(screen.getByText(/source coverage notes/i)).toBeInTheDocument();
     expect(screen.getByText(/HTTP 503/i)).toBeInTheDocument();

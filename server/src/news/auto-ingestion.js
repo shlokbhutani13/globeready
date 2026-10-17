@@ -7,11 +7,12 @@ const maxResponseBytes = 5 * 1024 * 1024;
 const maxItems = 100;
 const trackingKey = /^(?:utm_.+|fbclid|gclid|msclkid|mc_.+)$/iu;
 const topicRules = Object.freeze([
-  ["status", /\b(?:visa|immigration|sevis|i-20|ds-2019|duration of status|f-1|f-2|j-1|j-2|m-1|m-2)\b/iu],
+  ["status", /\b(?:visa|immigration|nonimmigrant|academic student|exchange visitor|sevp|sevis|i-20|ds-2019|fixed time period of admission|duration of status|extension of stay|f\/j\/m|f-1|f-2|j-1|j-2|m-1|m-2)\b/iu],
+  ["forms-fees", /\b(?:sevp fees?|sevis fees?|student visa fees?|visa fees?|filing fees?|i-901)\b/iu],
   ["employment", /\b(?:stem opt|opt|cpt|practical training|work authorization|employment authorization|ead|i-765|internship|h-1b|cap-gap)\b/iu],
   ["travel-entry", /\b(?:travel|re-entry|entry document|port of entry|visa interview|consular|consulate|embassy|passport|travel signature|visa bond)\b/iu],
   ["taxes-social-security", /\b(?:tax|taxes|irs|1040-nr|1040nr|itin|nonresident alien|social security|ssn)\b/iu],
-  ["university", /\b(?:international students?|international office|iso|dso|campus|university|college|school certification|orientation|enrollment)\b/iu],
+  ["university", /\b(?:international students?|international office|iso|dso|sevp certification|school certification|certification expiration|campus|university|college|orientation|enrollment)\b/iu],
 ]);
 const visaRules = Object.freeze([
   ["f-1", /\bf[ -]?1\b/iu], ["f-2", /\bf[ -]?2\b/iu],
@@ -76,12 +77,12 @@ export function classifyAutoStory({ title = "", excerpt = "" } = {}) {
 
 export function qualifyAutoStory(source = {}, item = {}) {
   const classification = classifyAutoStory(item);
-  if (!classification.topics.length) return null;
+  if (!source.studentSpecific && !classification.topics.length) return null;
   const evidence = `${item.title || ""} ${item.excerpt || ""}`;
   const keywords = Array.isArray(source.includeKeywords) ? source.includeKeywords.map(keywordPattern) : [];
   const studentContext = Array.isArray(source.studentContextKeywords) ? source.studentContextKeywords.map(keywordPattern) : [];
-  if (keywords.length && !keywords.some((keyword) => keyword.test(evidence))) return null;
-  if (studentContext.length && !studentContext.some((keyword) => keyword.test(evidence))) return null;
+  if (!source.studentSpecific && keywords.length && !keywords.some((keyword) => keyword.test(evidence))) return null;
+  if (!source.studentSpecific && studentContext.length && !studentContext.some((keyword) => keyword.test(evidence))) return null;
   return { ...item, ...classification };
 }
 
