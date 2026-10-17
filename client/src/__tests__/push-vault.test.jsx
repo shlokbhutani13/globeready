@@ -2,7 +2,7 @@ import React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 
-afterEach(cleanup);
+afterEach(() => { cleanup(); vi.unstubAllEnvs(); });
 import PushPanel from "../components/PushPanel";
 import VaultPanel from "../components/VaultPanel";
 import { disablePush, enablePush, needsHomeScreen, pushState, tokenId } from "../lib/push";
@@ -28,6 +28,7 @@ describe("push reminders library", () => {
   });
 
   it("refuses to enable without a configured key or a granted permission", async () => {
+    vi.stubEnv("VITE_FCM_VAPID_KEY", "");
     await expect(enablePush({ firestore: {}, uid: "u1" })).rejects.toThrow(/not set up/i);
   });
 });
@@ -74,6 +75,11 @@ describe("drive vault library", () => {
     expect(validateVaultFile({ type: "image/png", size: 10 }, 3)).toBe("");
     expect(safeName("../../etc/passwd")).toBe("_.._etc_passwd");
     expect(safeName("")).toBe("document");
+    vi.stubEnv("VITE_GOOGLE_CLIENT_ID", "");
+    expect(vaultConfigured()).toBe(false);
+    vi.stubEnv("VITE_GOOGLE_CLIENT_ID", "123456789012-abc123def.apps.googleusercontent.com");
+    expect(vaultConfigured()).toBe(true);
+    vi.stubEnv("VITE_GOOGLE_CLIENT_ID", "123456789012-abc123def");
     expect(vaultConfigured()).toBe(false);
   });
 
