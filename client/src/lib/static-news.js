@@ -69,8 +69,7 @@ function mergeNews(reviewedStories, liveStories) {
 
 function coverageStatus(report) {
   if (report.state === "disabled") return "disabled";
-  if (report.state === "current" && Number(report.fetched) > 0) return "active";
-  if (report.state === "current") return "not-checked";
+  if (report.state === "current") return "active";
   return "failing";
 }
 
@@ -91,6 +90,8 @@ export function coverageLedgerFromLiveFeed({ generatedAt, sourceReports = [] } =
     generatedAt,
     summary: {
       active: monitored.filter((entry) => entry.status === "active").length,
+      reachable: monitored.filter((entry) => entry.status === "active").length,
+      withRelevantStories: monitored.filter((entry) => entry.status === "active" && entry.fetched > 0).length,
       total: monitored.length,
       failing: monitored.filter((entry) => entry.status === "failing").length,
       disabled: entries.filter((entry) => entry.status === "disabled").length,

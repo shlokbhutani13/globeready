@@ -10,8 +10,8 @@
       "enabled": true,
       "allowedHosts": ["www.uscis.gov"],
       "imageHosts": ["www.uscis.gov"],
-      "includeKeywords": ["international student", "student visa", "F-1", "F-2", "M-1", "M-2", "J-1", "J-2", "OPT", "CPT", "SEVIS", "I-765", "employment authorization"],
-      "studentContextKeywords": ["international student", "student visa", "F-1", "F-2", "M-1", "M-2", "J-1", "J-2", "OPT", "CPT", "SEVIS"],
+      "includeKeywords": ["international student", "student visa", "F-1", "F-2", "M-1", "M-2", "J-1", "J-2", "F/J/M", "OPT", "CPT", "SEVP", "SEVIS", "I-765", "employment authorization", "nonimmigrant", "academic student", "exchange visitor", "DSO", "fixed time period of admission", "duration of status", "extension of stay", "SEVP fee", "SEVIS fee", "student visa fee"],
+      "studentContextKeywords": ["international student", "student visa", "F-1", "F-2", "M-1", "M-2", "J-1", "J-2", "F/J/M", "OPT", "CPT", "SEVP", "SEVIS", "nonimmigrant", "academic student", "exchange visitor", "DSO", "fixed time period of admission", "duration of status", "extension of stay"],
       "itemLimit": 100
     },
     {
@@ -21,6 +21,7 @@
       "type": "rss",
       "trustLabel": "Official DHS student source",
       "enabled": true,
+      "studentSpecific": true,
       "allowedHosts": ["studyinthestates.dhs.gov"],
       "imageHosts": ["studyinthestates.dhs.gov"],
       "itemLimit": 20
@@ -32,6 +33,7 @@
       "type": "html",
       "trustLabel": "Official ICE/SEVP source",
       "enabled": true,
+      "studentSpecific": true,
       "allowedHosts": ["www.ice.gov", "studyinthestates.dhs.gov", "www.federalregister.gov"],
       "imageHosts": ["www.ice.gov"],
       "itemSelector": ".usa-card",

@@ -8,11 +8,11 @@ import UpdateLifecycle from "../components/UpdateLifecycle";
 afterEach(cleanup);
 
 test("discloses exact coverage states and freshness in keyboard-accessible details", () => {
-  render(<CoverageLedger ledger={{ summary: { total: 2, active: 1, pending: 1 }, entries: [
+  render(<CoverageLedger ledger={{ summary: { total: 2, active: 1, reachable: 1, withRelevantStories: 1, pending: 1 }, entries: [
     { id: "uscis", publisher: "USCIS", status: "active", lastSuccessAt: "2026-10-13T10:00:00Z", cadenceHours: 12 },
     { id: "campus", publisher: "Example University", status: "pending", lastSuccessAt: null, safeReason: "Awaiting verification." },
   ] }} />);
-  expect(screen.getByText(/1 of 2 sources active/i)).toBeInTheDocument();
+  expect(screen.getByText(/1 of 2 sources reachable, 1 with relevant stories/i)).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: /show source details/i }));
   expect(screen.getByText("Example University")).toBeInTheDocument();
   expect(screen.getByText(/awaiting verification/i)).toBeInTheDocument();
