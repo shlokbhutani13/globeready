@@ -16,6 +16,13 @@ const rssSource = {
 };
 
 describe("automatic official-source ingestion", () => {
+  test("keeps the hand-reviewed fixed-admission-period record in the public feed", () => {
+    const reviewed = JSON.parse(readFileSync(new URL("../../client/public/data/news.json", import.meta.url), "utf8"));
+    expect(reviewed.stories).toEqual(expect.arrayContaining([
+      expect.objectContaining({ title: "Fixed admission periods replace duration of status for F, J, and I categories", sourceVerified: true }),
+    ]));
+  });
+
   test.each([
     ["visa", "F-1 student visa interview guidance", "", ["status"]],
     ["work authorization", "New STEM OPT employment authorization update", "", ["employment"]],
@@ -103,6 +110,38 @@ describe("automatic official-source ingestion", () => {
     const source = { ...rssSource, includeKeywords: ["employment authorization", "F-1"], studentContextKeywords: ["F-1", "OPT", "international student"] };
     const xml = `<?xml version="1.0"?><rss><channel><item><title>Employment authorization for professional athletes</title><link>https://agency.gov/athletes</link><description>Guidance follows adoption of a new system.</description></item><item><title>F-1 employment authorization update</title><link>https://agency.gov/students</link></item></channel></rss>`;
     expect(parseAutoSource(source, { text: xml, finalUrl: source.url }).map((item) => item.title)).toEqual(["F-1 employment authorization update"]);
+  });
+
+  test("includes every previously missed student story from student-specific sources", () => {
+    const source = { ...rssSource, studentSpecific: true };
+    const titles = [
+      "Quick Facts: Final Rule Establishing a Fixed Time Period of Admission",
+      "Frequently Asked Questions: Final Rule Establishing a Fixed Time Period of Admission",
+      "SEVP Final Rule Establishing a Fixed Time Period of Admission",
+      "New and Increased SEVP Fees",
+      "Removal of Obsolete Procedures and Requirements Related to F, J, and M Nonimmigrants",
+      "SEVP Certification Frequently Asked Questions",
+      "Updated Certification Expiration Date Guidance",
+    ];
+    const xml = `<?xml version="1.0"?><rss><channel>${titles.map((title, index) => `<item><title>${title.replaceAll("&", "&amp;")}</title><link>https://agency.gov/student-${index}</link><description>Official student-program update.</description></item>`).join("")}</channel></rss>`;
+    expect(parseAutoSource(source, { text: xml, finalUrl: source.url }).map((story) => story.title)).toEqual(titles);
+  });
+
+  test.each([
+    "F/J/M nonimmigrant admission update",
+    "Academic student extension of stay procedure",
+    "Exchange visitor duration of status notice",
+    "DSO SEVP and SEVIS certification update",
+    "New student visa fee terms",
+  ])("recognizes the expanded student relevance phrase: %s", (title) => {
+    const xml = `<?xml version="1.0"?><rss><channel><item><title>${title}</title><link>https://agency.gov/expanded</link></item></channel></rss>`;
+    expect(parseAutoSource(rssSource, { text: xml, finalUrl: rssSource.url })).toHaveLength(1);
+  });
+
+  test("keeps the professional-athletes item excluded and does not confuse adoption with OPT", () => {
+    const source = { ...rssSource, includeKeywords: ["employment authorization", "OPT"], studentContextKeywords: ["OPT", "F-1", "international student"] };
+    const xml = `<?xml version="1.0"?><rss><channel><item><title>Employment authorization for professional athletes</title><link>https://agency.gov/athletes</link><description>Guidance follows adoption of a new system.</description></item></channel></rss>`;
+    expect(parseAutoSource(source, { text: xml, finalUrl: source.url })).toEqual([]);
   });
 
   test("drops stories with no international-student topic signal", () => {

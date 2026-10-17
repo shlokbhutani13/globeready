@@ -14,6 +14,7 @@ import NewsArchive from "../components/NewsArchive";
 import NewsDiscovery from "../components/NewsDiscovery";
 import { applyDiscovery, discoveryOptions, isUnread, isUpdatedSinceSeen, loadSearches, loadSeen, markSeen, mergeFilters, removeSearch, saveSearch, splitFilters } from "../lib/news-discovery";
 import { localDateKey } from "../lib/reminders";
+import { capNewsBySource } from "../lib/news-balance";
 
 export const topicOptions = [
   "general", "status", "forms-fees", "employment", "travel-entry",
@@ -42,6 +43,7 @@ export default function NewsPage({
 }) {
   const [showPreferences, setShowPreferences] = useState(false);
   const [savedOnly, setSavedOnly] = useState(false);
+  const [showAllSources, setShowAllSources] = useState(false);
   const [flags, setFlags] = useState({});
   const [seen, setSeen] = useState(() => (zeroCostMode ? loadSeen(storage, storageScope) : {}));
   const [searches, setSearches] = useState(() => (zeroCostMode ? loadSearches(storage, storageScope) : []));
@@ -54,6 +56,9 @@ export default function NewsPage({
     return direction * String(left.publishedAt || "").localeCompare(String(right.publishedAt || ""));
   });
   const ranked = savedOnly ? chronological.filter((item) => savedIds.has(item.id)) : chronological;
+  const balanceMainView = zeroCostMode && !filters.sourceId && !savedOnly;
+  const balanced = balanceMainView && !showAllSources ? capNewsBySource(ranked) : ranked;
+  const hasCappedStories = balanced.length < ranked.length;
   const foundOptions = discoveryOptions(items);
   optionCache.current.topics = remember(optionCache.current.topics, foundOptions.topics);
   optionCache.current.visas = remember(optionCache.current.visas, foundOptions.visas);
@@ -173,8 +178,8 @@ export default function NewsPage({
 
       {!loading && !error && ranked.length > 0 && (
         <>
-          <section className="top-stories-section"><div className="section-heading"><div><span className="eyebrow">Quick briefing</span><h2>Top stories</h2></div></div><TopStoriesReader items={ranked.slice(0, 6)} savedIds={savedIds} onToggleSave={onToggleSave} profile={profile} /></section>
-          <NewsArchive items={ranked} seen={zeroCostMode ? seen : undefined} profile={profile} savedIds={savedIds} onToggleSave={onToggleSave} onLoadMore={onLoadMore} hasMore={hasMore} />
+          <section className="top-stories-section"><div className="section-heading"><div><span className="eyebrow">Quick briefing</span><h2>Top stories</h2></div></div><TopStoriesReader items={balanced.slice(0, 6)} savedIds={savedIds} onToggleSave={onToggleSave} profile={profile} /></section>
+          <NewsArchive items={balanced} totalCount={ranked.length} seen={zeroCostMode ? seen : undefined} profile={profile} savedIds={savedIds} onToggleSave={onToggleSave} onLoadMore={() => hasCappedStories ? setShowAllSources(true) : onLoadMore?.()} hasMore={hasCappedStories || hasMore} loadMoreLabel={hasCappedStories ? `Show all ${ranked.length} stories` : undefined} />
         </>
       )}
 
