@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-17T04:20:44.392Z",
+  "generatedAt": "2026-10-17T11:00:14.895Z",
   "cadenceHours": 4,
   "stories": [
     {
@@ -137,28 +137,6 @@
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
       "autoIngested": true
-    },
-    {
-      "id": "auto-uscis-news-7255946a250644c86a1c",
-      "sourceId": "uscis-news",
-      "publisher": "U.S. Citizenship and Immigration Services",
-      "title": "Five Defendants Charged with Defrauding and Exploiting H-2A Visa Program to Smuggle Aliens into the United States",
-      "canonicalUrl": "https://www.uscis.gov/newsroom/news-releases/five-defendants-charged-with-defrauding-and-exploiting-h-2a-visa-program-to-smuggle-aliens-into-the",
-      "publishedAt": "2026-09-18",
-      "excerpt": "U.S. Citizenship and Immigration Services (USCIS) supported a federal investigation that resulted in the indictment of five people for their roles in a scheme to exploit a nonimmigrant visa worker program. The defendants fraudulently obtained worker visas and smuggled aliens into the United States. ",
-      "topics": [
-        "status"
-      ],
-      "visaTypes": [],
-      "editorialState": "source-only",
-      "legalState": "informational",
-      "sourceVerified": false,
-      "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true,
-      "image": {
-        "url": "https://www.uscis.gov/sites/default/files/images/social-media/OPA-SM_USCISonBlue_FB_1200x627_V1.png",
-        "alt": "Five Defendants Charged with Defrauding and Exploiting H-2A Visa Program to Smuggle Aliens into the United States"
-      }
     },
     {
       "id": "auto-mit-iso-d249c5d20ce081942407",
@@ -1107,7 +1085,7 @@
       "sourceId": "uscis-news",
       "name": "U.S. Citizenship and Immigration Services",
       "state": "current",
-      "fetched": 1,
+      "fetched": 0,
       "attempts": 1
     },
     {
@@ -1153,5 +1131,5 @@
       "reason": "The source returned HTTP 403 to the collector on 2026-10-15."
     }
   ],
-  "contentHash": "dfd87c9879430dd63a4aa98fd26bd780bf26316c38fb31286a72c1396aad6912"
+  "contentHash": "d1d9af7a92d5c9c6c347cefafb07c30179f571817e1e49766490ebe4f381f6ec"
 }
