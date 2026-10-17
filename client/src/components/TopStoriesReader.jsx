@@ -1,8 +1,10 @@
 import React, { useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { newsImageFor } from "../lib/news-images";
+import { newsTopicLabel } from "../lib/news-topics";
+import RelevanceNote from "./RelevanceNote";
 
-export default function TopStoriesReader({ items = [], savedIds = new Set(), onToggleSave }) {
+export default function TopStoriesReader({ items = [], savedIds = new Set(), onToggleSave, profile }) {
   const [index, setIndex] = useState(0);
   if (!items.length) return null;
   const move = (delta) => setIndex((current) => (current + delta + items.length) % items.length);
@@ -17,7 +19,9 @@ export default function TopStoriesReader({ items = [], savedIds = new Set(), onT
       <span className="eyebrow">Top story · {item.publisher || "Official source"}</span>
       {item.autoIngested && <span className="legal-state pending">{item.trustLabel || "From official source — not yet reviewed by GlobeReady"}</span>}
       <h2>{item.title || "Untitled update"}</h2>
+      {(item.topics || []).length > 0 && <ul className="news-topic-list" aria-label="Story topics">{item.topics.map((topic) => <li className="chip" key={topic}>{newsTopicLabel(topic)}</li>)}</ul>}
       <p>{item.shortSummary || item.excerpt || item.sourceExcerpt || "Open this update for verified details from the official source."}</p>
+      {profile && <RelevanceNote item={item} profile={profile} />}
       {!item.autoIngested && item.whyItMatters && <div className="why-it-matters"><strong>Why this matters</strong><span>{item.whyItMatters}</span></div>}
       <div className="top-story-actions">
         <button type="button" aria-label="Previous story" onClick={() => move(-1)}><ChevronLeft /></button>

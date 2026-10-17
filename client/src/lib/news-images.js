@@ -7,6 +7,13 @@ import taxes from "../assets/news/taxes-social-security.svg";
 import campus from "../assets/news/campus-life.svg";
 import emergency from "../assets/news/emergency.svg";
 import university from "../assets/news/university.svg";
+import uscisSource from "../assets/news/source-uscis.svg";
+import studySource from "../assets/news/source-study.svg";
+import sevpSource from "../assets/news/source-sevp.svg";
+import federalRegisterSource from "../assets/news/source-federal-register.svg";
+import nafsaSource from "../assets/news/source-nafsa.svg";
+import mitSource from "../assets/news/source-mit.svg";
+import stateSource from "../assets/news/source-state.svg";
 
 // Every illustration is an original GlobeReady drawing bundled with the app. Nothing is fetched from another site, no
 // agency seal or logo is used, and no photograph is reproduced, so there is no third-party copyright to clear and no
@@ -15,6 +22,20 @@ const byTopic = {
   status, employment, "travel-entry": travel, "forms-fees": forms, "taxes-social-security": taxes, "campus-life": campus, emergency, university,
 };
 const aliases = { travel: "travel-entry", forms: "forms-fees", fees: "forms-fees", taxes: "taxes-social-security", "social-security": "taxes-social-security", campus: "campus-life", opt: "employment", work: "employment" };
+const bySource = Object.freeze({
+  "uscis-news": uscisSource,
+  "study-in-the-states": studySource,
+  "ice-sevp": sevpSource,
+  "federal-register": federalRegisterSource,
+  "nafsa-press": nafsaSource,
+  "mit-iso": mitSource,
+  "state-visa-news": stateSource,
+});
+const sourceNames = Object.freeze({
+  "uscis-news": "USCIS", "study-in-the-states": "Study in the States", "ice-sevp": "SEVP",
+  "federal-register": "Federal Register", "nafsa-press": "NAFSA", "mit-iso": "MIT international office",
+  "state-visa-news": "State Department visa news",
+});
 export const imageCredit = "Illustration by GlobeReady. It is not an official image.";
 
 export function topicImage(topic) {
@@ -22,9 +43,16 @@ export function topicImage(topic) {
   return byTopic[key] || null;
 }
 
+export function sourceImage(sourceId) {
+  return bySource[sourceId] || null;
+}
+
 export function newsImageFor(item = {}) {
   const topics = Array.isArray(item.topics) ? item.topics : [];
   const fallback = (() => {
+    if (item.autoIngested && sourceImage(item.sourceId)) {
+      return { url: sourceImage(item.sourceId), alt: `${sourceNames[item.sourceId] || item.publisher || "Official source"} source illustration`, credit: imageCredit };
+    }
     for (const topic of topics) {
       const url = topicImage(topic);
       if (url) return { url, alt: `${String(topic).replace(/-/g, " ")} illustration`, credit: imageCredit };

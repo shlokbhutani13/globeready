@@ -5,11 +5,13 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, test, vi } from "vitest";
 import NewsDetailPage from "../pages/NewsDetailPage";
 
-test("automatic stories show only source-level context and no personalised or reviewed guidance", () => {
+test("automatic stories show cautious profile relevance and no reviewed guidance", () => {
   render(<MemoryRouter><NewsDetailPage item={{ id: "auto-1", title: "Official feed item", publisher: "USCIS", canonicalUrl: "https://www.uscis.gov/news/auto", publishedAt: "2026-10-14", excerpt: "A short source excerpt.", autoIngested: true, sourceVerified: false, trustLabel: "From official source — not yet reviewed by GlobeReady", topics: ["employment"], visaTypes: ["f-1"] }} profile={{ visaType: "F-1" }} onAddTasks={vi.fn()} /></MemoryRouter>);
   expect(screen.getByRole("heading", { name: /not yet reviewed/i })).toBeInTheDocument();
   expect(screen.getByText(/informational only/i)).toBeInTheDocument();
-  expect(screen.queryByText(/may be relevant/i)).not.toBeInTheDocument();
+  expect(screen.getByText(/may be relevant to you/i)).toBeInTheDocument();
+  expect(screen.getByText(/does not mean the update legally applies/i)).toBeInTheDocument();
+  expect(screen.getByText("Work authorization")).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: /add a task/i })).not.toBeInTheDocument();
   expect(screen.getByRole("link", { name: /read more/i })).toHaveAttribute("rel", "noopener noreferrer");
 });

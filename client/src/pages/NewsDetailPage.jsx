@@ -3,6 +3,7 @@ import { ArrowLeft, ExternalLink, ListPlus } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { fetchNewsItem } from "../lib/news-data";
 import { newsImageFor } from "../lib/news-images";
+import { newsTopicLabel } from "../lib/news-topics";
 import Disclaimer from "../components/Disclaimer";
 import RelevanceNote from "../components/RelevanceNote";
 import NewsAtAGlance from "../components/NewsAtAGlance";
@@ -37,12 +38,12 @@ export default function NewsDetailPage({ onSeen, item: supplied, items = [], exp
   return <article className="page news-detail">
     <Link className="back-link" to="/news"><ArrowLeft size={16} /> All news</Link>
     <figure className="news-detail-figure"><img className="news-detail-image" src={image.url} alt={image.alt} onError={image.fallbackUrl ? (event) => { event.currentTarget.onerror = null; event.currentTarget.src = image.fallbackUrl; } : undefined} />{image.credit && <figcaption>{image.credit}</figcaption>}</figure>
-    <header><span className="eyebrow">{item.publisher || "Official source"}</span><h1>{item.title}</h1><div className="news-card-meta">{item.publishedAt && <span>Published {item.publishedAt}</span>}{item.verifiedAt && <span>Verified {item.verifiedAt}</span>}</div></header>
+    <header><span className="eyebrow">{item.publisher || "Official source"}</span><h1>{item.title}</h1>{(item.topics || []).length > 0 && <ul className="news-topic-list" aria-label="Story topics">{item.topics.map((topic) => <li className="chip" key={topic}>{newsTopicLabel(topic)}</li>)}</ul>}<div className="news-card-meta">{item.publishedAt && <span>Published {item.publishedAt}</span>}{item.verifiedAt && <span>Verified {item.verifiedAt}</span>}</div></header>
     {item.autoIngested && <section className="news-detail-callout" aria-labelledby="source-only-title"><h2 id="source-only-title">From official source — not yet reviewed by GlobeReady</h2><p>This short excerpt was collected automatically from the named source. It is informational only and is not personalised guidance, a legal conclusion, or a suggested deadline.</p></section>}
     {(item.editorialState === "archived" || item.correctionNote) && <section className="news-detail-callout" aria-labelledby="correction-title"><h2 id="correction-title">{item.editorialState === "archived" ? "Archived update" : "Correction"}</h2><p>{item.correctionNote || "This update is kept for history and is no longer current."}</p></section>}
     {item.reviewHistory?.length > 0 && <details><summary>Review history</summary><ul>{item.reviewHistory.map((entry, index) => <li key={`${entry.decidedAt}-${index}`}>{entry.type === "approve" ? "Approved" : entry.type === "correct" ? "Corrected" : entry.type === "archive" ? "Archived" : entry.type} on {String(entry.decidedAt).slice(0, 10)}</li>)}</ul></details>}
     {(item.shortSummary || item.excerpt || item.sourceExcerpt) && <p className="news-detail-lead">{item.shortSummary || item.excerpt || item.sourceExcerpt}</p>}
-    {!item.autoIngested && profile && <RelevanceNote item={item} profile={profile} explain />}
+    {profile && <RelevanceNote item={item} profile={profile} explain />}
     {!item.autoIngested && item.whyItMatters && <section className="news-detail-callout"><h2>Why this matters</h2><p>{item.whyItMatters}</p></section>}
     {!item.autoIngested && (item.detailSections || []).map((section) => <section key={section.heading}><h2>{section.heading}</h2><p>{section.body}</p></section>)}
     {!item.autoIngested && <UpdateTimeline events={updateTimeline(item, items)} />}

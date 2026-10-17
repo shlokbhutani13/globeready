@@ -94,7 +94,7 @@ HTML revalidates on every visit; hashed `/assets/` and `/ocr/` files are cached 
 
 ## Reviewed news operation
 
-The zero-cost Updates page now combines human-reviewed records with a separate, automatically refreshed official-source excerpt feed. Its sources, four-hour schedule, copyright policy, real-run counts, failure behavior and source-addition procedure are documented in [`LIVE_NEWS.md`](LIVE_NEWS.md). Automatic items are always labelled as not yet reviewed and cannot receive personalised relevance claims or reviewed guidance.
+The zero-cost Updates page now combines human-reviewed records with a separate, automatically refreshed official-source excerpt feed. Its sources, four-hour schedule, copyright policy, relevance filter, real-run counts, failure behavior and source-addition procedure are documented in [`LIVE_NEWS.md`](LIVE_NEWS.md). Automatic items are always labelled as not yet reviewed. Their deterministic tags may produce the cautious existing “May be relevant to you” profile match, but they cannot receive reviewed guidance or make legal-applicability claims.
 
 The complete candidate, decision, publication, failure, and rollback procedure is in
 [`NEWS_REVIEW_OPERATIONS.md`](NEWS_REVIEW_OPERATIONS.md). The reviewed university-link procedure and validator are in

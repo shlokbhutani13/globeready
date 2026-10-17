@@ -3,6 +3,7 @@ import { Bookmark, BookmarkCheck, ExternalLink } from "lucide-react";
 import RelevanceNote from "./RelevanceNote";
 import UpdateLifecycle from "./UpdateLifecycle";
 import { newsImageFor } from "../lib/news-images";
+import { newsTopicLabel } from "../lib/news-topics";
 
 const legalStateCopy = {
   proposed: "Proposed", final: "Final", scheduled: "Scheduled", effective: "Effective",
@@ -38,6 +39,11 @@ export default function NewsCard({ item, saved = false, onToggleSave, compact = 
       </div>
       <h3>{item.title || "Untitled update"}</h3>
       <p className="news-card-publisher">{item.publisher}</p>
+      {Array.isArray(item.topics) && item.topics.length > 0 && (
+        <div className="news-topic-list" aria-label="Story topics">
+          {item.topics.map((topic) => <span className="chip" key={topic}>{newsTopicLabel(topic)}</span>)}
+        </div>
+      )}
       <UpdateLifecycle item={item} />
       {profile && <RelevanceNote item={item} profile={profile} />}
       {!compact && summary && <p className="news-card-summary">{summary}</p>}
