@@ -225,6 +225,18 @@ service cloud.firestore {
         allow delete: if isOwner(uid);
       }
 
+      // Opt-in push addresses. One small record per device; the student can delete it at any time.
+      match /pushTokens/{tokenId} {
+        allow read: if isOwner(uid);
+        allow create: if canWrite(uid) && tokenId.size() <= 64
+          && request.resource.data.keys().hasOnly(['token', 'device', 'createdAt'])
+          && request.resource.data.token is string && request.resource.data.token.size() >= 20 && request.resource.data.token.size() <= 4096
+          && request.resource.data.device is string && request.resource.data.device.size() <= 60
+          && stampedNow(request.resource.data, 'createdAt');
+        allow update: if false;
+        allow delete: if isOwner(uid);
+      }
+
       match /contacts/{contactId} {
         allow read: if isOwner(uid);
         allow create: if canWrite(uid) && contactId.size() <= 128 && validContactFields(request.resource.data)

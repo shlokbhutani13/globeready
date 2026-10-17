@@ -26,9 +26,9 @@ describe("zero-cost public journeys", () => {
 
   test("discloses exactly what the free runtime cannot do", () => {
     render(<SettingsPage zeroCostMode live deviceBackupUid="student" consent={{ documents: false, aiGeneration: false, text: {} }} />);
-    expect(screen.getByText(/original-file backup is unavailable/i)).toBeInTheDocument();
+    expect(screen.getByText(/original files are never uploaded to GlobeReady/i)).toBeInTheDocument();
     expect(screen.getAllByText(/cloud AI answers are unavailable/i).length).toBeGreaterThan(0);
-    expect(screen.getByText(/email and push delivery are unavailable/i)).toBeInTheDocument();
+    expect(screen.getByText(/email reminders are not offered/i)).toBeInTheDocument();
     expect(screen.queryByText(/save my preference for email reminders/i)).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /back up data stored on this device/i })).toBeInTheDocument();
   });

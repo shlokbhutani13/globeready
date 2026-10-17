@@ -32,6 +32,7 @@ const app = firebaseConfigured
   ? getApps().find((candidate) => candidate.name === appName) || initializeApp(firebaseConfig, appName)
   : null;
 
+export const firebaseApp = app;
 export const auth = app ? getAuth(app) : null;
 export const db = app ? getFirestore(app) : null;
 export const storage = app && !zeroCostPublicMode && firebaseConfig.storageBucket ? getStorage(app) : null;
