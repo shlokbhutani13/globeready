@@ -11,6 +11,21 @@ export const localIndexLimits = Object.freeze({
 
 const encoder = new TextEncoder();
 
+// Mask high-risk immigration identifiers only when their format is distinctive or a nearby label identifies them.
+// Broad number stripping would also destroy dates, fees and other passages students need to find. This is a safety
+// net, not a guarantee: the consent copy tells students that uncommon formats or OCR errors can evade it.
+export function redactSensitiveIdentifiers(value) {
+  let text = String(value || "");
+  const labelled = [
+    /(\bsevis(?:\s+(?:id|number))?\s*[:#-]?\s*)N?\d{10}\b/giu,
+    /(\b(?:uscis\s+)?receipt(?:\s+(?:id|number))?\s*[:#-]?\s*)(?:EAC|WAC|LIN|SRC|NBC|MSC|IOE|YSC)\d{10}\b/giu,
+    /(\bpassport(?:\s+(?:no\.?|number))?\s*[:#-]?\s*)(?=[A-Z0-9]{6,12}\b)(?=[A-Z0-9]*\d)[A-Z0-9]{6,12}\b/giu,
+    /(\bvisa(?:\s+(?:foil\s+)?(?:no\.?|number))\s*[:#-]?\s*)(?=[A-Z0-9]{7,9}\b)(?=[A-Z0-9]*\d)[A-Z0-9]{7,9}\b/giu,
+  ];
+  for (const pattern of labelled) text = text.replace(pattern, "$1[REDACTED]");
+  return text;
+}
+
 function splitPage(text, maxLength) {
   const pieces = [];
   let rest = text;
@@ -41,7 +56,7 @@ export function indexDocumentPages(pages) {
   let characters = 0;
   let bytes = 0;
   for (const [position, page] of pages.entries()) {
-    const text = String(page?.text || "").replace(/\s+/gu, " ").trim();
+    const text = redactSensitiveIdentifiers(page?.text).replace(/\s+/gu, " ").trim();
     if (!text) continue;
     pagesWithText += 1;
     characters += text.length;

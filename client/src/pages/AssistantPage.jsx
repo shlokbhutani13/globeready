@@ -20,7 +20,7 @@ export function assistantMessageFromResponse(answer) {
   };
 }
 
-const localSuggestions = ["What is my program end date?", "When does my lease end?", "What is my SEVIS ID?"];
+const localSuggestions = ["What is my program end date?", "When does my lease end?", "What is my program start date?"];
 const serverSuggestions = ["What should I bring to an SSN appointment?", "Explain my I-20 travel signature", "How do I choose a bank account?"];
 
 export default function AssistantPage({ requestAnswer = apiRequest, documents = [], localMode = false, localChunks = [], documentsAllowed = true }) {

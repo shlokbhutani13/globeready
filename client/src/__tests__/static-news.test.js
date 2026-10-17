@@ -121,7 +121,7 @@ describe("static public news", () => {
 
     expect(result.sourceHealth.state).toBe("current");
     expect(result.sourceHealth.coverageLedger.summary).toMatchObject({ active: 1, total: 2, failing: 1 });
-    expect(result.sourceHealth.coverageLedger.entries[1]).toMatchObject({ id: "ice-sevp", status: "failing", safeReason: "HTTP 503" });
+    expect(result.sourceHealth.coverageLedger.entries[1]).toMatchObject({ id: "ice-sevp", status: "failing", safeReason: "HTTP 503", retained: 3 });
   });
 
   test("marks an otherwise healthy automatic feed delayed only after twelve hours", async () => {

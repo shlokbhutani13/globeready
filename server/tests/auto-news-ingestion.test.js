@@ -3,6 +3,8 @@ import { readFileSync } from "node:fs";
 
 import {
   classifyAutoStory,
+  classifyUpdateType,
+  clusterAutoStories,
   deduplicateAutoStories,
   extractLeadImage,
   parseAutoSource,
@@ -84,8 +86,30 @@ describe("automatic official-source ingestion", () => {
 
   test("parses Federal Register JSON search results", () => {
     const source = { ...rssSource, id: "federal-register", name: "Federal Register", type: "json", jsonItemsPath: "results", allowedHosts: ["www.federalregister.gov"] };
-    const payload = JSON.stringify({ results: [{ document_number: "2026-12345", title: "Student visa rule", html_url: "https://www.federalregister.gov/documents/2026/10/15/2026-12345/student-visa-rule", publication_date: "2026-10-15", abstract: "A proposed change affecting student visas." }] });
-    expect(parseAutoSource(source, { text: payload, finalUrl: source.url })).toEqual([expect.objectContaining({ sourceId: "federal-register", title: "Student visa rule", publishedAt: "2026-10-15", excerpt: "A proposed change affecting student visas." })]);
+    const payload = JSON.stringify({ results: [{ document_number: "2026-12345", type: "Proposed Rule", title: "Student visa rule", html_url: "https://www.federalregister.gov/documents/2026/10/15/2026-12345/student-visa-rule", publication_date: "2026-10-15", effective_on: "2026-12-01", abstract: "A proposed change affecting student visas." }] });
+    expect(parseAutoSource(source, { text: payload, finalUrl: source.url })).toEqual([expect.objectContaining({ sourceId: "federal-register", title: "Student visa rule", publishedAt: "2026-10-15", effectiveAt: "2026-12-01", updateType: "proposed-rule", documentNumber: "2026-12345", excerpt: "A proposed change affecting student visas." })]);
+  });
+
+  test.each([
+    ["DHS proposed rule for F-1 students", "proposed-rule"],
+    ["DHS final rule for F-1 students", "final-rule"],
+    ["Court blocks student visa rule", "court-development"],
+    ["Updated OPT filing guidance", "guidance"],
+    ["SEVP announces fee change", "announcement"],
+  ])("classifies %s conservatively", (title, expected) => {
+    expect(classifyUpdateType({ title })).toBe(expected);
+  });
+
+  test("clusters exact same events across sources without deleting either story", () => {
+    const clustered = clusterAutoStories([
+      { id: "a", sourceId: "one", title: "DHS Final Rule for F-1 Students", canonicalUrl: "https://one.gov/a", publishedAt: "2026-10-15" },
+      { id: "b", sourceId: "two", title: "DHS Final Rule for F-1 Students", canonicalUrl: "https://two.edu/b", publishedAt: "2026-10-15" },
+      { id: "c", sourceId: "two", title: "Different F-1 guidance", canonicalUrl: "https://two.edu/c", publishedAt: "2026-10-15" },
+    ]);
+    expect(clustered).toHaveLength(3);
+    expect(clustered[0].clusterId).toBe(clustered[1].clusterId);
+    expect(clustered[0].relatedStoryIds).toEqual(["b"]);
+    expect(clustered[2].relatedStoryIds).toEqual([]);
   });
 
   test("sanitizes, bounds and rejects unsafe text and URLs", () => {
@@ -156,13 +180,13 @@ describe("automatic official-source ingestion", () => {
     expect(parseAutoSource(rssSource, { text: xml, finalUrl: rssSource.url }).map((item) => item.title)).toEqual(["F-1 travel reminder"]);
   });
 
-  test("deduplicates canonical URLs and normalized titles deterministically", () => {
+  test("deduplicates canonical URLs and same-source titles while retaining cross-source coverage", () => {
     const items = [
       { id: "b", sourceId: "b", title: "Visa Update", canonicalUrl: "https://b.gov/2", publishedAt: "2026-10-14" },
       { id: "a", sourceId: "a", title: " visa   update ", canonicalUrl: "https://a.gov/1", publishedAt: "2026-10-15" },
       { id: "c", sourceId: "c", title: "Different", canonicalUrl: "https://a.gov/1", publishedAt: "2026-10-13" },
     ];
-    expect(deduplicateAutoStories(items).map((item) => item.id)).toEqual(["a"]);
+    expect(deduplicateAutoStories(items).map((item) => item.id)).toEqual(["a", "b"]);
   });
 
   test("extracts only an allowlisted HTTPS Open Graph image", () => {

@@ -11,13 +11,13 @@ import { maxCases, validCase, withEntry, withoutEntry } from "./cases";
 const consentVersion = "2026-10-14-zero-cost";
 const profileLimits = {
   fullName: 200, homeCountry: 100, university: 200, universityId: 120, officialUniversityDomain: 253, degreeLevel: 80,
-  program: 200, visaType: 40, journeyStage: 80, timeZone: 64,
+  program: 200, visaType: 40, journeyStage: 80, programLevel: 40, visaCategory: 20, studentStage: 40, trainingStatus: 80, timeZone: 64,
 };
 const profileDates = ["startDate", "graduationDate"];
 const profileLabels = {
   fullName: "Full name", homeCountry: "Home country", university: "University", universityId: "University ID",
   officialUniversityDomain: "University website", degreeLevel: "Degree level", program: "Program", visaType: "Visa type",
-  journeyStage: "Journey stage", timeZone: "Time zone", startDate: "Start date", graduationDate: "Graduation date",
+  journeyStage: "Journey stage", programLevel: "Program level", visaCategory: "Visa category", studentStage: "Student stage", trainingStatus: "Training status", timeZone: "Time zone", startDate: "Start date", graduationDate: "Graduation date",
 };
 export const maxLocalDocuments = 50;
 const batchSize = 400;
@@ -34,6 +34,16 @@ export const topicChoices = ["general", "status", "forms-fees", "employment", "t
 export const maxContacts = 50;
 export const maxPlannerHave = 200;
 export const maxPlannerCustom = 40;
+const canonicalProfileValues = {
+  programLevel: ["undergraduate", "masters", "phd", "other"],
+  visaCategory: ["f-1", "j-1", "other"],
+  studentStage: ["pre-arrival", "arrived", "studying", "post-completion"],
+};
+const trainingValues = {
+  "f-1": ["not-reported", "not-planning", "considering-cpt", "cpt-authorized", "considering-opt", "opt-pending", "opt-authorized", "stem-opt-pending", "stem-opt-authorized", "completed"],
+  "j-1": ["not-reported", "not-planning", "considering-academic-training", "academic-training-authorized", "completed"],
+  other: ["not-reported", "not-applicable", "other"],
+};
 
 function optionalBounded(value, max, label) {
   const text = typeof value === "string" ? value.trim() : "";
@@ -151,6 +161,13 @@ export function validProfileFields(input = {}) {
     const value = String(input[field]).trim();
     if (value && !isCalendarDate(value)) throw new Error(`${profileLabels[field]} must be a date (YYYY-MM-DD) and must be a real date.`);
     profile[field] = value;
+  }
+  for (const [field, allowed] of Object.entries(canonicalProfileValues)) {
+    if (field in profile && !allowed.includes(profile[field])) throw new Error(`${profileLabels[field]} is invalid.`);
+  }
+  if ("trainingStatus" in profile) {
+    const visaCategory = profile.visaCategory || input.visaCategory || "other";
+    if (!(trainingValues[visaCategory] || trainingValues.other).includes(profile.trainingStatus)) throw new Error("Training status does not match the selected visa category.");
   }
   return profile;
 }

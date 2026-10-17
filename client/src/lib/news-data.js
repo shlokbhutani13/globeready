@@ -2,6 +2,7 @@ import {
   collection, doc, onSnapshot, orderBy, query, updateDoc,
 } from "firebase/firestore";
 import { apiRequest } from "./api";
+import { visaCategoryFor } from "./student-profile";
 import { db } from "./firebase";
 export { subscribeStaticNews } from "./static-news";
 
@@ -43,7 +44,7 @@ function isUpcoming(item) {
 
 export function rankNewsItems(items, profile = {}) {
   const universityId = universityIdFor(profile.university);
-  const visaType = typeof profile.visaType === "string" ? profile.visaType.toLowerCase() : "";
+  const visaType = visaCategoryFor(profile);
   const nationality = countryCodeFor(profile.homeCountry);
 
   const scored = (Array.isArray(items) ? items : []).map((item, index) => {

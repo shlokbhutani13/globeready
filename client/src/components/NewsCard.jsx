@@ -10,6 +10,7 @@ const legalStateCopy = {
   delayed: "Delayed", enjoined: "Enjoined", superseded: "Superseded", withdrawn: "Withdrawn",
   expired: "Expired", informational: "Informational",
 };
+const updateTypeCopy = { "proposed-rule": "Proposed rule", "final-rule": "Final rule", announcement: "Announcement", "court-development": "Court development", guidance: "Guidance" };
 
 export default function NewsCard({ item, saved = false, onToggleSave, compact = false, profile, seenState }) {
   const legalLabel = legalStateCopy[item.legalState] || item.legalState || "Informational";
@@ -23,6 +24,7 @@ export default function NewsCard({ item, saved = false, onToggleSave, compact = 
       {!compact && <img className="news-card-image" src={image.url} alt={image.alt} onError={image.fallbackUrl ? (event) => { event.currentTarget.onerror = null; event.currentTarget.src = image.fallbackUrl; } : undefined} />}
       <div className="news-card-top">
         <span className={`legal-state ${item.legalState || "informational"}`}>{legalLabel}</span>
+        {item.updateType && <span className="legal-state informational">{updateTypeCopy[item.updateType] || item.updateType}</span>}
         {(seenState === "new" || seenState === "updated") && <span className="legal-state pending">{seenState === "new" ? "New" : "Updated"}</span>}
         {item.autoIngested ? <span className="legal-state pending">{item.trustLabel || "From official source — not yet reviewed by GlobeReady"}</span> : !item.sourceVerified && <span className="legal-state pending">Unverified source</span>}
         {item.editorialState === "archived" && <span className="legal-state withdrawn">Archived update</span>}
@@ -51,6 +53,7 @@ export default function NewsCard({ item, saved = false, onToggleSave, compact = 
         {item.effectiveAt && <span>Effective {item.effectiveAt}</span>}
         {item.publishedAt && <span>Published {item.publishedAt}</span>}
       </div>
+      {item.relatedStoryIds?.length > 0 && <p className="muted">Also reported in {item.relatedStoryIds.length} related source stor{item.relatedStoryIds.length === 1 ? "y" : "ies"}.</p>}
       {item.id && <a href={`/news/${item.id}`}>{item.autoIngested ? "View story" : "Read details"}</a>}
       {item.canonicalUrl && (
         <a href={item.canonicalUrl} target="_blank" rel="noopener noreferrer">

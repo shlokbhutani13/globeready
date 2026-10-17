@@ -17,11 +17,18 @@ describe("application routes", () => {
 
   test("updates and reads the student profile", async () => {
     await demo("put", "/api/profile")
-      .send({ fullName: "Maya Singh", university: "UNC Chapel Hill", homeCountry: "India" })
+      .send({ fullName: "Maya Singh", university: "UNC Chapel Hill", homeCountry: "India", programLevel: "masters", visaCategory: "f-1", studentStage: "studying", trainingStatus: "considering-opt" })
       .expect(200);
 
     const response = await demo("get", "/api/profile").expect(200);
     expect(response.body.data.university).toBe("UNC Chapel Hill");
+    expect(response.body.data).toMatchObject({ programLevel: "masters", visaCategory: "f-1", studentStage: "studying", trainingStatus: "considering-opt" });
+  });
+
+  test("rejects a training status from a different visa pathway", async () => {
+    await demo("put", "/api/profile")
+      .send({ programLevel: "masters", visaCategory: "j-1", studentStage: "studying", trainingStatus: "considering-opt" })
+      .expect(422);
   });
 
   test("creates, completes, and deletes a task", async () => {

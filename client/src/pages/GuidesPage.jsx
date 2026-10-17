@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Bookmark, ExternalLink } from "lucide-react";
-import { guides } from "../data/guides";
+import { guidesForVisa } from "../data/guides";
+import { visaCategoryFor } from "../lib/student-profile";
 import { friendlyError } from "../lib/friendly-error";
 import PageHelp from "../components/PageHelp";
 import PageHeader from "../components/ui/PageHeader";
@@ -9,11 +10,12 @@ import Disclaimer from "../components/Disclaimer";
 
 const noSavedUrls = [];
 
-export default function GuidesPage({ onSave = async () => {}, onRemove, savedUrls = noSavedUrls, savedResources = [] }) {
+export default function GuidesPage({ profile = {}, onSave = async () => {}, onRemove, savedUrls = noSavedUrls, savedResources = [] }) {
   const [filter, setFilter] = useState("All");
   const [saved, setSaved] = useState(new Set(savedUrls));
   const [saving, setSaving] = useState("");
   const [error, setError] = useState("");
+  const guides = guidesForVisa(visaCategoryFor(profile));
   const categories = ["All", "Saved", ...new Set(guides.map((guide) => guide.category))];
   const shown = filter === "All" ? guides : filter === "Saved" ? guides.filter((guide) => saved.has(guide.url)) : guides.filter((guide) => guide.category === filter);
   useEffect(() => setSaved(new Set(savedUrls)), [savedUrls]);

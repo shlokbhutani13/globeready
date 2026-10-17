@@ -67,6 +67,19 @@ export function stableStoryId(sourceId, canonicalUrl) {
   return `auto-${sourceId}-${createHash("sha256").update(canonicalUrl).digest("hex").slice(0, 20)}`;
 }
 
+export function classifyUpdateType({ title = "", excerpt = "", sourceType = "" } = {}) {
+  const explicit = sanitizeText(sourceType, 80).toLocaleLowerCase();
+  if (/proposed rule/u.test(explicit)) return "proposed-rule";
+  if (/^(?:rule|final rule)$/u.test(explicit) || /final rule/u.test(explicit)) return "final-rule";
+  if (/guidance|policy|frequently asked|faq/u.test(explicit)) return "guidance";
+  const evidence = `${sanitizeText(title, 300)} ${sanitizeExcerpt(excerpt)}`;
+  if (/\bproposed rule\b/iu.test(evidence)) return "proposed-rule";
+  if (/\bfinal rule\b/iu.test(evidence)) return "final-rule";
+  if (/\b(?:court|judge|lawsuit|litigation|injunction|ruling|enjoin(?:ed|s|ment)?)\b/iu.test(evidence)) return "court-development";
+  if (/\b(?:guidance|policy manual|frequently asked questions?|faq|how to|instructions?)\b/iu.test(evidence)) return "guidance";
+  return "announcement";
+}
+
 export function classifyAutoStory({ title = "", excerpt = "" } = {}) {
   const evidence = `${sanitizeText(title, 300)} ${sanitizeExcerpt(excerpt)}`;
   return {
@@ -114,9 +127,12 @@ function story(source, input, base) {
     title,
     canonicalUrl,
     publishedAt: dateOnly(input.date),
+    effectiveAt: dateOnly(input.effectiveDate),
     excerpt,
     topics: classification.topics,
     visaTypes: classification.visaTypes,
+    updateType: classifyUpdateType({ title, excerpt, sourceType: input.sourceType }),
+    ...(input.documentNumber ? { documentNumber: sanitizeText(input.documentNumber, 80) } : {}),
     ...(imageRecord(input.imageUrl, input.imageAlt || title, source, base) ? { image: imageRecord(input.imageUrl, input.imageAlt || title, source, base) } : {}),
     editorialState: "source-only",
     legalState: "informational",
@@ -186,6 +202,9 @@ function jsonEntries(source, text, base) {
     title: entry.title,
     url: entry.html_url || entry.url,
     date: entry.publication_date || entry.publishedAt || entry.date,
+    effectiveDate: entry.effective_on || entry.effectiveAt,
+    sourceType: entry.type || entry.document_type,
+    documentNumber: entry.document_number,
     excerpt: entry.abstract || entry.summary || entry.description,
     imageUrl: entry.image_url || entry.image?.url,
     imageAlt: entry.image?.alt,
@@ -211,7 +230,35 @@ export function deduplicateAutoStories(items = []) {
     .sort((left, right) => String(right.publishedAt || "").localeCompare(String(left.publishedAt || "")) || String(left.id).localeCompare(String(right.id)))
     .filter((item) => {
       const title = titleKey(item.title);
-      if (seenUrls.has(item.canonicalUrl) || seenTitles.has(title)) return false;
-      seenUrls.add(item.canonicalUrl); seenTitles.add(title); return true;
+      const sourceTitle = `${item.sourceId || ""}:${title}`;
+      if (seenUrls.has(item.canonicalUrl) || seenTitles.has(sourceTitle)) return false;
+      seenUrls.add(item.canonicalUrl); seenTitles.add(sourceTitle); return true;
     });
+}
+
+const clusterTitle = (value) => sanitizeText(value, 300)
+  .toLocaleLowerCase()
+  .replace(/[^\p{L}\p{N}]+/gu, " ")
+  .trim();
+
+function clusterKey(item) {
+  if (item.documentNumber) return `document:${String(item.documentNumber).toLocaleLowerCase()}`;
+  const title = clusterTitle(item.title);
+  const words = title.split(" ").filter(Boolean);
+  return words.length >= 5 ? `title:${title}|date:${item.publishedAt || ""}` : `story:${item.id}`;
+}
+
+export function clusterAutoStories(items = []) {
+  const groups = new Map();
+  for (const item of items) {
+    const key = clusterKey(item);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(item);
+  }
+  return items.map((item) => {
+    const key = clusterKey(item);
+    const members = groups.get(key);
+    const clusterId = `cluster-${createHash("sha256").update(key).digest("hex").slice(0, 20)}`;
+    return { ...item, clusterId, relatedStoryIds: members.filter((member) => member.id !== item.id).map((member) => member.id).sort() };
+  });
 }
