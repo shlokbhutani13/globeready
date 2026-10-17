@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-17T12:10:20.764Z",
+  "generatedAt": "2026-10-17T13:54:31.671Z",
   "cadenceHours": 4,
   "stories": [
     {
@@ -10,6 +10,7 @@
       "title": "DHS Proposed Rule to Establish New F-1 Optional Practical Training Fees",
       "canonicalUrl": "https://iso.mit.edu/news/dhs-proposed-rule-to-establish-new-f-1-optional-practical-training-fees",
       "publishedAt": "2026-10-10",
+      "effectiveAt": null,
       "excerpt": "On October 8, 2026, the U.S. Department of Homeland Security (DHS) issued a proposed rule (full text) that, if finalized, would create new fees for each application for F-1 Optional […]",
       "topics": [
         "status",
@@ -18,11 +19,14 @@
       "visaTypes": [
         "f-1"
       ],
+      "updateType": "proposed-rule",
       "editorialState": "source-only",
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true
+      "autoIngested": true,
+      "clusterId": "cluster-6bb7b4a2e80010151995",
+      "relatedStoryIds": []
     },
     {
       "id": "auto-nafsa-press-a3a5624776bfcc9bdd17",
@@ -31,16 +35,20 @@
       "title": "DHS Proposal to Establish New Optional Practical Training Fees Will Hurt U.S. Economy and Innovation",
       "canonicalUrl": "https://www.nafsa.org/statement-OPT-fee-proposed-rule",
       "publishedAt": "2026-10-07",
+      "effectiveAt": null,
       "excerpt": "",
       "topics": [
         "employment"
       ],
       "visaTypes": [],
+      "updateType": "announcement",
       "editorialState": "source-only",
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true
+      "autoIngested": true,
+      "clusterId": "cluster-c61b2eff65e509901ed1",
+      "relatedStoryIds": []
     },
     {
       "id": "auto-mit-iso-4762dd2af52e77ba404a",
@@ -49,17 +57,21 @@
       "title": "Higher Education Associations File Lawsuit Challenging New CPT Guidance",
       "canonicalUrl": "https://iso.mit.edu/news/higher-education-associations-file-lawsuit-challenging-new-cpt-guidance",
       "publishedAt": "2026-10-06",
+      "effectiveAt": null,
       "excerpt": "On October 5, 2026, the Association of American Universities (AAU), Presidents’ Alliance on Higher Education and Immigration, NAFSA: Association of International Educators, and the Association of Independent Colleges and Universities […]",
       "topics": [
         "status",
         "employment"
       ],
       "visaTypes": [],
+      "updateType": "court-development",
       "editorialState": "source-only",
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true
+      "autoIngested": true,
+      "clusterId": "cluster-8fc78fc23ab18d945f00",
+      "relatedStoryIds": []
     },
     {
       "id": "auto-nafsa-press-29282cb665ac538b7531",
@@ -68,17 +80,21 @@
       "title": "NAFSA Joins Lawsuit Challenging Changes to Vital Internship Program for International Students",
       "canonicalUrl": "https://www.nafsa.org/CPT-lawsuit-filed-press-statement",
       "publishedAt": "2026-10-05",
+      "effectiveAt": null,
       "excerpt": "",
       "topics": [
         "employment",
         "university"
       ],
       "visaTypes": [],
+      "updateType": "court-development",
       "editorialState": "source-only",
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true
+      "autoIngested": true,
+      "clusterId": "cluster-d14144cfbd5f8804f09b",
+      "relatedStoryIds": []
     },
     {
       "id": "auto-mit-iso-71fdd9e2962c78530c00",
@@ -87,16 +103,20 @@
       "title": "TN and TD Visa Applicants Subject to Expanded State Department Screening Starting October 1, 2026",
       "canonicalUrl": "https://iso.mit.edu/news/tn-and-td-visa-applicants-subject-to-expanded-state-department-screening-starting-october-1-2026",
       "publishedAt": "2026-09-25",
+      "effectiveAt": null,
       "excerpt": "On September 18, 2026, the U.S. Department of State announced that starting October 1, 2026, TN, TD (Canadian and Mexican citizen USMCA professionals and their dependents), and I (foreign media representatives) visa applicants will be subject to a review of their online presence as part of their vis",
       "topics": [
         "status"
       ],
       "visaTypes": [],
+      "updateType": "announcement",
       "editorialState": "source-only",
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true
+      "autoIngested": true,
+      "clusterId": "cluster-0fc2e1f82212c9e38848",
+      "relatedStoryIds": []
     },
     {
       "id": "auto-mit-iso-ab2f2fd151f6197ea988",
@@ -105,16 +125,20 @@
       "title": "Presidential Proclamation Purports to Extend $100,000 H-1B Fee Policy",
       "canonicalUrl": "https://iso.mit.edu/news/presidential-proclamation-purports-to-extend-100000-h-1b-fee-policy",
       "publishedAt": "2026-09-25",
+      "effectiveAt": null,
       "excerpt": "On September 18, 2026, President Trump issued a proclamation purporting to extend the $100,000 fee for certain H-1B petitions through 9/21/2027. Under the original September 2025 proclamation, the $100,000 fee policy had […]",
       "topics": [
         "employment"
       ],
       "visaTypes": [],
+      "updateType": "announcement",
       "editorialState": "source-only",
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true
+      "autoIngested": true,
+      "clusterId": "cluster-4519a02dd7c43fdbfef3",
+      "relatedStoryIds": []
     },
     {
       "id": "auto-mit-iso-bebb616eb1ea98acce2f",
@@ -123,6 +147,7 @@
       "title": "SEVP Issues New Guidance on CPT Eligibility – Changes Interpretation of “Integral Part of Established Curriculum”",
       "canonicalUrl": "https://iso.mit.edu/news/sevp-issues-new-guidance-on-cpt-eligibility-changes-interpretation-of-integral-part-of-established-curriculum",
       "publishedAt": "2026-09-25",
+      "effectiveAt": null,
       "excerpt": "August 31, 2026 Dear international students,On August 24, 2026, the USDHS Student and Exchange Visitor Program (SEVP) issued a Broadcast Message (2608-02) providing new guidance on F-1 Curricular Practical Training (CPT) As […]",
       "topics": [
         "status",
@@ -132,11 +157,14 @@
       "visaTypes": [
         "f-1"
       ],
+      "updateType": "guidance",
       "editorialState": "source-only",
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true
+      "autoIngested": true,
+      "clusterId": "cluster-ce1931c4ac700ae5a4c5",
+      "relatedStoryIds": []
     },
     {
       "id": "auto-mit-iso-d249c5d20ce081942407",
@@ -145,16 +173,20 @@
       "title": "Federal Court Postpones Effective Date of Final Rule Eliminating D/S",
       "canonicalUrl": "https://iso.mit.edu/news/federal-court-postpones-effective-date-of-final-rule-eliminating-d-s-2",
       "publishedAt": "2026-09-15",
+      "effectiveAt": null,
       "excerpt": "On September 14, 2026, the U.S. Federal District Court of Massachusetts issued a nationwide temporary injunction in the litigation against the USDHS Final Rule eliminating Duration of Status (D/S), postponing […]",
       "topics": [
         "status"
       ],
       "visaTypes": [],
+      "updateType": "final-rule",
       "editorialState": "source-only",
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true
+      "autoIngested": true,
+      "clusterId": "cluster-17a30550ad1722e749b6",
+      "relatedStoryIds": []
     },
     {
       "id": "auto-nafsa-press-49dc12a460dee25a36c3",
@@ -163,16 +195,20 @@
       "title": "NAFSA and other Plaintiffs’ Statement on Nationwide Preliminary Relief in Duration of Status Lawsuit",
       "canonicalUrl": "https://www.nafsa.org/statement-nationwide-preliminary-relief-DS",
       "publishedAt": "2026-09-14",
+      "effectiveAt": null,
       "excerpt": "",
       "topics": [
         "status"
       ],
       "visaTypes": [],
+      "updateType": "court-development",
       "editorialState": "source-only",
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true
+      "autoIngested": true,
+      "clusterId": "cluster-57e39c4551d4b2b83aea",
+      "relatedStoryIds": []
     },
     {
       "id": "auto-mit-iso-dc0720dc88df92d5a9b6",
@@ -181,16 +217,20 @@
       "title": "USDHS Issues Interim Final Rule Mandating Electronic Filing with USCIS",
       "canonicalUrl": "https://iso.mit.edu/news/usdhs-issues-interim-final-rule-mandating-electronic-filing-with-uscis",
       "publishedAt": "2026-09-08",
+      "effectiveAt": null,
       "excerpt": "On August 11, 2026, the U.S. Department of Homeland Security (USDHS) published an interim final rule that allows U.S. Citizenship and Immigration Services (USCIS) to mandate the electronic filing for […]",
       "topics": [
         "status"
       ],
       "visaTypes": [],
+      "updateType": "final-rule",
       "editorialState": "source-only",
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true
+      "autoIngested": true,
+      "clusterId": "cluster-b59ea53e94dd2739e1df",
+      "relatedStoryIds": []
     },
     {
       "id": "auto-nafsa-press-d5cc8e9e228a3edd7eb5",
@@ -199,17 +239,21 @@
       "title": "Statement: Court Hearing on DHS Rule Ending Duration of Status for International Students",
       "canonicalUrl": "https://www.nafsa.org/about/about-nafsa/statement-court-hearing-dhs-rule-ending-duration-status-international-students",
       "publishedAt": "2026-09-03",
+      "effectiveAt": null,
       "excerpt": "",
       "topics": [
         "status",
         "university"
       ],
       "visaTypes": [],
+      "updateType": "court-development",
       "editorialState": "source-only",
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true
+      "autoIngested": true,
+      "clusterId": "cluster-7950f58e48e2c039a513",
+      "relatedStoryIds": []
     },
     {
       "id": "auto-mit-iso-5329d0b0cf8e3c1cb37e",
@@ -218,16 +262,20 @@
       "title": "DOS Announces Expedited Tourist Visa Appointment Pilot Program",
       "canonicalUrl": "https://iso.mit.edu/news/dos-announces-expedited-tourist-visa-appointment-pilot-program",
       "publishedAt": "2026-08-24",
+      "effectiveAt": null,
       "excerpt": "On August 18, 2026, the US Department of State announced that it is testing an expedited interview appointment program for tourist (B status) visas as select U.S. Embassies/Consulates. The pilot […]",
       "topics": [
         "status"
       ],
       "visaTypes": [],
+      "updateType": "announcement",
       "editorialState": "source-only",
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true
+      "autoIngested": true,
+      "clusterId": "cluster-491e1fee6bb3057da3f0",
+      "relatedStoryIds": []
     },
     {
       "id": "auto-nafsa-press-6e75c58c8fd32d2fa0ee",
@@ -236,16 +284,20 @@
       "title": "Coalition Files Federal Lawsuit Challenging Rule Ending Duration of Status",
       "canonicalUrl": "https://www.nafsa.org/press-release-lawsuit-challenging-rule-ending-duration-status",
       "publishedAt": "2026-08-18",
+      "effectiveAt": null,
       "excerpt": "",
       "topics": [
         "status"
       ],
       "visaTypes": [],
+      "updateType": "court-development",
       "editorialState": "source-only",
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true
+      "autoIngested": true,
+      "clusterId": "cluster-88dd53eb942d95c2fcdf",
+      "relatedStoryIds": []
     },
     {
       "id": "auto-nafsa-press-600108249a1fa381de8d",
@@ -254,16 +306,20 @@
       "title": "U.S. Economy Stands to Lose $3.4 Billion from Precipitous Drop in International Students",
       "canonicalUrl": "https://www.nafsa.org/about/about-nafsa/us-economy-stands-lose-34-billion-precipitous-drop-international-students",
       "publishedAt": "2026-08-11",
+      "effectiveAt": null,
       "excerpt": "",
       "topics": [
         "university"
       ],
       "visaTypes": [],
+      "updateType": "announcement",
       "editorialState": "source-only",
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true
+      "autoIngested": true,
+      "clusterId": "cluster-631e4026c6658233ba9b",
+      "relatedStoryIds": []
     },
     {
       "id": "auto-mit-iso-df51095723d51d8a91fa",
@@ -272,17 +328,21 @@
       "title": "U.S. Tourist Visa Bond Program – Made Permanent Effective August 3, 2026",
       "canonicalUrl": "https://iso.mit.edu/news/u-s-tourist-visa-bond-program-made-permanent-effective-august-3-2026",
       "publishedAt": "2026-08-04",
+      "effectiveAt": null,
       "excerpt": "On August 3, 2026, the U.S. Department of State published a Final Rule, effective immediately, making permanent the tourist visa bond program (B-1/B-2 for business or tourism) and increasing the […]",
       "topics": [
         "status",
         "travel-entry"
       ],
       "visaTypes": [],
+      "updateType": "final-rule",
       "editorialState": "source-only",
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true
+      "autoIngested": true,
+      "clusterId": "cluster-75ef5cd14d1c5a1a6cfe",
+      "relatedStoryIds": []
     },
     {
       "id": "auto-mit-iso-6921841194ac4381e6c9",
@@ -291,16 +351,20 @@
       "title": "USDOS Announces Realignment of U.S. Visa Services in Africa",
       "canonicalUrl": "https://iso.mit.edu/news/usdos-announces-realignment-of-u-s-visa-services-in-africa",
       "publishedAt": "2026-07-24",
+      "effectiveAt": null,
       "excerpt": "On July 15, 2026, the U.S. Department of State (USDOS) announced that it will be realigning visa operations in Africa to designated regional hubs. This results in visa services not […]",
       "topics": [
         "status"
       ],
       "visaTypes": [],
+      "updateType": "announcement",
       "editorialState": "source-only",
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true
+      "autoIngested": true,
+      "clusterId": "cluster-c222104adcd56d417c41",
+      "relatedStoryIds": []
     },
     {
       "id": "auto-mit-iso-8d99114660469b922c4b",
@@ -309,16 +373,20 @@
       "title": "MIT Summary on USDHS Final Rule Eliminating D/S for F and J Statuses",
       "canonicalUrl": "https://iso.mit.edu/news/mit-summary-on-usdhs-final-rule-eliminating-d-s-for-f-and-j-statuses",
       "publishedAt": "2026-07-23",
+      "effectiveAt": null,
       "excerpt": "The following email was sent to all MIT international students and scholars on July 24, 2026. July 24, 2026 Dear International Students and Scholars, In follow-up to our note last […]",
       "topics": [
         "university"
       ],
       "visaTypes": [],
+      "updateType": "final-rule",
       "editorialState": "source-only",
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true
+      "autoIngested": true,
+      "clusterId": "cluster-5384418761d2d7242b98",
+      "relatedStoryIds": []
     },
     {
       "id": "auto-federal-register-1fa2cf8047ef8df71f91",
@@ -327,16 +395,21 @@
       "title": "Establishing a Fixed Time Period of Admission and an Extension of Stay Procedure for Nonimmigrant Academic Students, Exchange Visitors, and Representatives of Foreign Information Media",
       "canonicalUrl": "https://www.federalregister.gov/documents/2026/07/17/2026-14439/establishing-a-fixed-time-period-of-admission-and-an-extension-of-stay-procedure-for-nonimmigrant",
       "publishedAt": "2026-07-17",
+      "effectiveAt": null,
       "excerpt": "The Department of Homeland Security (DHS) is amending its regulations to change the admission period in the F, J, and I classifications from duration of status to an admission for a fixed time period, and additional changes to admission and extension requirements. This final rule will provide additi",
       "topics": [
         "status"
       ],
       "visaTypes": [],
+      "updateType": "final-rule",
+      "documentNumber": "2026-14439",
       "editorialState": "source-only",
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true
+      "autoIngested": true,
+      "clusterId": "cluster-3c63bbb571a45bf1ee30",
+      "relatedStoryIds": []
     },
     {
       "id": "auto-mit-iso-e4897c85cabd3301f609",
@@ -345,17 +418,21 @@
       "title": "Final Rule ending of “duration of status” policy for F and J nonimmigrant statuses",
       "canonicalUrl": "https://iso.mit.edu/news/final-rule-ending-of-duration-of-status-policy-for-f-and-j-nonimmigrant-statuses",
       "publishedAt": "2026-07-17",
+      "effectiveAt": null,
       "excerpt": "Dear MIT International Student and Scholar Community, Today, Friday, July 17, 2026, the U.S. Department of Homeland Security (DHS) published a Final Rule indicating its intent to end the duration […]",
       "topics": [
         "status",
         "university"
       ],
       "visaTypes": [],
+      "updateType": "final-rule",
       "editorialState": "source-only",
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true
+      "autoIngested": true,
+      "clusterId": "cluster-6187515ede7c6b0058b0",
+      "relatedStoryIds": []
     },
     {
       "id": "auto-nafsa-press-bbc0b34197adb823e24a",
@@ -364,16 +441,20 @@
       "title": "NAFSA: Undermining International Student Stability Weakens U.S. National Interest",
       "canonicalUrl": "https://www.nafsa.org/Duration-status-final-rule-press-statement",
       "publishedAt": "2026-07-16",
+      "effectiveAt": null,
       "excerpt": "",
       "topics": [
         "university"
       ],
       "visaTypes": [],
+      "updateType": "announcement",
       "editorialState": "source-only",
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true
+      "autoIngested": true,
+      "clusterId": "cluster-11e79d5015701c3794dd",
+      "relatedStoryIds": []
     },
     {
       "id": "auto-mit-iso-e256542605a9dc2b4ea0",
@@ -382,16 +463,20 @@
       "title": "ISO, and most MIT offices, CLOSED on Friday, July 3",
       "canonicalUrl": "https://iso.mit.edu/news/iso-and-most-mit-offices-closed-on-friday-july-3",
       "publishedAt": "2026-06-29",
+      "effectiveAt": null,
       "excerpt": "The ISO, and most MIT offices, will be closed on Friday, July 3, 2026, in observance of the Independence Day holiday. The ISO will close for walk-ins beginning at 3:00pm on […]",
       "topics": [
         "university"
       ],
       "visaTypes": [],
+      "updateType": "announcement",
       "editorialState": "source-only",
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true
+      "autoIngested": true,
+      "clusterId": "cluster-3ae7a1998b34488cee62",
+      "relatedStoryIds": []
     },
     {
       "id": "auto-mit-iso-33bf44d6cac7fb7b087a",
@@ -400,16 +485,20 @@
       "title": "ISO Summer Walk-In Office Hours – June 12-August 7, 2026",
       "canonicalUrl": "https://iso.mit.edu/news/iso-summer-walk-in-office-hours-june-12-august-7-2026",
       "publishedAt": "2026-06-23",
+      "effectiveAt": null,
       "excerpt": "For the period of Friday, June 12 through Friday, August 7, 2026, the ISO will have the following in-person/walk-in office hours: Mondays: 10:00am-3:00pmTuesdays: 10:00am-3:00pmWednesdays: FULLY REMOTEThursdays: 10:00am-3:00pmFridays: FULLY REMOTE The […]",
       "topics": [
         "university"
       ],
       "visaTypes": [],
+      "updateType": "announcement",
       "editorialState": "source-only",
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true
+      "autoIngested": true,
+      "clusterId": "cluster-26a0917b1fe5a22698c3",
+      "relatedStoryIds": []
     },
     {
       "id": "auto-mit-iso-e5c8a8b0c3550231700c",
@@ -418,16 +507,20 @@
       "title": "ISO, and most MIT offices, CLOSED on Friday, June 19",
       "canonicalUrl": "https://iso.mit.edu/news/iso-and-most-mit-offices-closed-on-friday-june-19",
       "publishedAt": "2026-06-18",
+      "effectiveAt": null,
       "excerpt": "The ISO, and most MIT offices, will be closed on Friday, June 19, 2026, in observance of the Juneteenth holiday. The ISO will close for walk-ins beginning at 3:00pm on Thursday, […]",
       "topics": [
         "university"
       ],
       "visaTypes": [],
+      "updateType": "announcement",
       "editorialState": "source-only",
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true
+      "autoIngested": true,
+      "clusterId": "cluster-16bed469a13b7157b651",
+      "relatedStoryIds": []
     },
     {
       "id": "auto-study-in-the-states-9536c621272155cac6e1",
@@ -436,16 +529,20 @@
       "title": "Final Rule: Establishing a Fixed Time Period of Admission and an Extension of Stay Procedure Quick Facts",
       "canonicalUrl": "https://studyinthestates.dhs.gov/final-rule-establishing-a-fixed-time-period-of-admission-and-an-extension-of-stay-procedure-quick",
       "publishedAt": "2026-06-02",
+      "effectiveAt": null,
       "excerpt": "Final Rule: Establishing a Fixed Time Period of Admission and an Extension of Stay Procedure Quick Facts admin Tue, 06/02/2026 - 15:19 On July 17, 2026, the U.S. Department of Homeland Security published a final rule in the Federal Register, “Establishing a Fixed Time Period of Admission and an Exte",
       "topics": [
         "status"
       ],
       "visaTypes": [],
+      "updateType": "final-rule",
       "editorialState": "source-only",
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true
+      "autoIngested": true,
+      "clusterId": "cluster-fb096c46f99384f8bf83",
+      "relatedStoryIds": []
     },
     {
       "id": "auto-study-in-the-states-be9571b4f8d9ee5e5957",
@@ -454,16 +551,20 @@
       "title": "Final Rule: Establishing a Fixed Time Period of Admission and an Extension of Stay Procedure FAQ",
       "canonicalUrl": "https://studyinthestates.dhs.gov/final-rule-establishing-a-fixed-time-period-of-admission-and-an-extension-of-stay-procedure-faq",
       "publishedAt": "2026-06-02",
+      "effectiveAt": null,
       "excerpt": "Final Rule: Establishing a Fixed Time Period of Admission and an Extension of Stay Procedure FAQ admin Tue, 06/02/2026 - 16:34 Below are the answers to the most frequently asked questions (FAQs) about the final rule, “Establishing a Fixed Time Period of Admission and an Extension of Stay Procedure f",
       "topics": [
         "status"
       ],
       "visaTypes": [],
+      "updateType": "final-rule",
       "editorialState": "source-only",
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true
+      "autoIngested": true,
+      "clusterId": "cluster-a823bae27ca1f3e67cd3",
+      "relatedStoryIds": []
     },
     {
       "id": "auto-mit-iso-b7a85774eedc6f926230",
@@ -472,16 +573,20 @@
       "title": "USCIS Issues Policy Memo Requiring Most Applicants for Permanent Residence to Process Final Step Through U.S. Consulates Abroad",
       "canonicalUrl": "https://iso.mit.edu/news/uscis-issues-policy-memo-requiring-adjustment-of-status-to-green-card-by-consular-processing-abroad",
       "publishedAt": "2026-05-26",
+      "effectiveAt": null,
       "excerpt": "On May 22, 2026, U.S. Citizenship and Immigration Services (USCIS) announced a new policy memo indicating that USCIS will now grant ‘Adjustment of Status’ to Permanent Resident (Green Card) within the U.S. only […]",
       "topics": [
         "status"
       ],
       "visaTypes": [],
+      "updateType": "announcement",
       "editorialState": "source-only",
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true
+      "autoIngested": true,
+      "clusterId": "cluster-8cdc1f13cbfdc2124e58",
+      "relatedStoryIds": []
     },
     {
       "id": "auto-nafsa-press-f60aee68764aac485d5a",
@@ -490,16 +595,20 @@
       "title": "NAFSA Responds to Alleged Instances of OPT Abuses",
       "canonicalUrl": "https://www.nafsa.org/opt-allegations-response",
       "publishedAt": "2026-05-13",
+      "effectiveAt": null,
       "excerpt": "",
       "topics": [
         "employment"
       ],
       "visaTypes": [],
+      "updateType": "announcement",
       "editorialState": "source-only",
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true
+      "autoIngested": true,
+      "clusterId": "cluster-d52f545efa1799b4b1be",
+      "relatedStoryIds": []
     },
     {
       "id": "auto-mit-iso-e7c660e92df6beb19411",
@@ -508,17 +617,21 @@
       "title": "SEVP Issues Broadcast Message Regarding Prevention of STEM OPT Employer Fraud",
       "canonicalUrl": "https://iso.mit.edu/news/sevp-issues-broadcast-message-regarding-prevention-of-stem-opt-employer-fraud",
       "publishedAt": "2026-04-16",
+      "effectiveAt": null,
       "excerpt": "On March 23, 2026, the Student and Exchange Visitor Program (SEVP), in the U.S. Department of Homeland Security, issued a Broadcast Message “STEM OPT Employer Fraud” regarding a new focus […]",
       "topics": [
         "status",
         "employment"
       ],
       "visaTypes": [],
+      "updateType": "announcement",
       "editorialState": "source-only",
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true
+      "autoIngested": true,
+      "clusterId": "cluster-0c19e23c0f2addb28e6f",
+      "relatedStoryIds": []
     },
     {
       "id": "auto-mit-iso-a1b1171df26d23df3dfc",
@@ -527,17 +640,21 @@
       "title": "State Department Adds Countries to the Tourist/Business Visa Bond List",
       "canonicalUrl": "https://iso.mit.edu/news/state-department-adds-additional-countries-to-the-tourist-business-visa-bond-list",
       "publishedAt": "2026-03-19",
+      "effectiveAt": null,
       "excerpt": "On March 18, 2026, the U.S. Department of State published an update on their website adding to the list of countries whose nationals may be required to post a “visa bond” when […]",
       "topics": [
         "status",
         "travel-entry"
       ],
       "visaTypes": [],
+      "updateType": "announcement",
       "editorialState": "source-only",
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true
+      "autoIngested": true,
+      "clusterId": "cluster-afd06a64e5bb604124d5",
+      "relatedStoryIds": []
     },
     {
       "id": "auto-nafsa-press-cba22607ba0f9099a72c",
@@ -546,6 +663,7 @@
       "title": "NAFSA Responds to the Decline in F-1 Visa Issuance in the Summer of 2025",
       "canonicalUrl": "https://www.nafsa.org/about/about-nafsa/nafsa-responds-decline-f-1-visa-issuance-summer-2025",
       "publishedAt": "2026-03-09",
+      "effectiveAt": null,
       "excerpt": "",
       "topics": [
         "status"
@@ -553,11 +671,14 @@
       "visaTypes": [
         "f-1"
       ],
+      "updateType": "announcement",
       "editorialState": "source-only",
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true
+      "autoIngested": true,
+      "clusterId": "cluster-0b54d9fad0dfb9217d09",
+      "relatedStoryIds": []
     },
     {
       "id": "auto-mit-iso-4a5128b6e53cbfe3aea2",
@@ -566,17 +687,21 @@
       "title": "State Department Expands Tourist/Business Visa Bond List",
       "canonicalUrl": "https://iso.mit.edu/news/state-department-expands-tourist-business-visa-bond-list",
       "publishedAt": "2026-02-12",
+      "effectiveAt": null,
       "excerpt": "On January 8, 2026, the U.S. Department of State published an update to the list of countries whose nationals may be required to post a “visa bond” when applying for […]",
       "topics": [
         "status",
         "travel-entry"
       ],
       "visaTypes": [],
+      "updateType": "announcement",
       "editorialState": "source-only",
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true
+      "autoIngested": true,
+      "clusterId": "cluster-b21e457af19f80b38371",
+      "relatedStoryIds": []
     },
     {
       "id": "auto-study-in-the-states-019e8b0fc2a2532878ba",
@@ -585,14 +710,18 @@
       "title": "DSOs: Fraud Training 101",
       "canonicalUrl": "https://studyinthestates.dhs.gov/dsos-fraud-training-101",
       "publishedAt": "2025-11-03",
+      "effectiveAt": null,
       "excerpt": "DSOs: Fraud Training 101 admin Mon, 11/03/2025 - 09:17 FraudTrainingforSchoolOfficialsForeignStudentFraud.vtt",
       "topics": [],
       "visaTypes": [],
+      "updateType": "announcement",
       "editorialState": "source-only",
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true
+      "autoIngested": true,
+      "clusterId": "cluster-d423fbb0b05de83c3495",
+      "relatedStoryIds": []
     },
     {
       "id": "auto-study-in-the-states-9500b0cc3eb956f8fb83",
@@ -601,17 +730,21 @@
       "title": "Getting Started Frequently Asked Questions",
       "canonicalUrl": "https://studyinthestates.dhs.gov/faq-menu/getting-started-frequently-asked-questions",
       "publishedAt": "2025-01-27",
+      "effectiveAt": null,
       "excerpt": "Getting Started Frequently Asked Questions admin Mon, 01/27/2025 - 09:44 What is SEVP certification and do schools need it? Student and Exchange Visitor Program (SEVP) certification authorizes schools to issue Forms I-20, \"Certificate of Eligibility for Nonimmigrant Student Status, \" to prospective ",
       "topics": [
         "status",
         "university"
       ],
       "visaTypes": [],
+      "updateType": "guidance",
       "editorialState": "source-only",
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true
+      "autoIngested": true,
+      "clusterId": "cluster-ee3df9f25c4c656c16ea",
+      "relatedStoryIds": []
     },
     {
       "id": "auto-study-in-the-states-110082c2fa3d9db2d939",
@@ -620,16 +753,20 @@
       "title": "Status Changes",
       "canonicalUrl": "https://studyinthestates.dhs.gov/faq-menu/status-changes",
       "publishedAt": "2024-12-18",
+      "effectiveAt": null,
       "excerpt": "Status Changes admin Wed, 12/18/2024 - 11:40 Status Changes When do international students need to fill out the Form I-539? If an international student wants to change the purpose of their visit while in the United States, the student (or in some cases a student’s employer) must file a request with ",
       "topics": [
         "university"
       ],
       "visaTypes": [],
+      "updateType": "announcement",
       "editorialState": "source-only",
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true
+      "autoIngested": true,
+      "clusterId": "cluster-81e98b61a5f29b692d14",
+      "relatedStoryIds": []
     },
     {
       "id": "auto-study-in-the-states-3c0bc8d81b929440c261",
@@ -638,17 +775,21 @@
       "title": "SEVP Certification",
       "canonicalUrl": "https://studyinthestates.dhs.gov/faq-menu/sevp-certification",
       "publishedAt": "2024-12-18",
+      "effectiveAt": null,
       "excerpt": "SEVP Certification admin Wed, 12/18/2024 - 11:41 SEVP Certification How does a U.S. school apply for and maintain SEVP certification? Student and Exchange Visitor Program (SEVP) certification is the result of an adjudication process that includes a review of the Form I-17, \"Petition for Approval of ",
       "topics": [
         "status",
         "university"
       ],
       "visaTypes": [],
+      "updateType": "announcement",
       "editorialState": "source-only",
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true
+      "autoIngested": true,
+      "clusterId": "cluster-71fdffacd6f304955ab8",
+      "relatedStoryIds": []
     },
     {
       "id": "auto-study-in-the-states-58a06ef689b57759ed21",
@@ -657,14 +798,18 @@
       "title": "Studying in the United States",
       "canonicalUrl": "https://studyinthestates.dhs.gov/faq-menu/studying-in-the-united-states",
       "publishedAt": "2024-12-18",
+      "effectiveAt": null,
       "excerpt": "Studying in the United States admin Wed, 12/18/2024 - 11:32 Studying in the United States What is the difference between a vocational school and an academic school? Vocational schools are institutions of learning that provide training and education for a particular skillset or occupation (culinary s",
       "topics": [],
       "visaTypes": [],
+      "updateType": "announcement",
       "editorialState": "source-only",
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true
+      "autoIngested": true,
+      "clusterId": "cluster-28dd38cd6e9446fa60ca",
+      "relatedStoryIds": []
     },
     {
       "id": "auto-study-in-the-states-9bad3ad7a10536fa3976",
@@ -673,17 +818,21 @@
       "title": "Traveling to the United States",
       "canonicalUrl": "https://studyinthestates.dhs.gov/faq-menu/traveling-to-the-united-states",
       "publishedAt": "2024-12-18",
+      "effectiveAt": null,
       "excerpt": "Traveling to the United States admin Wed, 12/18/2024 - 11:38 Traveling to the United States What is the I-901 SEVIS Fee and how much does it cost? Regulation requires all prospective F and M students pay the I-h2 before the U.S. Department of State issues them a visa. The congressionally mandated I-",
       "topics": [
         "status",
         "forms-fees"
       ],
       "visaTypes": [],
+      "updateType": "announcement",
       "editorialState": "source-only",
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true
+      "autoIngested": true,
+      "clusterId": "cluster-c8fa0b3d0153f3879926",
+      "relatedStoryIds": []
     },
     {
       "id": "auto-study-in-the-states-c25251bd18b47ccd09ee",
@@ -692,6 +841,7 @@
       "title": "Student Benefits",
       "canonicalUrl": "https://studyinthestates.dhs.gov/faq-menu/student-benefits",
       "publishedAt": "2024-12-18",
+      "effectiveAt": null,
       "excerpt": "Student Benefits admin Wed, 12/18/2024 - 11:39 Student Benefits Can international students obtain a Social Security number? Every F-1 and M-1 student who U.S. Citizenship and Immigration Services grants employment authorization to needs a Social Security number. For more information about the proces",
       "topics": [
         "status",
@@ -703,11 +853,14 @@
         "f-1",
         "m-1"
       ],
+      "updateType": "announcement",
       "editorialState": "source-only",
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true
+      "autoIngested": true,
+      "clusterId": "cluster-34124874beca4888fa77",
+      "relatedStoryIds": []
     },
     {
       "id": "auto-study-in-the-states-d0fc5783941caf4626c9",
@@ -716,17 +869,21 @@
       "title": "SEVP Certification Frequently Asked Questions",
       "canonicalUrl": "https://studyinthestates.dhs.gov/faq-menu/sevp-certification-frequently-asked-questions",
       "publishedAt": "2024-12-17",
+      "effectiveAt": null,
       "excerpt": "SEVP Certification Frequently Asked Questions admin Tue, 12/17/2024 - 13:11 All schools in the United States that enroll F and/or M nonimmigrant students must be certified by the Student and Exchange Visitor Program (SEVP). Schools petition for certification by means of the Form I-17, \"Petition for ",
       "topics": [
         "status",
         "university"
       ],
       "visaTypes": [],
+      "updateType": "guidance",
       "editorialState": "source-only",
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true
+      "autoIngested": true,
+      "clusterId": "cluster-a29a2c2d2c184dc6cc17",
+      "relatedStoryIds": []
     },
     {
       "id": "auto-mit-iso-f44a72463064f9d9c5fc",
@@ -735,6 +892,7 @@
       "title": "REMINDER: Obtaining Travel Signatures on Form I-20/Form DS-2019",
       "canonicalUrl": "https://iso.mit.edu/news/obtaining-travel-signatures-on-form-i-20-form-ds-2019",
       "publishedAt": "2023-11-20",
+      "effectiveAt": null,
       "excerpt": "NOTE: You can leave the U.S. without a travel validation signature, but you will need one to re-enter; however, the ISO strongly advises that you secure any new documents prior […]",
       "topics": [
         "status",
@@ -742,11 +900,14 @@
         "university"
       ],
       "visaTypes": [],
+      "updateType": "announcement",
       "editorialState": "source-only",
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true
+      "autoIngested": true,
+      "clusterId": "cluster-2a78b7730d8e04a29df0",
+      "relatedStoryIds": []
     },
     {
       "id": "auto-federal-register-2a2d92ad4a9fc041bca7",
@@ -755,16 +916,21 @@
       "title": "Removal of Obsolete Procedures and Requirements Related to F, J, and M Nonimmigrants",
       "canonicalUrl": "https://www.federalregister.gov/documents/2022/12/12/2022-26013/removal-of-obsolete-procedures-and-requirements-related-to-f-j-and-m-nonimmigrants",
       "publishedAt": "2022-12-12",
+      "effectiveAt": null,
       "excerpt": "The Department of Homeland Security (DHS) is amending its regulations to update information that is no longer accurate since the creation of the Student and Exchange Visitor Information System (SEVIS). DHS is updating obsolete or unnecessary information because SEVIS, a Web-based system that DHS use",
       "topics": [
         "status"
       ],
       "visaTypes": [],
+      "updateType": "final-rule",
+      "documentNumber": "2022-26013",
       "editorialState": "source-only",
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true
+      "autoIngested": true,
+      "clusterId": "cluster-896a054e9f67ef8b550b",
+      "relatedStoryIds": []
     },
     {
       "id": "auto-federal-register-f08785cf05ee716e79d5",
@@ -773,6 +939,7 @@
       "title": "Adjustments to Limitations on Designated School Official Assignment and Study by F-2 and M-2 Nonimmigrants",
       "canonicalUrl": "https://www.federalregister.gov/documents/2013/11/21/2013-27898/adjustments-to-limitations-on-designated-school-official-assignment-and-study-by-f-2-and-m-2",
       "publishedAt": "2013-11-21",
+      "effectiveAt": null,
       "excerpt": "The Department of Homeland Security proposes to amend its regulations under the Student and Exchange Visitor Program to improve management of international student programs and increase opportunities for study by spouses and children of nonimmigrant students. The proposed rule would grant school off",
       "topics": [
         "status",
@@ -782,11 +949,15 @@
         "f-2",
         "m-2"
       ],
+      "updateType": "proposed-rule",
+      "documentNumber": "2013-27898",
       "editorialState": "source-only",
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true
+      "autoIngested": true,
+      "clusterId": "cluster-8e3f8cec1eaf04d32715",
+      "relatedStoryIds": []
     },
     {
       "id": "auto-federal-register-50654aafa5568b34c82b",
@@ -795,16 +966,21 @@
       "title": "Retention and Reporting of Information for F, J, and M Nonimmigrants; Student and Exchange Visitor Information System (SEVIS)",
       "canonicalUrl": "https://www.federalregister.gov/documents/2002/12/11/02-31184/retention-and-reporting-of-information-for-f-j-and-m-nonimmigrants-student-and-exchange-visitor",
       "publishedAt": "2002-12-11",
+      "effectiveAt": null,
       "excerpt": "This rule amends the Immigration and Naturalization Service (Service) regulations governing the retention and reporting of information regarding F, J, and M nonimmigrants (foreign nationals having a residence in a foreign country which they have no intention of abandoning, and who are seeking tempor",
       "topics": [
         "status"
       ],
       "visaTypes": [],
+      "updateType": "final-rule",
+      "documentNumber": "02-31184",
       "editorialState": "source-only",
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true
+      "autoIngested": true,
+      "clusterId": "cluster-734c7087e5636628e1c2",
+      "relatedStoryIds": []
     },
     {
       "id": "auto-ice-sevp-50a179b77c7d34d7dab1",
@@ -813,17 +989,21 @@
       "title": "Updated Certification Expiration Date Process",
       "canonicalUrl": "https://www.ice.gov/doclib/sevis/pdf/faqUpdatedCertExpDateProcess.pdf",
       "publishedAt": null,
+      "effectiveAt": null,
       "excerpt": "Per regulation, all SEVP-certified schools must be recertified every two years. The certification expiration date (CED) is exactly two years from the date of initial certification or the date of previous recertification.",
       "topics": [
         "status",
         "university"
       ],
       "visaTypes": [],
+      "updateType": "announcement",
       "editorialState": "source-only",
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true
+      "autoIngested": true,
+      "clusterId": "cluster-4e31678a335a3e611f67",
+      "relatedStoryIds": []
     },
     {
       "id": "auto-ice-sevp-625e12e3cb15dfd5c93d",
@@ -832,11 +1012,13 @@
       "title": "DHS Publishes Final Rule: Establishing a Fixed Time Period of Admission and an Extension of Stay Procedure for Nonimmigrant Academic Students, Exchange Visitors, and Representatives of Foreign Information Media",
       "canonicalUrl": "https://studyinthestates.dhs.gov/elimination-of-duration-of-status-quick-facts",
       "publishedAt": null,
+      "effectiveAt": null,
       "excerpt": "On July 17, 2026, DHS published a final rule establishing a fixed time period of admission and an extension of stay procedure for F nonimmigrant academic students, J exchange visitors and representatives of foreign information media.",
       "topics": [
         "status"
       ],
       "visaTypes": [],
+      "updateType": "final-rule",
       "image": {
         "url": "https://www.ice.gov/sites/default/files/2026-07/messageSEVP_07172026.png",
         "alt": "DHS Publishes Final Rule"
@@ -845,7 +1027,9 @@
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true
+      "autoIngested": true,
+      "clusterId": "cluster-317aa5610ede60f7d119",
+      "relatedStoryIds": []
     },
     {
       "id": "auto-ice-sevp-7ce659670953362d9b74",
@@ -854,11 +1038,13 @@
       "title": "Update to 2022-23 Academic Year Guidance",
       "canonicalUrl": "https://www.ice.gov/doclib/sevis/pdf/bcm2204-04a.pdf",
       "publishedAt": null,
+      "effectiveAt": null,
       "excerpt": "Nonimmigrant students and schools certified by the Student and Exchange Visitor Program (SEVP) should abide by SEVP guidance originally issued in Mar. 2020 for the 2022-23 academic year.",
       "topics": [
         "status"
       ],
       "visaTypes": [],
+      "updateType": "guidance",
       "image": {
         "url": "https://www.ice.gov/sites/default/files/migrated/images/sevis-message1.jpg",
         "alt": "Important guidance for 2022-2023 Academic Year"
@@ -867,7 +1053,9 @@
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true
+      "autoIngested": true,
+      "clusterId": "cluster-903de1363bd450ac86b2",
+      "relatedStoryIds": []
     },
     {
       "id": "auto-ice-sevp-8ecab19e91d8d7b43afb",
@@ -876,6 +1064,7 @@
       "title": "Impact of Labor Strikes on F-1 Nonimmigrant Students",
       "canonicalUrl": "https://www.ice.gov/doclib/sevis/pdf/impactLaborStrikesNonimmigrantStudents_FAQ.pdf",
       "publishedAt": null,
+      "effectiveAt": null,
       "excerpt": "On Nov. 6, 2023, SEVP published interpretive guidance that addresses the impact of a strike on various F-1 nonimmigrant students, including those enrolled in school and those who have graduated and are engaged in optional practical training (OPT) employment.",
       "topics": [
         "status",
@@ -884,6 +1073,7 @@
       "visaTypes": [
         "f-1"
       ],
+      "updateType": "guidance",
       "image": {
         "url": "https://www.ice.gov/sites/default/files/migrated/images/messageLaborStrike.png",
         "alt": "Impact of Labor Strikes on F-1 Nonimmigrant Students"
@@ -892,7 +1082,9 @@
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true
+      "autoIngested": true,
+      "clusterId": "cluster-cc5cfc358454050790b8",
+      "relatedStoryIds": []
     },
     {
       "id": "auto-ice-sevp-9036c509d3ef748b9422",
@@ -901,12 +1093,14 @@
       "title": "New and Increased SEVP Fees",
       "canonicalUrl": "https://www.ice.gov/doclib/sevis/pdf/SEVP-FinalFeeRule-FAQs.pdf",
       "publishedAt": null,
+      "effectiveAt": null,
       "excerpt": "On June 24, 2019, new and increased fees for nonimmigrant students, exchange visitors and SEVP-certified schools took effect.",
       "topics": [
         "status",
         "forms-fees"
       ],
       "visaTypes": [],
+      "updateType": "announcement",
       "image": {
         "url": "https://www.ice.gov/sites/default/files/migrated/images/sevis-message3.jpg",
         "alt": "Important message regarding SEVP fees"
@@ -915,7 +1109,9 @@
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true
+      "autoIngested": true,
+      "clusterId": "cluster-573a27d584248e488be3",
+      "relatedStoryIds": []
     },
     {
       "id": "auto-ice-sevp-9554a5c6db6e123e4c4a",
@@ -924,16 +1120,20 @@
       "title": "DHS Publishes Federal Register Notice: Removal of Obsolete Procedures and Requirements Related to F, J and M Nonimmigrants",
       "canonicalUrl": "https://www.ice.gov/doclib/sevis/pdf/bcm2212-02.pdf",
       "publishedAt": null,
+      "effectiveAt": null,
       "excerpt": "On Dec. 12, 2022, SEVP will publish the Interim Final Rule: Removal of Obsolete Procedures and Requirements Related to F, J and M Nonimmigrants for public inspection.",
       "topics": [
         "status"
       ],
       "visaTypes": [],
+      "updateType": "final-rule",
       "editorialState": "source-only",
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true
+      "autoIngested": true,
+      "clusterId": "cluster-381663cbac409e39fb0d",
+      "relatedStoryIds": []
     },
     {
       "id": "auto-ice-sevp-a6a58b3103a4904de3eb",
@@ -942,11 +1142,13 @@
       "title": "SEVIS by the Numbers",
       "canonicalUrl": "https://www.ice.gov/doclib/sevis/btn/25_0605_2024-sevis-btn.pdf",
       "publishedAt": null,
+      "effectiveAt": null,
       "excerpt": "",
       "topics": [
         "status"
       ],
       "visaTypes": [],
+      "updateType": "announcement",
       "image": {
         "url": "https://www.ice.gov/sites/default/files/2025-06/25_0605_2024-sevis-btn-wide.jpg",
         "alt": "2024 SEVIS by the numbers"
@@ -955,7 +1157,9 @@
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true
+      "autoIngested": true,
+      "clusterId": "cluster-7c3e64009b949ba129ef",
+      "relatedStoryIds": []
     },
     {
       "id": "auto-ice-sevp-a7900d9f5b53d45e1397",
@@ -964,16 +1168,20 @@
       "title": "New Guidance on the Use of Electronic Signatures and Transmission of the Form I-20",
       "canonicalUrl": "https://www.ice.gov/doclib/sevis/pdf/I20-guidance.pdf",
       "publishedAt": null,
+      "effectiveAt": null,
       "excerpt": "On Nov. 1, 2021, the Student and Exchange Visitor Program published SEVP Policy Guidance: Use of Electronic Signatures and Transmission for the Form I-20. This guidance permits designated school officials to electronically sign and transmit the Form I-20 to initial and continuing international stude",
       "topics": [
         "status"
       ],
       "visaTypes": [],
+      "updateType": "guidance",
       "editorialState": "source-only",
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true
+      "autoIngested": true,
+      "clusterId": "cluster-f9386eae0a7a43d36aad",
+      "relatedStoryIds": []
     },
     {
       "id": "auto-ice-sevp-aaf681bb42b677625c81",
@@ -982,11 +1190,13 @@
       "title": "SEVP Spotlight",
       "canonicalUrl": "https://studyinthestates.dhs.gov/december-2022-sevp-spotlight",
       "publishedAt": null,
+      "effectiveAt": null,
       "excerpt": "December 2022",
       "topics": [
         "status"
       ],
       "visaTypes": [],
+      "updateType": "announcement",
       "image": {
         "url": "https://www.ice.gov/sites/default/files/migrated/images/15622089_1401963933231820_7264523065989380408_n.png",
         "alt": "Read the latest SEVP Spotlight on Study in the States"
@@ -995,7 +1205,9 @@
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true
+      "autoIngested": true,
+      "clusterId": "cluster-469c5386c9d45d2cebea",
+      "relatedStoryIds": []
     },
     {
       "id": "auto-ice-sevp-b5aa751c1654b5ff937d",
@@ -1004,12 +1216,14 @@
       "title": "SEVP Supports DHS Burden Reduction Initiative",
       "canonicalUrl": "https://studyinthestates.dhs.gov/trends-and-improvements/sevis/i-901-sevis-fee-payment",
       "publishedAt": null,
+      "effectiveAt": null,
       "excerpt": "Through ongoing initiatives since 2016, SEVP has worked to reduce processing times for the I-901 SEVIS Fee. These efforts have focused on improving the user experience on FMJFee.com and reduced completion times to five minutes per application.",
       "topics": [
         "status",
         "forms-fees"
       ],
       "visaTypes": [],
+      "updateType": "announcement",
       "image": {
         "url": "https://www.ice.gov/sites/default/files/2026-01/SEVP_3.21.jpg",
         "alt": "SEVP Supports DHS Burden Reduction Initiative"
@@ -1018,7 +1232,9 @@
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true
+      "autoIngested": true,
+      "clusterId": "cluster-2f95fa982e44fb226209",
+      "relatedStoryIds": []
     },
     {
       "id": "auto-ice-sevp-c34c686b53adb015f266",
@@ -1027,11 +1243,13 @@
       "title": "Termination of SEVP COVID-19 Flexibilities",
       "canonicalUrl": "https://www.ice.gov/sevis/schools",
       "publishedAt": null,
+      "effectiveAt": null,
       "excerpt": "The Student and Exchange Visitor Program (SEVP) ended its COVID-19 guidance on May 11, 2023, consistent with the end of the COVID-19 Public Health Emergency on May 11, 2023. As a result, all related statements, guidance and FAQs previously released by SEVP also terminated on May 11, 2023.",
       "topics": [
         "status"
       ],
       "visaTypes": [],
+      "updateType": "guidance",
       "image": {
         "url": "https://www.ice.gov/sites/default/files/migrated/images/sevis-message2.jpg",
         "alt": "Important news regarding COVID-19"
@@ -1040,7 +1258,9 @@
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true
+      "autoIngested": true,
+      "clusterId": "cluster-9ff705b045571fa036d7",
+      "relatedStoryIds": []
     },
     {
       "id": "auto-ice-sevp-d90802788a0fb3526455",
@@ -1049,17 +1269,21 @@
       "title": "FAQs on New Student Visa Guidance",
       "canonicalUrl": "https://www.ice.gov/doclib/sevis/pdf/VisaGuidance_FAQ.pdf",
       "publishedAt": null,
+      "effectiveAt": null,
       "excerpt": "On Feb. 21, 2023, the U.S. Department of State provided updated guidance to stakeholders which announced that consular officers can issue a visa up to 365 days in advance of a student’s Program Start Date. Read frequently asked questions about the change and the impact on SEVP stakeholders.",
       "topics": [
         "status",
         "travel-entry"
       ],
       "visaTypes": [],
+      "updateType": "guidance",
       "editorialState": "source-only",
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true
+      "autoIngested": true,
+      "clusterId": "cluster-bb057901019c2d4aba63",
+      "relatedStoryIds": []
     },
     {
       "id": "auto-ice-sevp-dc6c7bd6866e0de4eb57",
@@ -1068,16 +1292,20 @@
       "title": "Curricular Practical Training Reminders",
       "canonicalUrl": "https://www.ice.gov/doclib/sevis/pdf/CurricularPracticalTraining.pdf",
       "publishedAt": null,
+      "effectiveAt": null,
       "excerpt": "Download the new Curricular Practical Training Fact Sheet for reminders about the federal regulations governing curricular practical training (CPT) and answers to frequently asked questions about CPT.",
       "topics": [
         "employment"
       ],
       "visaTypes": [],
+      "updateType": "guidance",
       "editorialState": "source-only",
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true
+      "autoIngested": true,
+      "clusterId": "cluster-b0bab05009ba2ae31bf7",
+      "relatedStoryIds": []
     }
   ],
   "sourceReports": [
@@ -1086,42 +1314,48 @@
       "name": "U.S. Citizenship and Immigration Services",
       "state": "current",
       "fetched": 0,
-      "attempts": 1
+      "attempts": 1,
+      "lastSuccessAt": "2026-10-17T13:54:31.671Z"
     },
     {
       "sourceId": "study-in-the-states",
       "name": "Study in the States",
       "state": "current",
       "fetched": 10,
-      "attempts": 1
+      "attempts": 1,
+      "lastSuccessAt": "2026-10-17T13:54:31.671Z"
     },
     {
       "sourceId": "ice-sevp",
       "name": "Student and Exchange Visitor Program",
       "state": "current",
       "fetched": 14,
-      "attempts": 1
+      "attempts": 1,
+      "lastSuccessAt": "2026-10-17T13:54:31.671Z"
     },
     {
       "sourceId": "federal-register",
       "name": "Federal Register",
       "state": "current",
       "fetched": 7,
-      "attempts": 1
+      "attempts": 1,
+      "lastSuccessAt": "2026-10-17T13:54:31.671Z"
     },
     {
       "sourceId": "nafsa-press",
       "name": "NAFSA: Association of International Educators",
       "state": "current",
       "fetched": 9,
-      "attempts": 1
+      "attempts": 1,
+      "lastSuccessAt": "2026-10-17T13:54:31.671Z"
     },
     {
       "sourceId": "mit-iso",
       "name": "MIT International Students Office",
       "state": "current",
       "fetched": 20,
-      "attempts": 1
+      "attempts": 1,
+      "lastSuccessAt": "2026-10-17T13:54:31.671Z"
     },
     {
       "sourceId": "state-visa-news",
@@ -1131,5 +1365,5 @@
       "reason": "The source returned HTTP 403 to the collector on 2026-10-15."
     }
   ],
-  "contentHash": "6d6db07254bc39c17e7c4200cabdc6eaaa9302abc305ccfefb747d75849d144f"
+  "contentHash": "50faffe3d101f6aadc8988064e5fe411d018f102c69dd104278de7001bb78b1d"
 }

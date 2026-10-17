@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-17T12:10:20.764Z",
+  "generatedAt": "2026-10-17T13:54:31.671Z",
   "totalStories": 56,
   "sources": [
     {
@@ -8,42 +8,48 @@
       "name": "U.S. Citizenship and Immigration Services",
       "state": "current",
       "fetched": 0,
-      "attempts": 1
+      "attempts": 1,
+      "lastSuccessAt": "2026-10-17T13:54:31.671Z"
     },
     {
       "sourceId": "study-in-the-states",
       "name": "Study in the States",
       "state": "current",
       "fetched": 10,
-      "attempts": 1
+      "attempts": 1,
+      "lastSuccessAt": "2026-10-17T13:54:31.671Z"
     },
     {
       "sourceId": "ice-sevp",
       "name": "Student and Exchange Visitor Program",
       "state": "current",
       "fetched": 14,
-      "attempts": 1
+      "attempts": 1,
+      "lastSuccessAt": "2026-10-17T13:54:31.671Z"
     },
     {
       "sourceId": "federal-register",
       "name": "Federal Register",
       "state": "current",
       "fetched": 7,
-      "attempts": 1
+      "attempts": 1,
+      "lastSuccessAt": "2026-10-17T13:54:31.671Z"
     },
     {
       "sourceId": "nafsa-press",
       "name": "NAFSA: Association of International Educators",
       "state": "current",
       "fetched": 9,
-      "attempts": 1
+      "attempts": 1,
+      "lastSuccessAt": "2026-10-17T13:54:31.671Z"
     },
     {
       "sourceId": "mit-iso",
       "name": "MIT International Students Office",
       "state": "current",
       "fetched": 20,
-      "attempts": 1
+      "attempts": 1,
+      "lastSuccessAt": "2026-10-17T13:54:31.671Z"
     },
     {
       "sourceId": "state-visa-news",
