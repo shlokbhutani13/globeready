@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-17T03:32:25.397Z",
+  "generatedAt": "2026-10-17T03:55:21.299Z",
   "cadenceHours": 4,
   "stories": [
     {
@@ -137,6 +137,28 @@
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
       "autoIngested": true
+    },
+    {
+      "id": "auto-uscis-news-7255946a250644c86a1c",
+      "sourceId": "uscis-news",
+      "publisher": "U.S. Citizenship and Immigration Services",
+      "title": "Five Defendants Charged with Defrauding and Exploiting H-2A Visa Program to Smuggle Aliens into the United States",
+      "canonicalUrl": "https://www.uscis.gov/newsroom/news-releases/five-defendants-charged-with-defrauding-and-exploiting-h-2a-visa-program-to-smuggle-aliens-into-the",
+      "publishedAt": "2026-09-18",
+      "excerpt": "U.S. Citizenship and Immigration Services (USCIS) supported a federal investigation that resulted in the indictment of five people for their roles in a scheme to exploit a nonimmigrant visa worker program. The defendants fraudulently obtained worker visas and smuggled aliens into the United States. ",
+      "topics": [
+        "status"
+      ],
+      "visaTypes": [],
+      "editorialState": "source-only",
+      "legalState": "informational",
+      "sourceVerified": false,
+      "trustLabel": "From official source — not yet reviewed by GlobeReady",
+      "autoIngested": true,
+      "image": {
+        "url": "https://www.uscis.gov/sites/default/files/images/social-media/OPA-SM_USCISonBlue_FB_1200x627_V1.png",
+        "alt": "Five Defendants Charged with Defrauding and Exploiting H-2A Visa Program to Smuggle Aliens into the United States"
+      }
     },
     {
       "id": "auto-mit-iso-d249c5d20ce081942407",
@@ -430,6 +452,42 @@
       "autoIngested": true
     },
     {
+      "id": "auto-study-in-the-states-9536c621272155cac6e1",
+      "sourceId": "study-in-the-states",
+      "publisher": "Study in the States",
+      "title": "Final Rule: Establishing a Fixed Time Period of Admission and an Extension of Stay Procedure Quick Facts",
+      "canonicalUrl": "https://studyinthestates.dhs.gov/final-rule-establishing-a-fixed-time-period-of-admission-and-an-extension-of-stay-procedure-quick",
+      "publishedAt": "2026-06-02",
+      "excerpt": "Final Rule: Establishing a Fixed Time Period of Admission and an Extension of Stay Procedure Quick Facts admin Tue, 06/02/2026 - 15:19 On July 17, 2026, the U.S. Department of Homeland Security published a final rule in the Federal Register, “Establishing a Fixed Time Period of Admission and an Exte",
+      "topics": [
+        "status"
+      ],
+      "visaTypes": [],
+      "editorialState": "source-only",
+      "legalState": "informational",
+      "sourceVerified": false,
+      "trustLabel": "From official source — not yet reviewed by GlobeReady",
+      "autoIngested": true
+    },
+    {
+      "id": "auto-study-in-the-states-be9571b4f8d9ee5e5957",
+      "sourceId": "study-in-the-states",
+      "publisher": "Study in the States",
+      "title": "Final Rule: Establishing a Fixed Time Period of Admission and an Extension of Stay Procedure FAQ",
+      "canonicalUrl": "https://studyinthestates.dhs.gov/final-rule-establishing-a-fixed-time-period-of-admission-and-an-extension-of-stay-procedure-faq",
+      "publishedAt": "2026-06-02",
+      "excerpt": "Final Rule: Establishing a Fixed Time Period of Admission and an Extension of Stay Procedure FAQ admin Tue, 06/02/2026 - 16:34 Below are the answers to the most frequently asked questions (FAQs) about the final rule, “Establishing a Fixed Time Period of Admission and an Extension of Stay Procedure f",
+      "topics": [
+        "status"
+      ],
+      "visaTypes": [],
+      "editorialState": "source-only",
+      "legalState": "informational",
+      "sourceVerified": false,
+      "trustLabel": "From official source — not yet reviewed by GlobeReady",
+      "autoIngested": true
+    },
+    {
       "id": "auto-mit-iso-b7a85774eedc6f926230",
       "sourceId": "mit-iso",
       "publisher": "MIT International Students Office",
@@ -474,6 +532,7 @@
       "publishedAt": "2026-04-16",
       "excerpt": "On March 23, 2026, the Student and Exchange Visitor Program (SEVP), in the U.S. Department of Homeland Security, issued a Broadcast Message “STEM OPT Employer Fraud” regarding a new focus […]",
       "topics": [
+        "status",
         "employment"
       ],
       "visaTypes": [],
@@ -542,6 +601,22 @@
       "autoIngested": true
     },
     {
+      "id": "auto-study-in-the-states-019e8b0fc2a2532878ba",
+      "sourceId": "study-in-the-states",
+      "publisher": "Study in the States",
+      "title": "DSOs: Fraud Training 101",
+      "canonicalUrl": "https://studyinthestates.dhs.gov/dsos-fraud-training-101",
+      "publishedAt": "2025-11-03",
+      "excerpt": "DSOs: Fraud Training 101 admin Mon, 11/03/2025 - 09:17 FraudTrainingforSchoolOfficialsForeignStudentFraud.vtt",
+      "topics": [],
+      "visaTypes": [],
+      "editorialState": "source-only",
+      "legalState": "informational",
+      "sourceVerified": false,
+      "trustLabel": "From official source — not yet reviewed by GlobeReady",
+      "autoIngested": true
+    },
+    {
       "id": "auto-study-in-the-states-9500b0cc3eb956f8fb83",
       "sourceId": "study-in-the-states",
       "publisher": "Study in the States",
@@ -550,7 +625,8 @@
       "publishedAt": "2025-01-27",
       "excerpt": "Getting Started Frequently Asked Questions admin Mon, 01/27/2025 - 09:44 What is SEVP certification and do schools need it? Student and Exchange Visitor Program (SEVP) certification authorizes schools to issue Forms I-20, \"Certificate of Eligibility for Nonimmigrant Student Status, \" to prospective ",
       "topics": [
-        "status"
+        "status",
+        "university"
       ],
       "visaTypes": [],
       "editorialState": "source-only",
@@ -578,6 +654,41 @@
       "autoIngested": true
     },
     {
+      "id": "auto-study-in-the-states-3c0bc8d81b929440c261",
+      "sourceId": "study-in-the-states",
+      "publisher": "Study in the States",
+      "title": "SEVP Certification",
+      "canonicalUrl": "https://studyinthestates.dhs.gov/faq-menu/sevp-certification",
+      "publishedAt": "2024-12-18",
+      "excerpt": "SEVP Certification admin Wed, 12/18/2024 - 11:41 SEVP Certification How does a U.S. school apply for and maintain SEVP certification? Student and Exchange Visitor Program (SEVP) certification is the result of an adjudication process that includes a review of the Form I-17, \"Petition for Approval of ",
+      "topics": [
+        "status",
+        "university"
+      ],
+      "visaTypes": [],
+      "editorialState": "source-only",
+      "legalState": "informational",
+      "sourceVerified": false,
+      "trustLabel": "From official source — not yet reviewed by GlobeReady",
+      "autoIngested": true
+    },
+    {
+      "id": "auto-study-in-the-states-58a06ef689b57759ed21",
+      "sourceId": "study-in-the-states",
+      "publisher": "Study in the States",
+      "title": "Studying in the United States",
+      "canonicalUrl": "https://studyinthestates.dhs.gov/faq-menu/studying-in-the-united-states",
+      "publishedAt": "2024-12-18",
+      "excerpt": "Studying in the United States admin Wed, 12/18/2024 - 11:32 Studying in the United States What is the difference between a vocational school and an academic school? Vocational schools are institutions of learning that provide training and education for a particular skillset or occupation (culinary s",
+      "topics": [],
+      "visaTypes": [],
+      "editorialState": "source-only",
+      "legalState": "informational",
+      "sourceVerified": false,
+      "trustLabel": "From official source — not yet reviewed by GlobeReady",
+      "autoIngested": true
+    },
+    {
       "id": "auto-study-in-the-states-9bad3ad7a10536fa3976",
       "sourceId": "study-in-the-states",
       "publisher": "Study in the States",
@@ -586,7 +697,8 @@
       "publishedAt": "2024-12-18",
       "excerpt": "Traveling to the United States admin Wed, 12/18/2024 - 11:38 Traveling to the United States What is the I-901 SEVIS Fee and how much does it cost? Regulation requires all prospective F and M students pay the I-h2 before the U.S. Department of State issues them a visa. The congressionally mandated I-",
       "topics": [
-        "status"
+        "status",
+        "forms-fees"
       ],
       "visaTypes": [],
       "editorialState": "source-only",
@@ -613,6 +725,25 @@
         "f-1",
         "m-1"
       ],
+      "editorialState": "source-only",
+      "legalState": "informational",
+      "sourceVerified": false,
+      "trustLabel": "From official source — not yet reviewed by GlobeReady",
+      "autoIngested": true
+    },
+    {
+      "id": "auto-study-in-the-states-d0fc5783941caf4626c9",
+      "sourceId": "study-in-the-states",
+      "publisher": "Study in the States",
+      "title": "SEVP Certification Frequently Asked Questions",
+      "canonicalUrl": "https://studyinthestates.dhs.gov/faq-menu/sevp-certification-frequently-asked-questions",
+      "publishedAt": "2024-12-17",
+      "excerpt": "SEVP Certification Frequently Asked Questions admin Tue, 12/17/2024 - 13:11 All schools in the United States that enroll F and/or M nonimmigrant students must be certified by the Student and Exchange Visitor Program (SEVP). Schools petition for certification by means of the Form I-17, \"Petition for ",
+      "topics": [
+        "status",
+        "university"
+      ],
+      "visaTypes": [],
       "editorialState": "source-only",
       "legalState": "informational",
       "sourceVerified": false,
@@ -698,6 +829,69 @@
       "autoIngested": true
     },
     {
+      "id": "auto-ice-sevp-50a179b77c7d34d7dab1",
+      "sourceId": "ice-sevp",
+      "publisher": "Student and Exchange Visitor Program",
+      "title": "Updated Certification Expiration Date Process",
+      "canonicalUrl": "https://www.ice.gov/doclib/sevis/pdf/faqUpdatedCertExpDateProcess.pdf",
+      "publishedAt": null,
+      "excerpt": "Per regulation, all SEVP-certified schools must be recertified every two years. The certification expiration date (CED) is exactly two years from the date of initial certification or the date of previous recertification.",
+      "topics": [
+        "status",
+        "university"
+      ],
+      "visaTypes": [],
+      "editorialState": "source-only",
+      "legalState": "informational",
+      "sourceVerified": false,
+      "trustLabel": "From official source — not yet reviewed by GlobeReady",
+      "autoIngested": true
+    },
+    {
+      "id": "auto-ice-sevp-625e12e3cb15dfd5c93d",
+      "sourceId": "ice-sevp",
+      "publisher": "Student and Exchange Visitor Program",
+      "title": "DHS Publishes Final Rule: Establishing a Fixed Time Period of Admission and an Extension of Stay Procedure for Nonimmigrant Academic Students, Exchange Visitors, and Representatives of Foreign Information Media",
+      "canonicalUrl": "https://studyinthestates.dhs.gov/elimination-of-duration-of-status-quick-facts",
+      "publishedAt": null,
+      "excerpt": "On July 17, 2026, DHS published a final rule establishing a fixed time period of admission and an extension of stay procedure for F nonimmigrant academic students, J exchange visitors and representatives of foreign information media.",
+      "topics": [
+        "status"
+      ],
+      "visaTypes": [],
+      "image": {
+        "url": "https://www.ice.gov/sites/default/files/2026-07/messageSEVP_07172026.png",
+        "alt": "DHS Publishes Final Rule"
+      },
+      "editorialState": "source-only",
+      "legalState": "informational",
+      "sourceVerified": false,
+      "trustLabel": "From official source — not yet reviewed by GlobeReady",
+      "autoIngested": true
+    },
+    {
+      "id": "auto-ice-sevp-7ce659670953362d9b74",
+      "sourceId": "ice-sevp",
+      "publisher": "Student and Exchange Visitor Program",
+      "title": "Update to 2022-23 Academic Year Guidance",
+      "canonicalUrl": "https://www.ice.gov/doclib/sevis/pdf/bcm2204-04a.pdf",
+      "publishedAt": null,
+      "excerpt": "Nonimmigrant students and schools certified by the Student and Exchange Visitor Program (SEVP) should abide by SEVP guidance originally issued in Mar. 2020 for the 2022-23 academic year.",
+      "topics": [
+        "status"
+      ],
+      "visaTypes": [],
+      "image": {
+        "url": "https://www.ice.gov/sites/default/files/migrated/images/sevis-message1.jpg",
+        "alt": "Important guidance for 2022-2023 Academic Year"
+      },
+      "editorialState": "source-only",
+      "legalState": "informational",
+      "sourceVerified": false,
+      "trustLabel": "From official source — not yet reviewed by GlobeReady",
+      "autoIngested": true
+    },
+    {
       "id": "auto-ice-sevp-8ecab19e91d8d7b43afb",
       "sourceId": "ice-sevp",
       "publisher": "Student and Exchange Visitor Program",
@@ -716,6 +910,47 @@
         "url": "https://www.ice.gov/sites/default/files/migrated/images/messageLaborStrike.png",
         "alt": "Impact of Labor Strikes on F-1 Nonimmigrant Students"
       },
+      "editorialState": "source-only",
+      "legalState": "informational",
+      "sourceVerified": false,
+      "trustLabel": "From official source — not yet reviewed by GlobeReady",
+      "autoIngested": true
+    },
+    {
+      "id": "auto-ice-sevp-9036c509d3ef748b9422",
+      "sourceId": "ice-sevp",
+      "publisher": "Student and Exchange Visitor Program",
+      "title": "New and Increased SEVP Fees",
+      "canonicalUrl": "https://www.ice.gov/doclib/sevis/pdf/SEVP-FinalFeeRule-FAQs.pdf",
+      "publishedAt": null,
+      "excerpt": "On June 24, 2019, new and increased fees for nonimmigrant students, exchange visitors and SEVP-certified schools took effect.",
+      "topics": [
+        "status",
+        "forms-fees"
+      ],
+      "visaTypes": [],
+      "image": {
+        "url": "https://www.ice.gov/sites/default/files/migrated/images/sevis-message3.jpg",
+        "alt": "Important message regarding SEVP fees"
+      },
+      "editorialState": "source-only",
+      "legalState": "informational",
+      "sourceVerified": false,
+      "trustLabel": "From official source — not yet reviewed by GlobeReady",
+      "autoIngested": true
+    },
+    {
+      "id": "auto-ice-sevp-9554a5c6db6e123e4c4a",
+      "sourceId": "ice-sevp",
+      "publisher": "Student and Exchange Visitor Program",
+      "title": "DHS Publishes Federal Register Notice: Removal of Obsolete Procedures and Requirements Related to F, J and M Nonimmigrants",
+      "canonicalUrl": "https://www.ice.gov/doclib/sevis/pdf/bcm2212-02.pdf",
+      "publishedAt": null,
+      "excerpt": "On Dec. 12, 2022, SEVP will publish the Interim Final Rule: Removal of Obsolete Procedures and Requirements Related to F, J and M Nonimmigrants for public inspection.",
+      "topics": [
+        "status"
+      ],
+      "visaTypes": [],
       "editorialState": "source-only",
       "legalState": "informational",
       "sourceVerified": false,
@@ -763,6 +998,28 @@
       "autoIngested": true
     },
     {
+      "id": "auto-ice-sevp-aaf681bb42b677625c81",
+      "sourceId": "ice-sevp",
+      "publisher": "Student and Exchange Visitor Program",
+      "title": "SEVP Spotlight",
+      "canonicalUrl": "https://studyinthestates.dhs.gov/december-2022-sevp-spotlight",
+      "publishedAt": null,
+      "excerpt": "December 2022",
+      "topics": [
+        "status"
+      ],
+      "visaTypes": [],
+      "image": {
+        "url": "https://www.ice.gov/sites/default/files/migrated/images/15622089_1401963933231820_7264523065989380408_n.png",
+        "alt": "Read the latest SEVP Spotlight on Study in the States"
+      },
+      "editorialState": "source-only",
+      "legalState": "informational",
+      "sourceVerified": false,
+      "trustLabel": "From official source — not yet reviewed by GlobeReady",
+      "autoIngested": true
+    },
+    {
       "id": "auto-ice-sevp-b5aa751c1654b5ff937d",
       "sourceId": "ice-sevp",
       "publisher": "Student and Exchange Visitor Program",
@@ -771,7 +1028,8 @@
       "publishedAt": null,
       "excerpt": "Through ongoing initiatives since 2016, SEVP has worked to reduce processing times for the I-901 SEVIS Fee. These efforts have focused on improving the user experience on FMJFee.com and reduced completion times to five minutes per application.",
       "topics": [
-        "status"
+        "status",
+        "forms-fees"
       ],
       "visaTypes": [],
       "image": {
@@ -788,14 +1046,18 @@
       "id": "auto-ice-sevp-c34c686b53adb015f266",
       "sourceId": "ice-sevp",
       "publisher": "Student and Exchange Visitor Program",
-      "title": "New Guidance on OPT Employment and Student’s Major Area of Study",
+      "title": "Termination of SEVP COVID-19 Flexibilities",
       "canonicalUrl": "https://www.ice.gov/sevis/schools",
       "publishedAt": null,
-      "excerpt": "On Sep. 30, 2019, SEVP published new policy guidance titled, “Practical Training: Determining a Direct Relationship Between Employment and a Student’s Major Area of Study.”",
+      "excerpt": "The Student and Exchange Visitor Program (SEVP) ended its COVID-19 guidance on May 11, 2023, consistent with the end of the COVID-19 Public Health Emergency on May 11, 2023. As a result, all related statements, guidance and FAQs previously released by SEVP also terminated on May 11, 2023.",
       "topics": [
-        "employment"
+        "status"
       ],
       "visaTypes": [],
+      "image": {
+        "url": "https://www.ice.gov/sites/default/files/migrated/images/sevis-message2.jpg",
+        "alt": "Important news regarding COVID-19"
+      },
       "editorialState": "source-only",
       "legalState": "informational",
       "sourceVerified": false,
@@ -845,28 +1107,28 @@
       "sourceId": "uscis-news",
       "name": "U.S. Citizenship and Immigration Services",
       "state": "current",
-      "fetched": 0,
+      "fetched": 1,
       "attempts": 1
     },
     {
       "sourceId": "study-in-the-states",
       "name": "Study in the States",
       "state": "current",
-      "fetched": 4,
+      "fetched": 10,
       "attempts": 1
     },
     {
       "sourceId": "ice-sevp",
       "name": "Student and Exchange Visitor Program",
       "state": "current",
-      "fetched": 7,
+      "fetched": 14,
       "attempts": 1
     },
     {
       "sourceId": "federal-register",
       "name": "Federal Register",
       "state": "current",
-      "fetched": 5,
+      "fetched": 7,
       "attempts": 1
     },
     {
@@ -891,5 +1153,5 @@
       "reason": "The source returned HTTP 403 to the collector on 2026-10-15."
     }
   ],
-  "contentHash": "0e04e0f1c9a7b73c9e5af80ed702bc9fe391a0cc788c4a13d69cf18ea4bbbf07"
+  "contentHash": "75e5df164821532afdbfb4a198f24689114c4c935648452b54b6bf98724563c8"
 }
