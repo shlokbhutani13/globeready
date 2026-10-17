@@ -15,6 +15,7 @@ import SearchPage from "./pages/SearchPage";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import AppShell from "./components/AppShell";
 import LoginPage from "./pages/LoginPage";
+import PrivacyPage from "./pages/PrivacyPage";
 import DashboardPage from "./pages/DashboardPage";
 import DocumentsPage from "./pages/DocumentsPage";
 import TasksPage from "./pages/TasksPage";
@@ -240,6 +241,8 @@ export default function App() {
     return splitSnoozed(steps, loadSnoozes(localStorage, auth.user?.uid || "", reminderClock)).active.length;
   }, [zeroCostPublicMode, live, tasks, watchedDates, records.planner, profile, reminderClock, lifeExtra, lifeVersion, auth.user?.uid]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // The privacy notice is public: people can read it before they sign in.
+  if (zeroCostPublicMode && window.location.pathname.replace(/\/+$/, "") === "/privacy") return <PrivacyPage />;
   if (auth.loading) return <div className="app-loading">Preparing GlobeReady…</div>;
   if (!auth.user && !demo) return <LoginPage onDemo={async () => {
     // The direct build-time flag lets Vite omit the fixture module entirely from every non-demo build.
@@ -524,7 +527,7 @@ export default function App() {
           <Route path="resources" element={<ResourcesPage />} />
           <Route path="help" element={<HelpPage zeroCostMode={zeroCostPublicMode} />} />
           <Route path="guides" element={<GuidesPage profile={profile} onSave={saveGuide} onRemove={zeroCostStore ? (id) => zeroCostStore.removeResource(id) : undefined} savedResources={savedResources} savedUrls={savedResources.map((resource) => resource.url)} />} />
-          <Route path="assistant" element={<AssistantPage localMode={zeroCostPublicMode} documentsAllowed={!zeroCostPublicMode || consent?.documents === true} localChunks={localChunks} documents={documents.filter((document) => document.analysisStatus === "indexed")} />} />
+          <Route path="assistant" element={<AssistantPage localMode={zeroCostPublicMode} grounded={zeroCostPublicMode ? { news: newsItems, visaCategory: visaCategoryFor(profile) } : null} documentsAllowed={!zeroCostPublicMode || consent?.documents === true} localChunks={localChunks} documents={documents.filter((document) => document.analysisStatus === "indexed")} />} />
           <Route path="notifications" element={<NotificationsPage localMode={zeroCostPublicMode} notifications={shownNotifications} onMarkRead={markRead} onMarkAllRead={markAllRead} />} />
           <Route path="profile" element={<ProfilePage profile={profile} onSave={updateProfile} showTopics={zeroCostPublicMode} />} />
           <Route path="settings" element={(
