@@ -144,6 +144,13 @@ describe("automatic official-source ingestion", () => {
     expect(parseAutoSource(source, { text: xml, finalUrl: source.url })).toEqual([]);
   });
 
+  test("does not treat a non-student H-2A nonimmigrant story as student news", () => {
+    const registry = JSON.parse(readFileSync(new URL("../../config/news-sources.json", import.meta.url), "utf8"));
+    const source = { ...registry.sources.find(({ id }) => id === "uscis-news"), url: "https://www.uscis.gov/feed.xml" };
+    const xml = `<?xml version="1.0"?><rss><channel><item><title>Five Defendants Charged with Defrauding and Exploiting H-2A Visa Program</title><link>https://www.uscis.gov/newsroom/h-2a-athletes</link><description>A scheme exploited a nonimmigrant visa worker program.</description></item></channel></rss>`;
+    expect(parseAutoSource(source, { text: xml, finalUrl: source.url })).toEqual([]);
+  });
+
   test("drops stories with no international-student topic signal", () => {
     const xml = `<?xml version="1.0"?><rss><channel><item><title>Agency building maintenance</title><link>https://agency.gov/maintenance</link><description>Elevator work begins Monday.</description></item><item><title>F-1 travel reminder</title><link>https://agency.gov/travel</link><description>Students should review re-entry documents.</description></item></channel></rss>`;
     expect(parseAutoSource(rssSource, { text: xml, finalUrl: rssSource.url }).map((item) => item.title)).toEqual(["F-1 travel reminder"]);
