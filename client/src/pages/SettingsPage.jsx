@@ -8,6 +8,7 @@ import DeviceBackupPanel from "../components/DeviceBackupPanel";
 import PushPanel from "../components/PushPanel";
 import VaultPanel from "../components/VaultPanel";
 import PageHeader from "../components/ui/PageHeader";
+import FeedbackLink from "../components/FeedbackLink";
 
 export const deletionPhrase = "DELETE MY ACCOUNT";
 
@@ -44,6 +45,7 @@ export default function SettingsPage({ live = true, preferences = {}, onUpdatePr
     <div className="page">
       <PageHeader eyebrow="Account" title="Settings" description="Privacy, display, your data, and account deletion.">
         {zeroCostMode && <p><a href="/privacy">Read what GlobeReady stores and where</a></p>}
+        {zeroCostMode && <FeedbackLink topic="Settings" />}
       </PageHeader>
 
       {consent !== undefined && <ConsentPanel consent={consent} onSave={onSaveConsent} aiAvailable={!zeroCostMode} />}

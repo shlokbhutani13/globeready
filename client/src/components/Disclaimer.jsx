@@ -1,5 +1,6 @@
 import React from "react";
 import { ShieldCheck } from "lucide-react";
+import { contentReviewNotice } from "../data/content-review";
 
 export default function Disclaimer({ compact = false }) {
   return (
@@ -8,6 +9,7 @@ export default function Disclaimer({ compact = false }) {
       <p>
         GlobeReady provides general information. Confirm immigration, legal, health,
         financial, and tax decisions with official sources or a qualified professional.
+        {!compact && <> <span className="disclaimer-status">{contentReviewNotice()}</span></>}
       </p>
     </div>
   );

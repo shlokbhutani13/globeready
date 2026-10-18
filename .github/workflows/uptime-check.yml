@@ -1,0 +1,47 @@
+name: Uptime and freshness check
+
+on:
+  schedule:
+    - cron: "41 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check the live site and news feed
+        id: check
+        run: |
+          set -u
+          problems=""
+          code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 https://globe-ready.web.app/ || echo 000)
+          [ "$code" = "200" ] || problems="${problems}- Site returned HTTP ${code}\n"
+          generated=$(curl -s --max-time 30 https://globe-ready.web.app/data/live-news.json | python3 -c 'import sys,json,datetime as d; t=json.load(sys.stdin)["generatedAt"]; print(int((d.datetime.now(d.timezone.utc)-d.datetime.fromisoformat(t.replace("Z","+00:00"))).total_seconds()//3600))' 2>/dev/null || echo bad)
+          if [ "$generated" = "bad" ]; then problems="${problems}- News feed could not be read\n"; elif [ "$generated" -gt 12 ]; then problems="${problems}- News feed is ${generated} hours old (limit 12)\n"; fi
+          printf 'problems<<EOF\n%b\nEOF\n' "$problems" >> "$GITHUB_OUTPUT"
+          [ -z "$problems" ] && echo ok=true >> "$GITHUB_OUTPUT" || echo ok=false >> "$GITHUB_OUTPUT"
+      - name: Open or update an incident issue
+        if: steps.check.outputs.ok == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PROBLEMS: ${{ steps.check.outputs.problems }}
+        run: |
+          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --label incident --state open --json number --jq '.[0].number')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body "Still failing:"$'\n'"$PROBLEMS"
+          else
+            gh label create incident --repo "$GITHUB_REPOSITORY" --color B60205 2>/dev/null || true
+            gh issue create --repo "$GITHUB_REPOSITORY" --label incident --title "GlobeReady uptime check failed" --body "$PROBLEMS"$'\n'"See docs/INCIDENTS.md for what to do."
+          fi
+      - name: Close the incident when healthy
+        if: steps.check.outputs.ok == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for n in $(gh issue list --repo "$GITHUB_REPOSITORY" --label incident --state open --json number --jq '.[].number' 2>/dev/null); do
+            gh issue close "$n" --repo "$GITHUB_REPOSITORY" --comment "Checks are passing again."
+          done
