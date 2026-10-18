@@ -3,43 +3,88 @@
 [![CI](https://github.com/shlokbhutani13/globeready/actions/workflows/ci.yml/badge.svg)](https://github.com/shlokbhutani13/globeready/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-17191e.svg)](LICENSE)
 [![Node 22](https://img.shields.io/badge/Node-22%20LTS-315fda.svg)](.nvmrc)
-[![Firebase](https://img.shields.io/badge/Firebase-Auth%20%7C%20Firestore%20%7C%20Storage-f0a534.svg)](firebase.json)
+[![Firebase](https://img.shields.io/badge/Firebase-Auth%20%7C%20Firestore%20%7C%20Hosting-f0a534.svg)](firebase.json)
 
-GlobeReady helps international students in the United States follow verified official updates, plan deadlines, ask grounded questions about their own documents, and control their data.
+**GlobeReady is a student workspace for international students in the United States.** It keeps deadlines, documents and official news in one place, answers questions only from sources it can cite, and gives students full control of their data. It is designed to run at **$0**.
 
-GlobeReady provides general information, not legal, immigration, tax, health, or financial advice. Confirm decisions with your Designated School Official (DSO), your university, or the relevant government agency.
+**Live free beta:** <https://globe-ready.web.app> · [Privacy and your data](https://globe-ready.web.app/privacy)
 
-> **Release status:** the repository includes a verified `$0` public-beta mode, but nothing has been deployed from this branch. Paid/full-production provisioning remains separate. See [docs/ZERO_COST_PUBLIC.md](docs/ZERO_COST_PUBLIC.md) and [docs/RELEASE_READINESS.md](docs/RELEASE_READINESS.md).
+GlobeReady provides general information, not legal, immigration, tax, health or financial advice. Confirm decisions with your Designated School Official (DSO), your university or the relevant government agency.
 
-## What the launch includes
+| Home | Official updates | Documents |
+| --- | --- | --- |
+| ![Home](docs/assets/home-desktop.jpg) | ![Updates](docs/assets/updates-desktop.jpg) | ![Documents](docs/assets/documents-desktop.jpg) |
 
-- **Updates:** a visual top-story reader plus a searchable weekly, monthly, yearly, and custom-range archive; verified story details, official links, safe image fallbacks, saved items, lifecycle labels, and on-demand cited AI explanations. The Federal Register is the only live source enabled by default; USCIS, SEVP, State Department, and other registered sources remain visibly pending until their extraction contracts are verified. Local-user mode seeds clearly labeled development stories so the experience can be tested without external network access.
-- **My Plan:** tasks with due dates and priorities, a month calendar, and in-app reminders with a notification inbox.
-- **Documents and Assistant:** text-based PDFs with page-referenced text, and PNG/JPEG photos of printed text read with local OCR. Scanned or image-only PDFs, handwriting, and malformed or blank files are not read; each gets a clear message and keeps the upload. Document questions return citations, say when the evidence is missing, and route high-risk questions to a DSO or professional. Conversations are kept per student.
-- **Account:** profile, university, time zone, digest and email-preference settings (email delivery is deliberately disabled), a JSON data export, and account deletion.
+<p>
+  <img src="docs/assets/home-phone.jpg" alt="Home on a phone" width="220">
+  <img src="docs/assets/updates-phone.jpg" alt="Updates on a phone" width="220">
+</p>
 
-The repository is ready for production provisioning, not deployed production. Source operations default to credential-free dry run, no scheduler or email provider is configured, and the UI never claims comprehensive university coverage.
+_Screenshots are taken in demo mode with sample data._
 
-Email delivery and browser push are not part of the launch.
+## What it does
+
+- **Official updates.** News collected every four hours from selected official sources, including MIT ISO, ICE SEVP, Study in the States, NAFSA and the Federal Register. Automatic stories are labelled "not yet reviewed by GlobeReady"; only records a person has reviewed carry the verified treatment.
+- **Ask GlobeReady.** A sources mode that ranks passages from reviewed rules, guides, a plain-language glossary, resources and news, and shows each with where it came from. It never writes an answer, and it says so when nothing matches. A documents mode searches the student's own saved passages with page numbers.
+- **Plan.** Tasks, key dates with reminders, a calendar export, and opt-in push reminders for dates and tasks that are close.
+- **Documents.** PDFs and photos are read inside the browser (local OCR). The file is discarded; only extracted text is saved, with common passport, visa, receipt and SEVIS patterns masked. Optionally, originals can be kept in the student's own Google Drive, in a hidden app-only folder.
+- **Your data.** JSON export and restore, a device-only backup of browser-stored tools, and account deletion with re-authentication.
+- **Privacy page.** A public, plain-language statement of what is stored where, mirrored by tests against the code.
+
+## Design decisions
+
+- **Free to run, enforced in code.** The public beta is a static site plus Firestore, with browser-side document processing, so there is no server to pay for. The deploy refuses to run with an incomplete public configuration. Feature flags keep paid services (Cloud Storage, hosted AI, email) out of this mode.
+- **Never guess.** Search returns cited passages or an explicit "nothing matched". Questions about the student's own case are referred to a DSO or an attorney. Generated answers are deliberately absent from the free beta, because free model tiers may train on what is sent to them.
+- **Say what is verified.** Automatic news is labelled unreviewed, and the UI never claims comprehensive university coverage.
+- **Data stays with the student.** Per-user Firestore rules validate every write, original files are never uploaded to GlobeReady, optional features are off until the student turns them on, and the privacy page is tested against what the code does.
+- **Deploys are gated.** CI runs the full test suites; going live needs a manual approval in a protected environment.
+
+More detail is in [docs/DECISIONS.md](docs/DECISIONS.md) and [docs/ZERO_COST_PUBLIC.md](docs/ZERO_COST_PUBLIC.md).
+
+## Limitations
+
+- It is a beta. No qualified reviewer has signed off on the visa-specific content yet.
+- News is collected automatically from a short list of official sources and can be late or incomplete.
+- There is no email delivery and no generated AI answers in the free beta.
+- Optional Drive files are not encrypted by GlobeReady, so anyone who controls the student's Google account can open them.
+- Push reminders on iPhone need the app added to the Home Screen.
 
 ## Architecture
+
+Free public beta (the live site):
+
+```mermaid
+flowchart LR
+    Student["Student's browser"] --> Hosting["Firebase Hosting (static React app)"]
+    Student --> Auth["Firebase Authentication"]
+    Student --> Rules{"Firestore rules"}
+    Rules --> Firestore["Firestore (own records only)"]
+    Student -. "optional" .-> Drive["Student's Google Drive (hidden app folder)"]
+    Student -. "optional" .-> FCM["Push via Firebase Cloud Messaging"]
+    Actions["GitHub Actions"] -->|"every 4 hours"| News["Official news sources"]
+    News --> Feed["Reviewed-label news feed (static JSON)"]
+    Feed --> Hosting
+    Actions -->|"daily, if enabled"| Reminders["Reminder job"]
+    Reminders --> Firestore
+    Reminders --> FCM
+```
+
+Full production (paid services; not what the live beta runs):
 
 ```mermaid
 flowchart LR
     Student["Student"] --> Client["React + Vite client"]
     Client --> Auth["Firebase Authentication"]
     Client --> Firestore["Firestore (own records)"]
-    Client --> Storage["Cloud Storage (own documents)"]
     Client --> API["Express API"]
     API --> Admin["Firebase Admin: token verification"]
-    API --> Firestore
-    API --> Storage
+    API --> Storage["Cloud Storage (own documents)"]
     API --> Extraction["PDF parsing + local OCR"]
     Extraction --> Chunks["Private Firestore chunks"]
     API --> Gemini["Gemini answers (optional)"]
 ```
 
-The client reads a student's own records through Firebase rules. The API verifies identity on every protected request, derives the student from the verified token, and performs document reading, answer generation, publication, administration, and account deletion. [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) describes each component.
+In production mode the API verifies identity on every protected request and derives the student from the verified token. In the free beta the browser talks to Firestore directly, so [`firestore.zero-cost.rules`](firestore.zero-cost.rules) validate every write.
 
 ## Run locally
 
