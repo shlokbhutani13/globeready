@@ -50,7 +50,7 @@ jobs:
         run: npm test
       - working-directory: client
         run: npm run build -- --mode zero-cost-public
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         with:
           name: zero-cost-public-${{ github.run_id }}
           path: client/dist
@@ -63,7 +63,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
         with:
           name: zero-cost-public-${{ github.run_id }}
           path: client/dist
@@ -103,7 +103,7 @@ jobs:
         env:
           FIREBASE_RULES_ACCESS_TOKEN: ${{ steps.google-auth.outputs.access_token }}
         run: node server/scripts/deploy-firestore-rules.mjs
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
         with:
           name: zero-cost-public-${{ github.run_id }}
           path: client/dist
