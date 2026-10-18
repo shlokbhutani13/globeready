@@ -41,3 +41,19 @@ Both features are built and stay hidden until you set public values. None of the
 2. Credentials, Create credentials, OAuth client ID, Web application, authorized JavaScript origin `https://globe-ready.web.app`.
 3. GitHub variable `VITE_GOOGLE_CLIENT_ID` = the client ID (public, not the secret).
 4. Redeploy live. Settings then shows the Drive vault section.
+
+## 7. Free quotas, cost and upkeep
+Check these monthly in the Firebase and Google Cloud consoles. All figures are the free allowances at the time of writing; confirm them on the providers' pricing pages.
+
+| Resource | Where to look | If it runs out |
+| --- | --- | --- |
+| Hosting bandwidth and storage | Firebase, Hosting, Usage | The site stops serving until the quota resets. Keep assets small. |
+| Firestore reads, writes, storage | Firebase, Firestore, Usage | Saving fails; the app keeps working from the device copy. |
+| GitHub Actions minutes | GitHub, Settings, Billing | Scheduled jobs stop. Reduce the news refresh frequency. |
+| Cloud Messaging | No usage cap for push | n/a |
+
+Upkeep: merge Dependabot pull requests (pdfjs-dist stays on the audited 5.4 line), review news candidates weekly, and re-check the rules content whenever the government publishes a change. Keep billing disabled. If you can no longer maintain the app, say so on the site and in the README rather than leaving stale information up.
+
+## 8. Support and review
+- Set `VITE_PRIVACY_CONTACT` so feedback links open an email to you; otherwise they open the public issue tracker.
+- When a school official or attorney reviews the content, fill in `reviewedBy` and `reviewedOn` in `client/src/data/content-review.js`. The app then shows who reviewed it and when instead of the "not yet reviewed" notice.

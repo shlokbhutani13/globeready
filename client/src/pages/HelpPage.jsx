@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import PageHeader from "../components/ui/PageHeader";
 import Notice from "../components/ui/Notice";
 import Disclaimer from "../components/Disclaimer";
+import FeedbackLink from "../components/FeedbackLink";
 import EmptyState from "../components/ui/EmptyState";
 import { glossary, searchGlossary } from "../data/glossary";
 import { helpOrder, pageHelp, pageHelpTitles } from "../data/page-help";
@@ -68,6 +69,7 @@ export default function HelpPage({ zeroCostMode = false }) {
           </dl>
         )}
       </section>
+      <FeedbackLink topic="Help page" />
       <Disclaimer />
     </div>
   );

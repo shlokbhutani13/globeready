@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowUp, Bot, ExternalLink, History, RefreshCcw, Sparkles } from "lucide-react";
 import Disclaimer from "../components/Disclaimer";
+import FeedbackLink from "../components/FeedbackLink";
 import { apiRequest } from "../lib/api";
 import { answerFromLocalChunks } from "../lib/local-assistant";
 import { answerFromSources } from "../lib/grounded-search";
@@ -168,6 +169,7 @@ export default function AssistantPage({ requestAnswer = apiRequest, documents = 
         )}
       </div>
       <form className="assistant-composer" onSubmit={ask}>{documents.length > 0 && !sources && <select aria-label="Document scope" value={documentId} onChange={(event) => setDocumentId(event.target.value)}><option value="">All indexed documents</option>{documents.map((document) => <option key={document.id} value={document.id}>{document.name}</option>)}</select>}<input aria-label="Ask GlobeReady" disabled={blocked || noDocuments} value={question} onChange={(event) => setQuestion(event.target.value)} placeholder={sources ? "Ask about a term, a rule or a step, for example: what is OPT?" : localMode ? "Search your documents, for example: program end date" : "Ask a question about your student journey"} /><button aria-label="Send question" disabled={busy || blocked || noDocuments}><ArrowUp size={18} /></button></form>
+      {sources && <FeedbackLink topic="Ask GlobeReady answer" />}
       <Disclaimer compact />
     </div>
   );
