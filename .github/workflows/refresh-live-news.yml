@@ -34,7 +34,7 @@ jobs:
           NODE_OPTIONS: --no-experimental-webstorage
         run: npm test -- --run tests/auto-news-ingestion.test.js tests/auto-news-collector.test.js
       - name: Maintain persistent source-failure issues
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const fs = require('fs');
