@@ -16,6 +16,13 @@ updates:
       - dependency-name: "*"
         update-types:
           - version-update:semver-major
+      # pdfjs-dist 5.6.83 through 6.2.107 carry GHSA-hq66-cqwq-w95j (script execution when opening a malicious PDF),
+      # and student uploads go through this reader. Stay on the audited 5.4 line until a release at or above
+      # 6.2.108 is tested, then remove this entry.
+      - dependency-name: pdfjs-dist
+        update-types:
+          - version-update:semver-minor
+          - version-update:semver-patch
 
   - package-ecosystem: npm
     directory: /server
