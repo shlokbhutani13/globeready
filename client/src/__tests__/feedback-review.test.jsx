@@ -1,6 +1,6 @@
 import React from "react";
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { feedbackHref } from "../lib/feedback";
 import { contentReviewNotice } from "../data/content-review";
 import FeedbackLink from "../components/FeedbackLink";
@@ -21,6 +21,22 @@ describe("feedback link", () => {
   it("renders an accessible link", () => {
     render(<FeedbackLink href="mailto:a@b.co" />);
     expect(screen.getByRole("link", { name: /tell us/i }).getAttribute("href")).toBe("mailto:a@b.co");
+  });
+});
+
+describe("feedback copy fallback", () => {
+  it("shows and copies the address when the link is an email", async () => {
+    const writeText = vi.fn().mockResolvedValue();
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+    render(<FeedbackLink href="mailto:help@example.com?subject=x" />);
+    expect(screen.getByText("help@example.com")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /copy address/i }));
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith("help@example.com"));
+    expect(screen.getByRole("button", { name: /copied/i })).toBeTruthy();
+  });
+  it("has no copy button for the issue tracker link", () => {
+    render(<FeedbackLink href="https://github.com/o/r/issues/new?title=x" />);
+    expect(screen.queryByRole("button")).toBeNull();
   });
 });
 
