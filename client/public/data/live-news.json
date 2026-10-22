@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-22T13:45:22.110Z",
+  "generatedAt": "2026-10-22T20:04:52.367Z",
   "cadenceHours": 4,
   "stories": [
     {
@@ -657,30 +657,6 @@
       "relatedStoryIds": []
     },
     {
-      "id": "auto-nafsa-press-cba22607ba0f9099a72c",
-      "sourceId": "nafsa-press",
-      "publisher": "NAFSA: Association of International Educators",
-      "title": "NAFSA Responds to the Decline in F-1 Visa Issuance in the Summer of 2025",
-      "canonicalUrl": "https://www.nafsa.org/about/about-nafsa/nafsa-responds-decline-f-1-visa-issuance-summer-2025",
-      "publishedAt": "2026-03-09",
-      "effectiveAt": null,
-      "excerpt": "",
-      "topics": [
-        "status"
-      ],
-      "visaTypes": [
-        "f-1"
-      ],
-      "updateType": "announcement",
-      "editorialState": "source-only",
-      "legalState": "informational",
-      "sourceVerified": false,
-      "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true,
-      "clusterId": "cluster-0b54d9fad0dfb9217d09",
-      "relatedStoryIds": []
-    },
-    {
       "id": "auto-mit-iso-4a5128b6e53cbfe3aea2",
       "sourceId": "mit-iso",
       "publisher": "MIT International Students Office",
@@ -1315,7 +1291,7 @@
       "state": "current",
       "fetched": 0,
       "attempts": 1,
-      "lastSuccessAt": "2026-10-22T13:45:22.110Z"
+      "lastSuccessAt": "2026-10-22T20:04:52.367Z"
     },
     {
       "sourceId": "study-in-the-states",
@@ -1323,7 +1299,7 @@
       "state": "current",
       "fetched": 10,
       "attempts": 1,
-      "lastSuccessAt": "2026-10-22T13:45:22.110Z"
+      "lastSuccessAt": "2026-10-22T20:04:52.367Z"
     },
     {
       "sourceId": "ice-sevp",
@@ -1331,7 +1307,7 @@
       "state": "current",
       "fetched": 14,
       "attempts": 1,
-      "lastSuccessAt": "2026-10-22T13:45:22.110Z"
+      "lastSuccessAt": "2026-10-22T20:04:52.367Z"
     },
     {
       "sourceId": "federal-register",
@@ -1339,15 +1315,15 @@
       "state": "current",
       "fetched": 7,
       "attempts": 1,
-      "lastSuccessAt": "2026-10-22T13:45:22.110Z"
+      "lastSuccessAt": "2026-10-22T20:04:52.367Z"
     },
     {
       "sourceId": "nafsa-press",
       "name": "NAFSA: Association of International Educators",
       "state": "current",
-      "fetched": 9,
+      "fetched": 8,
       "attempts": 1,
-      "lastSuccessAt": "2026-10-22T13:45:22.110Z"
+      "lastSuccessAt": "2026-10-22T20:04:52.367Z"
     },
     {
       "sourceId": "mit-iso",
@@ -1355,7 +1331,7 @@
       "state": "current",
       "fetched": 20,
       "attempts": 1,
-      "lastSuccessAt": "2026-10-22T13:45:22.110Z"
+      "lastSuccessAt": "2026-10-22T20:04:52.367Z"
     },
     {
       "sourceId": "state-visa-news",
@@ -1365,5 +1341,5 @@
       "reason": "The source returned HTTP 403 to the collector on 2026-10-15."
     }
   ],
-  "contentHash": "08a830f7bf91eb600df3c38439e68e4968e62afdc8d4a5634493e09458a4d8e1"
+  "contentHash": "8a1324d86505aaf7319b0b35d4aae993f56b8eaf68144f67b7ef354ee9b7f19e"
 }

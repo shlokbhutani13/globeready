@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-22T13:45:22.110Z",
-  "totalStories": 56,
+  "generatedAt": "2026-10-22T20:04:52.367Z",
+  "totalStories": 55,
   "sources": [
     {
       "sourceId": "uscis-news",
@@ -9,7 +9,7 @@
       "state": "current",
       "fetched": 0,
       "attempts": 1,
-      "lastSuccessAt": "2026-10-22T13:45:22.110Z"
+      "lastSuccessAt": "2026-10-22T20:04:52.367Z"
     },
     {
       "sourceId": "study-in-the-states",
@@ -17,7 +17,7 @@
       "state": "current",
       "fetched": 10,
       "attempts": 1,
-      "lastSuccessAt": "2026-10-22T13:45:22.110Z"
+      "lastSuccessAt": "2026-10-22T20:04:52.367Z"
     },
     {
       "sourceId": "ice-sevp",
@@ -25,7 +25,7 @@
       "state": "current",
       "fetched": 14,
       "attempts": 1,
-      "lastSuccessAt": "2026-10-22T13:45:22.110Z"
+      "lastSuccessAt": "2026-10-22T20:04:52.367Z"
     },
     {
       "sourceId": "federal-register",
@@ -33,15 +33,15 @@
       "state": "current",
       "fetched": 7,
       "attempts": 1,
-      "lastSuccessAt": "2026-10-22T13:45:22.110Z"
+      "lastSuccessAt": "2026-10-22T20:04:52.367Z"
     },
     {
       "sourceId": "nafsa-press",
       "name": "NAFSA: Association of International Educators",
       "state": "current",
-      "fetched": 9,
+      "fetched": 8,
       "attempts": 1,
-      "lastSuccessAt": "2026-10-22T13:45:22.110Z"
+      "lastSuccessAt": "2026-10-22T20:04:52.367Z"
     },
     {
       "sourceId": "mit-iso",
@@ -49,7 +49,7 @@
       "state": "current",
       "fetched": 20,
       "attempts": 1,
-      "lastSuccessAt": "2026-10-22T13:45:22.110Z"
+      "lastSuccessAt": "2026-10-22T20:04:52.367Z"
     },
     {
       "sourceId": "state-visa-news",
