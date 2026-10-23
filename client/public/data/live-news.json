@@ -1,8 +1,30 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-23T19:56:47.864Z",
+  "generatedAt": "2026-10-23T23:07:21.696Z",
   "cadenceHours": 4,
   "stories": [
+    {
+      "id": "auto-mit-iso-02b88828deeff682196a",
+      "sourceId": "mit-iso",
+      "publisher": "MIT International Students Office",
+      "title": "2026 – 2027 International Student Statistics are now Available!",
+      "canonicalUrl": "https://iso.mit.edu/news/2026-2027-international-student-statistics-are-now-available",
+      "publishedAt": "2026-10-23",
+      "effectiveAt": null,
+      "excerpt": "Below are the General Statistics for the International Student body for the 2026-2027 academic year. Please click here for more comprehensive statistics. Student Body Composition Degree Level International US Citizen US PermResident […]",
+      "topics": [
+        "university"
+      ],
+      "visaTypes": [],
+      "updateType": "announcement",
+      "editorialState": "source-only",
+      "legalState": "informational",
+      "sourceVerified": false,
+      "trustLabel": "From official source — not yet reviewed by GlobeReady",
+      "autoIngested": true,
+      "clusterId": "cluster-b5760c64ad5e23c3a300",
+      "relatedStoryIds": []
+    },
     {
       "id": "auto-mit-iso-2b5f1fc776d72f52403b",
       "sourceId": "mit-iso",
@@ -657,29 +679,6 @@
       "relatedStoryIds": []
     },
     {
-      "id": "auto-mit-iso-4a5128b6e53cbfe3aea2",
-      "sourceId": "mit-iso",
-      "publisher": "MIT International Students Office",
-      "title": "State Department Expands Tourist/Business Visa Bond List",
-      "canonicalUrl": "https://iso.mit.edu/news/state-department-expands-tourist-business-visa-bond-list",
-      "publishedAt": "2026-02-12",
-      "effectiveAt": null,
-      "excerpt": "On January 8, 2026, the U.S. Department of State published an update to the list of countries whose nationals may be required to post a “visa bond” when applying for […]",
-      "topics": [
-        "status",
-        "travel-entry"
-      ],
-      "visaTypes": [],
-      "updateType": "announcement",
-      "editorialState": "source-only",
-      "legalState": "informational",
-      "sourceVerified": false,
-      "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true,
-      "clusterId": "cluster-b21e457af19f80b38371",
-      "relatedStoryIds": []
-    },
-    {
       "id": "auto-study-in-the-states-019e8b0fc2a2532878ba",
       "sourceId": "study-in-the-states",
       "publisher": "Study in the States",
@@ -1291,7 +1290,7 @@
       "state": "current",
       "fetched": 0,
       "attempts": 1,
-      "lastSuccessAt": "2026-10-23T19:56:47.864Z"
+      "lastSuccessAt": "2026-10-23T23:07:21.696Z"
     },
     {
       "sourceId": "study-in-the-states",
@@ -1299,7 +1298,7 @@
       "state": "current",
       "fetched": 10,
       "attempts": 1,
-      "lastSuccessAt": "2026-10-23T19:56:47.864Z"
+      "lastSuccessAt": "2026-10-23T23:07:21.696Z"
     },
     {
       "sourceId": "ice-sevp",
@@ -1307,7 +1306,7 @@
       "state": "current",
       "fetched": 14,
       "attempts": 1,
-      "lastSuccessAt": "2026-10-23T19:56:47.864Z"
+      "lastSuccessAt": "2026-10-23T23:07:21.696Z"
     },
     {
       "sourceId": "federal-register",
@@ -1315,7 +1314,7 @@
       "state": "current",
       "fetched": 7,
       "attempts": 1,
-      "lastSuccessAt": "2026-10-23T19:56:47.864Z"
+      "lastSuccessAt": "2026-10-23T23:07:21.696Z"
     },
     {
       "sourceId": "nafsa-press",
@@ -1323,7 +1322,7 @@
       "state": "current",
       "fetched": 8,
       "attempts": 1,
-      "lastSuccessAt": "2026-10-23T19:56:47.864Z"
+      "lastSuccessAt": "2026-10-23T23:07:21.696Z"
     },
     {
       "sourceId": "mit-iso",
@@ -1331,7 +1330,7 @@
       "state": "current",
       "fetched": 20,
       "attempts": 1,
-      "lastSuccessAt": "2026-10-23T19:56:47.864Z"
+      "lastSuccessAt": "2026-10-23T23:07:21.696Z"
     },
     {
       "sourceId": "state-visa-news",
@@ -1341,5 +1340,5 @@
       "reason": "The source returned HTTP 403 to the collector on 2026-10-15."
     }
   ],
-  "contentHash": "68fdbb36ec584a8b200490e2bf327caf0f0e8237136bc9e6caad7f59225c9e66"
+  "contentHash": "6d6cc1a1fe8f77ee6ecb2cd3026358912a07c06bf3ea0c78f4551bebc9061e5a"
 }
