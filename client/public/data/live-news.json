@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-22T23:21:05.146Z",
+  "generatedAt": "2026-10-23T04:44:19.410Z",
   "cadenceHours": 4,
   "stories": [
     {
@@ -1291,7 +1291,7 @@
       "state": "current",
       "fetched": 0,
       "attempts": 1,
-      "lastSuccessAt": "2026-10-22T23:21:05.146Z"
+      "lastSuccessAt": "2026-10-23T04:44:19.410Z"
     },
     {
       "sourceId": "study-in-the-states",
@@ -1299,7 +1299,7 @@
       "state": "current",
       "fetched": 10,
       "attempts": 1,
-      "lastSuccessAt": "2026-10-22T23:21:05.146Z"
+      "lastSuccessAt": "2026-10-23T04:44:19.410Z"
     },
     {
       "sourceId": "ice-sevp",
@@ -1307,7 +1307,7 @@
       "state": "current",
       "fetched": 14,
       "attempts": 1,
-      "lastSuccessAt": "2026-10-22T23:21:05.146Z"
+      "lastSuccessAt": "2026-10-23T04:44:19.410Z"
     },
     {
       "sourceId": "federal-register",
@@ -1315,7 +1315,7 @@
       "state": "current",
       "fetched": 7,
       "attempts": 1,
-      "lastSuccessAt": "2026-10-22T23:21:05.146Z"
+      "lastSuccessAt": "2026-10-23T04:44:19.410Z"
     },
     {
       "sourceId": "nafsa-press",
@@ -1323,7 +1323,7 @@
       "state": "current",
       "fetched": 8,
       "attempts": 1,
-      "lastSuccessAt": "2026-10-22T23:21:05.146Z"
+      "lastSuccessAt": "2026-10-23T04:44:19.410Z"
     },
     {
       "sourceId": "mit-iso",
@@ -1331,7 +1331,7 @@
       "state": "current",
       "fetched": 20,
       "attempts": 1,
-      "lastSuccessAt": "2026-10-22T23:21:05.146Z"
+      "lastSuccessAt": "2026-10-23T04:44:19.410Z"
     },
     {
       "sourceId": "state-visa-news",
@@ -1341,5 +1341,5 @@
       "reason": "The source returned HTTP 403 to the collector on 2026-10-15."
     }
   ],
-  "contentHash": "f2667ab0528415ed2dc5ab03bf5f3c889d35169898f056cb68bbe87f48574fae"
+  "contentHash": "cc27c0082b2cd3413a49f0a206c25612019a88e499ffb008a7d6d079a1c79f7a"
 }
