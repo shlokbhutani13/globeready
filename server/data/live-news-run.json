@@ -1,30 +1,36 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-04T12:04:11.285Z",
+  "generatedAt": "2026-11-04T19:43:23.560Z",
   "totalStories": 55,
   "sources": [
     {
       "sourceId": "uscis-news",
       "name": "U.S. Citizenship and Immigration Services",
-      "state": "current",
+      "state": "blocked-by-robots",
       "fetched": 0,
-      "attempts": 1,
+      "retained": 0,
+      "reason": "Collection is blocked by the source's robots.txt policy.",
+      "failedSince": "2026-11-04T19:43:23.560Z",
       "lastSuccessAt": "2026-11-04T12:04:11.285Z"
     },
     {
       "sourceId": "study-in-the-states",
       "name": "Study in the States",
-      "state": "current",
-      "fetched": 10,
-      "attempts": 1,
+      "state": "blocked-by-robots",
+      "fetched": 0,
+      "retained": 10,
+      "reason": "Collection is blocked by the source's robots.txt policy.",
+      "failedSince": "2026-11-04T19:43:23.560Z",
       "lastSuccessAt": "2026-11-04T12:04:11.285Z"
     },
     {
       "sourceId": "ice-sevp",
       "name": "Student and Exchange Visitor Program",
-      "state": "current",
-      "fetched": 14,
-      "attempts": 1,
+      "state": "blocked-by-robots",
+      "fetched": 0,
+      "retained": 13,
+      "reason": "Collection is blocked by the source's robots.txt policy.",
+      "failedSince": "2026-11-04T19:43:23.560Z",
       "lastSuccessAt": "2026-11-04T12:04:11.285Z"
     },
     {
@@ -33,7 +39,7 @@
       "state": "current",
       "fetched": 7,
       "attempts": 1,
-      "lastSuccessAt": "2026-11-04T12:04:11.285Z"
+      "lastSuccessAt": "2026-11-04T19:43:23.560Z"
     },
     {
       "sourceId": "nafsa-press",
@@ -41,7 +47,7 @@
       "state": "current",
       "fetched": 8,
       "attempts": 1,
-      "lastSuccessAt": "2026-11-04T12:04:11.285Z"
+      "lastSuccessAt": "2026-11-04T19:43:23.560Z"
     },
     {
       "sourceId": "mit-iso",
@@ -49,7 +55,7 @@
       "state": "current",
       "fetched": 20,
       "attempts": 1,
-      "lastSuccessAt": "2026-11-04T12:04:11.285Z"
+      "lastSuccessAt": "2026-11-04T19:43:23.560Z"
     },
     {
       "sourceId": "state-visa-news",

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-04T12:04:11.285Z",
+  "generatedAt": "2026-11-04T19:43:23.560Z",
   "cadenceHours": 4,
   "stories": [
     {
@@ -1287,25 +1287,31 @@
     {
       "sourceId": "uscis-news",
       "name": "U.S. Citizenship and Immigration Services",
-      "state": "current",
+      "state": "blocked-by-robots",
       "fetched": 0,
-      "attempts": 1,
+      "retained": 0,
+      "reason": "Collection is blocked by the source's robots.txt policy.",
+      "failedSince": "2026-11-04T19:43:23.560Z",
       "lastSuccessAt": "2026-11-04T12:04:11.285Z"
     },
     {
       "sourceId": "study-in-the-states",
       "name": "Study in the States",
-      "state": "current",
-      "fetched": 10,
-      "attempts": 1,
+      "state": "blocked-by-robots",
+      "fetched": 0,
+      "retained": 10,
+      "reason": "Collection is blocked by the source's robots.txt policy.",
+      "failedSince": "2026-11-04T19:43:23.560Z",
       "lastSuccessAt": "2026-11-04T12:04:11.285Z"
     },
     {
       "sourceId": "ice-sevp",
       "name": "Student and Exchange Visitor Program",
-      "state": "current",
-      "fetched": 14,
-      "attempts": 1,
+      "state": "blocked-by-robots",
+      "fetched": 0,
+      "retained": 13,
+      "reason": "Collection is blocked by the source's robots.txt policy.",
+      "failedSince": "2026-11-04T19:43:23.560Z",
       "lastSuccessAt": "2026-11-04T12:04:11.285Z"
     },
     {
@@ -1314,7 +1320,7 @@
       "state": "current",
       "fetched": 7,
       "attempts": 1,
-      "lastSuccessAt": "2026-11-04T12:04:11.285Z"
+      "lastSuccessAt": "2026-11-04T19:43:23.560Z"
     },
     {
       "sourceId": "nafsa-press",
@@ -1322,7 +1328,7 @@
       "state": "current",
       "fetched": 8,
       "attempts": 1,
-      "lastSuccessAt": "2026-11-04T12:04:11.285Z"
+      "lastSuccessAt": "2026-11-04T19:43:23.560Z"
     },
     {
       "sourceId": "mit-iso",
@@ -1330,7 +1336,7 @@
       "state": "current",
       "fetched": 20,
       "attempts": 1,
-      "lastSuccessAt": "2026-11-04T12:04:11.285Z"
+      "lastSuccessAt": "2026-11-04T19:43:23.560Z"
     },
     {
       "sourceId": "state-visa-news",
@@ -1340,5 +1346,5 @@
       "reason": "The source returned HTTP 403 to the collector on 2026-10-15."
     }
   ],
-  "contentHash": "a084286009d79506420e5803a47e5cc9b9a6f2144032a0a025212fe1b5d28f6e"
+  "contentHash": "59d11752f38c8ca2bef4e94520a345eb1926a2e1f0dc352d411e676f53683ea8"
 }
