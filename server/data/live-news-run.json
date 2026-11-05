@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-05T12:15:57.586Z",
+  "generatedAt": "2026-11-05T19:58:13.660Z",
   "totalStories": 55,
   "sources": [
     {
@@ -39,7 +39,7 @@
       "state": "current",
       "fetched": 7,
       "attempts": 1,
-      "lastSuccessAt": "2026-11-05T12:15:57.586Z"
+      "lastSuccessAt": "2026-11-05T19:58:13.660Z"
     },
     {
       "sourceId": "nafsa-press",
@@ -47,7 +47,7 @@
       "state": "current",
       "fetched": 8,
       "attempts": 1,
-      "lastSuccessAt": "2026-11-05T12:15:57.586Z"
+      "lastSuccessAt": "2026-11-05T19:58:13.660Z"
     },
     {
       "sourceId": "mit-iso",
@@ -55,7 +55,7 @@
       "state": "current",
       "fetched": 20,
       "attempts": 1,
-      "lastSuccessAt": "2026-11-05T12:15:57.586Z"
+      "lastSuccessAt": "2026-11-05T19:58:13.660Z"
     },
     {
       "sourceId": "state-visa-news",
