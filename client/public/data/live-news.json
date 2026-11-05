@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-04T19:43:23.560Z",
+  "generatedAt": "2026-11-05T00:53:42.646Z",
   "cadenceHours": 4,
   "stories": [
     {
@@ -1320,7 +1320,7 @@
       "state": "current",
       "fetched": 7,
       "attempts": 1,
-      "lastSuccessAt": "2026-11-04T19:43:23.560Z"
+      "lastSuccessAt": "2026-11-05T00:53:42.646Z"
     },
     {
       "sourceId": "nafsa-press",
@@ -1328,7 +1328,7 @@
       "state": "current",
       "fetched": 8,
       "attempts": 1,
-      "lastSuccessAt": "2026-11-04T19:43:23.560Z"
+      "lastSuccessAt": "2026-11-05T00:53:42.646Z"
     },
     {
       "sourceId": "mit-iso",
@@ -1336,7 +1336,7 @@
       "state": "current",
       "fetched": 20,
       "attempts": 1,
-      "lastSuccessAt": "2026-11-04T19:43:23.560Z"
+      "lastSuccessAt": "2026-11-05T00:53:42.646Z"
     },
     {
       "sourceId": "state-visa-news",
@@ -1346,5 +1346,5 @@
       "reason": "The source returned HTTP 403 to the collector on 2026-10-15."
     }
   ],
-  "contentHash": "59d11752f38c8ca2bef4e94520a345eb1926a2e1f0dc352d411e676f53683ea8"
+  "contentHash": "1aae9f2efd40878a119afc28d88b8db4fe3c1afeeec39f231ab43c3d667eddf8"
 }
