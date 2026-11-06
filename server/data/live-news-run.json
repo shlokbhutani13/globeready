@@ -1,37 +1,31 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-05T19:58:13.660Z",
+  "generatedAt": "2026-11-06T00:57:26.479Z",
   "totalStories": 55,
   "sources": [
     {
       "sourceId": "uscis-news",
       "name": "U.S. Citizenship and Immigration Services",
-      "state": "blocked-by-robots",
+      "state": "current",
       "fetched": 0,
-      "retained": 0,
-      "reason": "Collection is blocked by the source's robots.txt policy.",
-      "failedSince": "2026-11-04T19:43:23.560Z",
-      "lastSuccessAt": "2026-11-04T12:04:11.285Z"
+      "attempts": 1,
+      "lastSuccessAt": "2026-11-06T00:57:26.479Z"
     },
     {
       "sourceId": "study-in-the-states",
       "name": "Study in the States",
-      "state": "blocked-by-robots",
-      "fetched": 0,
-      "retained": 10,
-      "reason": "Collection is blocked by the source's robots.txt policy.",
-      "failedSince": "2026-11-04T19:43:23.560Z",
-      "lastSuccessAt": "2026-11-04T12:04:11.285Z"
+      "state": "current",
+      "fetched": 10,
+      "attempts": 1,
+      "lastSuccessAt": "2026-11-06T00:57:26.479Z"
     },
     {
       "sourceId": "ice-sevp",
       "name": "Student and Exchange Visitor Program",
-      "state": "blocked-by-robots",
-      "fetched": 0,
-      "retained": 13,
-      "reason": "Collection is blocked by the source's robots.txt policy.",
-      "failedSince": "2026-11-04T19:43:23.560Z",
-      "lastSuccessAt": "2026-11-04T12:04:11.285Z"
+      "state": "current",
+      "fetched": 14,
+      "attempts": 1,
+      "lastSuccessAt": "2026-11-06T00:57:26.479Z"
     },
     {
       "sourceId": "federal-register",
@@ -39,7 +33,7 @@
       "state": "current",
       "fetched": 7,
       "attempts": 1,
-      "lastSuccessAt": "2026-11-05T19:58:13.660Z"
+      "lastSuccessAt": "2026-11-06T00:57:26.479Z"
     },
     {
       "sourceId": "nafsa-press",
@@ -47,7 +41,7 @@
       "state": "current",
       "fetched": 8,
       "attempts": 1,
-      "lastSuccessAt": "2026-11-05T19:58:13.660Z"
+      "lastSuccessAt": "2026-11-06T00:57:26.479Z"
     },
     {
       "sourceId": "mit-iso",
@@ -55,7 +49,7 @@
       "state": "current",
       "fetched": 20,
       "attempts": 1,
-      "lastSuccessAt": "2026-11-05T19:58:13.660Z"
+      "lastSuccessAt": "2026-11-06T00:57:26.479Z"
     },
     {
       "sourceId": "state-visa-news",
