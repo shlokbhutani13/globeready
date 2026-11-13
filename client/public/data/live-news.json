@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-12T16:46:24.846Z",
+  "generatedAt": "2026-11-13T01:03:39.693Z",
   "cadenceHours": 4,
   "stories": [
     {
@@ -838,26 +838,26 @@
       "relatedStoryIds": []
     },
     {
-      "id": "auto-study-in-the-states-d0fc5783941caf4626c9",
+      "id": "auto-study-in-the-states-c31efdb2f860a77a60be",
       "sourceId": "study-in-the-states",
       "publisher": "Study in the States",
-      "title": "SEVP Certification Frequently Asked Questions",
-      "canonicalUrl": "https://studyinthestates.dhs.gov/faq-menu/sevp-certification-frequently-asked-questions",
-      "publishedAt": "2024-12-17",
+      "title": "December 2024 SEVP Spotlight",
+      "canonicalUrl": "https://studyinthestates.dhs.gov/december-2024-sevp-spotlight",
+      "publishedAt": "2024-12-11",
       "effectiveAt": null,
-      "excerpt": "SEVP Certification Frequently Asked Questions admin Tue, 12/17/2024 - 13:11 All schools in the United States that enroll F and/or M nonimmigrant students must be certified by the Student and Exchange Visitor Program (SEVP). Schools petition for certification by means of the Form I-17, \"Petition for ",
+      "excerpt": "December 2024 SEVP Spotlight mmckee Wed, 12/11/2024 - 15:58 Welcome to the Student and Exchange Visitor Program (SEVP) Spotlight, a quarterly newsletter for the academic community that includes important program news, seasonal reminders, and updates relevant to the international student life cycle. ",
       "topics": [
         "status",
         "university"
       ],
       "visaTypes": [],
-      "updateType": "guidance",
+      "updateType": "announcement",
       "editorialState": "source-only",
       "legalState": "informational",
       "sourceVerified": false,
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
       "autoIngested": true,
-      "clusterId": "cluster-a29a2c2d2c184dc6cc17",
+      "clusterId": "cluster-3c94d7a50bb45536c92d",
       "relatedStoryIds": []
     },
     {
@@ -1290,7 +1290,7 @@
       "state": "current",
       "fetched": 0,
       "attempts": 1,
-      "lastSuccessAt": "2026-11-12T16:46:24.846Z"
+      "lastSuccessAt": "2026-11-13T01:03:39.693Z"
     },
     {
       "sourceId": "study-in-the-states",
@@ -1298,7 +1298,7 @@
       "state": "current",
       "fetched": 10,
       "attempts": 1,
-      "lastSuccessAt": "2026-11-12T16:46:24.846Z"
+      "lastSuccessAt": "2026-11-13T01:03:39.693Z"
     },
     {
       "sourceId": "ice-sevp",
@@ -1306,7 +1306,7 @@
       "state": "current",
       "fetched": 14,
       "attempts": 1,
-      "lastSuccessAt": "2026-11-12T16:46:24.846Z"
+      "lastSuccessAt": "2026-11-13T01:03:39.693Z"
     },
     {
       "sourceId": "federal-register",
@@ -1314,7 +1314,7 @@
       "state": "current",
       "fetched": 7,
       "attempts": 1,
-      "lastSuccessAt": "2026-11-12T16:46:24.846Z"
+      "lastSuccessAt": "2026-11-13T01:03:39.693Z"
     },
     {
       "sourceId": "nafsa-press",
@@ -1322,7 +1322,7 @@
       "state": "current",
       "fetched": 8,
       "attempts": 1,
-      "lastSuccessAt": "2026-11-12T16:46:24.846Z"
+      "lastSuccessAt": "2026-11-13T01:03:39.693Z"
     },
     {
       "sourceId": "mit-iso",
@@ -1330,7 +1330,7 @@
       "state": "current",
       "fetched": 20,
       "attempts": 1,
-      "lastSuccessAt": "2026-11-12T16:46:24.846Z"
+      "lastSuccessAt": "2026-11-13T01:03:39.693Z"
     },
     {
       "sourceId": "state-visa-news",
@@ -1340,5 +1340,5 @@
       "reason": "The source returned HTTP 403 to the collector on 2026-10-15."
     }
   ],
-  "contentHash": "679cd458a874946d3327fa02eec485b12a75690ee5cdbc5d2d96ab121c273057"
+  "contentHash": "bc1b10cbff9fdaec4d0fb9117ec09cd4788ac4f61b18cad44ecac98b883269ea"
 }
