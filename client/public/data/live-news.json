@@ -1,8 +1,30 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-16T06:20:31.925Z",
+  "generatedAt": "2026-11-16T18:28:19.553Z",
   "cadenceHours": 4,
   "stories": [
+    {
+      "id": "auto-nafsa-press-780a823e201a898e06e0",
+      "sourceId": "nafsa-press",
+      "publisher": "NAFSA: Association of International Educators",
+      "title": "International Students Contributed $39.9 Billion to the U.S. Economy in 2025-2026; Fall 2026 Spending Down by $2.4 Billion",
+      "canonicalUrl": "https://www.nafsa.org/about/about-nafsa/international-students-contributed-399-billion-us-economy-2025-2026-fall-2026",
+      "publishedAt": "2026-11-16",
+      "effectiveAt": null,
+      "excerpt": "",
+      "topics": [
+        "university"
+      ],
+      "visaTypes": [],
+      "updateType": "announcement",
+      "editorialState": "source-only",
+      "legalState": "informational",
+      "sourceVerified": false,
+      "trustLabel": "From official source — not yet reviewed by GlobeReady",
+      "autoIngested": true,
+      "clusterId": "cluster-24054ccba3c75551ef75",
+      "relatedStoryIds": []
+    },
     {
       "id": "auto-mit-iso-02b88828deeff682196a",
       "sourceId": "mit-iso",
@@ -608,28 +630,6 @@
       "trustLabel": "From official source — not yet reviewed by GlobeReady",
       "autoIngested": true,
       "clusterId": "cluster-8cdc1f13cbfdc2124e58",
-      "relatedStoryIds": []
-    },
-    {
-      "id": "auto-nafsa-press-f60aee68764aac485d5a",
-      "sourceId": "nafsa-press",
-      "publisher": "NAFSA: Association of International Educators",
-      "title": "NAFSA Responds to Alleged Instances of OPT Abuses",
-      "canonicalUrl": "https://www.nafsa.org/opt-allegations-response",
-      "publishedAt": "2026-05-13",
-      "effectiveAt": null,
-      "excerpt": "",
-      "topics": [
-        "employment"
-      ],
-      "visaTypes": [],
-      "updateType": "announcement",
-      "editorialState": "source-only",
-      "legalState": "informational",
-      "sourceVerified": false,
-      "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true,
-      "clusterId": "cluster-d52f545efa1799b4b1be",
       "relatedStoryIds": []
     },
     {
@@ -1290,7 +1290,7 @@
       "state": "current",
       "fetched": 0,
       "attempts": 1,
-      "lastSuccessAt": "2026-11-16T06:20:31.925Z"
+      "lastSuccessAt": "2026-11-16T18:28:19.553Z"
     },
     {
       "sourceId": "study-in-the-states",
@@ -1298,7 +1298,7 @@
       "state": "current",
       "fetched": 10,
       "attempts": 1,
-      "lastSuccessAt": "2026-11-16T06:20:31.925Z"
+      "lastSuccessAt": "2026-11-16T18:28:19.553Z"
     },
     {
       "sourceId": "ice-sevp",
@@ -1306,7 +1306,7 @@
       "state": "current",
       "fetched": 14,
       "attempts": 1,
-      "lastSuccessAt": "2026-11-16T06:20:31.925Z"
+      "lastSuccessAt": "2026-11-16T18:28:19.553Z"
     },
     {
       "sourceId": "federal-register",
@@ -1314,7 +1314,7 @@
       "state": "current",
       "fetched": 7,
       "attempts": 1,
-      "lastSuccessAt": "2026-11-16T06:20:31.925Z"
+      "lastSuccessAt": "2026-11-16T18:28:19.553Z"
     },
     {
       "sourceId": "nafsa-press",
@@ -1322,7 +1322,7 @@
       "state": "current",
       "fetched": 8,
       "attempts": 1,
-      "lastSuccessAt": "2026-11-16T06:20:31.925Z"
+      "lastSuccessAt": "2026-11-16T18:28:19.553Z"
     },
     {
       "sourceId": "mit-iso",
@@ -1330,7 +1330,7 @@
       "state": "current",
       "fetched": 20,
       "attempts": 1,
-      "lastSuccessAt": "2026-11-16T06:20:31.925Z"
+      "lastSuccessAt": "2026-11-16T18:28:19.553Z"
     },
     {
       "sourceId": "state-visa-news",
@@ -1340,5 +1340,5 @@
       "reason": "The source returned HTTP 403 to the collector on 2026-10-15."
     }
   ],
-  "contentHash": "1a5e1da5f3c7e14a06f589bb44c7cf417095b04aeb1b5d10f9fd1456859e96fe"
+  "contentHash": "3768d692245e39f3e65e6e7ce5deea6aaa23d9aecfadea653b44a91e3350d6f2"
 }
