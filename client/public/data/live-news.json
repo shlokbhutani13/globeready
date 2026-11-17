@@ -1,8 +1,30 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-17T13:16:43.924Z",
+  "generatedAt": "2026-11-17T23:29:13.735Z",
   "cadenceHours": 4,
   "stories": [
+    {
+      "id": "auto-mit-iso-ca40c18c6b6af2c9cc95",
+      "sourceId": "mit-iso",
+      "publisher": "MIT International Students Office",
+      "title": "Federal Court Vacates DHS Final Rule Eliminating D/S for F, J and I nonimmigrant statuses",
+      "canonicalUrl": "https://iso.mit.edu/news/federal-court-vacates-dhs-final-rule-eliminating-d-s-for-f-j-and-i-nonimmigrant-statuses",
+      "publishedAt": "2026-11-17",
+      "effectiveAt": null,
+      "excerpt": "On November 16, 2026, the U.S. District Court for the District of Massachusetts vacated the USDHS Final Rule eliminating Duration of Status (D/S) and implementing academic program limitations. This ruling […]",
+      "topics": [
+        "status"
+      ],
+      "visaTypes": [],
+      "updateType": "final-rule",
+      "editorialState": "source-only",
+      "legalState": "informational",
+      "sourceVerified": false,
+      "trustLabel": "From official source — not yet reviewed by GlobeReady",
+      "autoIngested": true,
+      "clusterId": "cluster-67eaddaf7482e326830f",
+      "relatedStoryIds": []
+    },
     {
       "id": "auto-nafsa-press-68f91b439c86d1380c00",
       "sourceId": "nafsa-press",
@@ -678,29 +700,6 @@
       "relatedStoryIds": []
     },
     {
-      "id": "auto-mit-iso-a1b1171df26d23df3dfc",
-      "sourceId": "mit-iso",
-      "publisher": "MIT International Students Office",
-      "title": "State Department Adds Countries to the Tourist/Business Visa Bond List",
-      "canonicalUrl": "https://iso.mit.edu/news/state-department-adds-additional-countries-to-the-tourist-business-visa-bond-list",
-      "publishedAt": "2026-03-19",
-      "effectiveAt": null,
-      "excerpt": "On March 18, 2026, the U.S. Department of State published an update on their website adding to the list of countries whose nationals may be required to post a “visa bond” when […]",
-      "topics": [
-        "status",
-        "travel-entry"
-      ],
-      "visaTypes": [],
-      "updateType": "announcement",
-      "editorialState": "source-only",
-      "legalState": "informational",
-      "sourceVerified": false,
-      "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true,
-      "clusterId": "cluster-afd06a64e5bb604124d5",
-      "relatedStoryIds": []
-    },
-    {
       "id": "auto-study-in-the-states-019e8b0fc2a2532878ba",
       "sourceId": "study-in-the-states",
       "publisher": "Study in the States",
@@ -1312,7 +1311,7 @@
       "state": "current",
       "fetched": 0,
       "attempts": 1,
-      "lastSuccessAt": "2026-11-17T13:16:43.924Z"
+      "lastSuccessAt": "2026-11-17T23:29:13.735Z"
     },
     {
       "sourceId": "study-in-the-states",
@@ -1320,7 +1319,7 @@
       "state": "current",
       "fetched": 10,
       "attempts": 1,
-      "lastSuccessAt": "2026-11-17T13:16:43.924Z"
+      "lastSuccessAt": "2026-11-17T23:29:13.735Z"
     },
     {
       "sourceId": "ice-sevp",
@@ -1328,7 +1327,7 @@
       "state": "current",
       "fetched": 14,
       "attempts": 1,
-      "lastSuccessAt": "2026-11-17T13:16:43.924Z"
+      "lastSuccessAt": "2026-11-17T23:29:13.735Z"
     },
     {
       "sourceId": "federal-register",
@@ -1336,7 +1335,7 @@
       "state": "current",
       "fetched": 7,
       "attempts": 1,
-      "lastSuccessAt": "2026-11-17T13:16:43.924Z"
+      "lastSuccessAt": "2026-11-17T23:29:13.735Z"
     },
     {
       "sourceId": "nafsa-press",
@@ -1344,7 +1343,7 @@
       "state": "current",
       "fetched": 9,
       "attempts": 1,
-      "lastSuccessAt": "2026-11-17T13:16:43.924Z"
+      "lastSuccessAt": "2026-11-17T23:29:13.735Z"
     },
     {
       "sourceId": "mit-iso",
@@ -1352,7 +1351,7 @@
       "state": "current",
       "fetched": 20,
       "attempts": 1,
-      "lastSuccessAt": "2026-11-17T13:16:43.924Z"
+      "lastSuccessAt": "2026-11-17T23:29:13.735Z"
     },
     {
       "sourceId": "state-visa-news",
@@ -1362,5 +1361,5 @@
       "reason": "The source returned HTTP 403 to the collector on 2026-10-15."
     }
   ],
-  "contentHash": "7bff5eded5fe6a198dbd528d9058330cc95756ced8703f9e80b1a40c776ca931"
+  "contentHash": "f374e4d977ffc4266dc8ddef47b30daa82dcdc2e36251481ab4cef333bf99bb9"
 }
