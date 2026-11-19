@@ -46,7 +46,8 @@
     "brace-expansion": "2.1.7",
     "basic-ftp": "6.2.3",
     "@opentelemetry/core": "^2.8.0",
-    "rimraf": "^6.1.4"
+    "rimraf": "^6.1.4",
+    "glob": "^14.0.6"
   },
   "engines": {
     "node": ">=22.12.0"
