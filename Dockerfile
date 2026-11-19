@@ -15,6 +15,9 @@ ENV NODE_ENV=production
 ENV HOST=0.0.0.0
 WORKDIR /app
 
+# Pick up Alpine security fixes released after the pinned image (for example musl).
+RUN apk upgrade --no-cache
+
 # The process only runs `node src/index.js`, so the package managers bundled in the base image are removed.
 # They are build tools, and their own dependencies are a vulnerability surface the runtime does not need.
 RUN rm -rf /usr/local/lib/node_modules /usr/local/bin/npm /usr/local/bin/npx \
