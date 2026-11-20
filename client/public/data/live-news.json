@@ -1,8 +1,33 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-19T23:02:09.223Z",
+  "generatedAt": "2026-11-20T07:06:46.690Z",
   "cadenceHours": 4,
   "stories": [
+    {
+      "id": "auto-mit-iso-0132fd2cefe8f9d93502",
+      "sourceId": "mit-iso",
+      "publisher": "MIT International Students Office",
+      "title": "Federal Court Issues Injunction on CPT Guidance",
+      "canonicalUrl": "https://iso.mit.edu/news/federal-court-issues-injunction-on-cpt-guidance",
+      "publishedAt": "2026-11-20",
+      "effectiveAt": null,
+      "excerpt": "On November 17, 2026, the U.S. District Court for the District of Massachusetts issued a preliminary injunction and a stay of agency action against the new guidance on F-1 Curricular Practical Training […]",
+      "topics": [
+        "status",
+        "employment"
+      ],
+      "visaTypes": [
+        "f-1"
+      ],
+      "updateType": "court-development",
+      "editorialState": "source-only",
+      "legalState": "informational",
+      "sourceVerified": false,
+      "trustLabel": "From official source — not yet reviewed by GlobeReady",
+      "autoIngested": true,
+      "clusterId": "cluster-408c1c41d30bcdbf188a",
+      "relatedStoryIds": []
+    },
     {
       "id": "auto-mit-iso-ca40c18c6b6af2c9cc95",
       "sourceId": "mit-iso",
@@ -677,29 +702,6 @@
       "relatedStoryIds": []
     },
     {
-      "id": "auto-mit-iso-e7c660e92df6beb19411",
-      "sourceId": "mit-iso",
-      "publisher": "MIT International Students Office",
-      "title": "SEVP Issues Broadcast Message Regarding Prevention of STEM OPT Employer Fraud",
-      "canonicalUrl": "https://iso.mit.edu/news/sevp-issues-broadcast-message-regarding-prevention-of-stem-opt-employer-fraud",
-      "publishedAt": "2026-04-16",
-      "effectiveAt": null,
-      "excerpt": "On March 23, 2026, the Student and Exchange Visitor Program (SEVP), in the U.S. Department of Homeland Security, issued a Broadcast Message “STEM OPT Employer Fraud” regarding a new focus […]",
-      "topics": [
-        "status",
-        "employment"
-      ],
-      "visaTypes": [],
-      "updateType": "announcement",
-      "editorialState": "source-only",
-      "legalState": "informational",
-      "sourceVerified": false,
-      "trustLabel": "From official source — not yet reviewed by GlobeReady",
-      "autoIngested": true,
-      "clusterId": "cluster-0c19e23c0f2addb28e6f",
-      "relatedStoryIds": []
-    },
-    {
       "id": "auto-study-in-the-states-019e8b0fc2a2532878ba",
       "sourceId": "study-in-the-states",
       "publisher": "Study in the States",
@@ -1311,7 +1313,7 @@
       "state": "current",
       "fetched": 0,
       "attempts": 1,
-      "lastSuccessAt": "2026-11-19T23:02:09.223Z"
+      "lastSuccessAt": "2026-11-20T07:06:46.690Z"
     },
     {
       "sourceId": "study-in-the-states",
@@ -1319,7 +1321,7 @@
       "state": "current",
       "fetched": 10,
       "attempts": 1,
-      "lastSuccessAt": "2026-11-19T23:02:09.223Z"
+      "lastSuccessAt": "2026-11-20T07:06:46.690Z"
     },
     {
       "sourceId": "ice-sevp",
@@ -1327,7 +1329,7 @@
       "state": "current",
       "fetched": 14,
       "attempts": 1,
-      "lastSuccessAt": "2026-11-19T23:02:09.223Z"
+      "lastSuccessAt": "2026-11-20T07:06:46.690Z"
     },
     {
       "sourceId": "federal-register",
@@ -1335,7 +1337,7 @@
       "state": "current",
       "fetched": 7,
       "attempts": 1,
-      "lastSuccessAt": "2026-11-19T23:02:09.223Z"
+      "lastSuccessAt": "2026-11-20T07:06:46.690Z"
     },
     {
       "sourceId": "nafsa-press",
@@ -1343,7 +1345,7 @@
       "state": "current",
       "fetched": 9,
       "attempts": 1,
-      "lastSuccessAt": "2026-11-19T23:02:09.223Z"
+      "lastSuccessAt": "2026-11-20T07:06:46.690Z"
     },
     {
       "sourceId": "mit-iso",
@@ -1351,7 +1353,7 @@
       "state": "current",
       "fetched": 20,
       "attempts": 1,
-      "lastSuccessAt": "2026-11-19T23:02:09.223Z"
+      "lastSuccessAt": "2026-11-20T07:06:46.690Z"
     },
     {
       "sourceId": "state-visa-news",
@@ -1361,5 +1363,5 @@
       "reason": "The source returned HTTP 403 to the collector on 2026-10-15."
     }
   ],
-  "contentHash": "66f5e891fcf9443ae8d9cd292f02d45335a4c6f2ff64f0f7241b7303ead9e520"
+  "contentHash": "84bac9f463fe789e0ffe793d94a58a80f97a141ab61bc3784d4309ab1ebf92b9"
 }
